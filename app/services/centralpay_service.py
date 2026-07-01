@@ -1,23 +1,25 @@
 """CentralPay online gateway (redirect + pull-verify).
 
-Money safety rests on two things (no signed IPN exists):
-  1. idempotent verify keyed on our order (payment row FOR UPDATE + status check),
-  2. an amount+user match check before crediting.
-All credits still go through WalletService (ledger). Never re-verify or re-credit
-an already-approved order; never credit on mismatch.
+Since C1 this is a :class:`PaymentProvider` implementation; the money-safety
+core (idempotent FOR-UPDATE verify, amount+user match, WalletService-only
+credit, plan intent) moved unchanged into the shared
+:class:`app.services.gateway_service.GatewayService`. The public
+``CentralPayService`` API (start / verify_and_apply) is preserved verbatim.
+
+``post_json`` stays a module global here so existing tests (and operators)
+can intercept CentralPay HTTP without touching other providers.
 """
 from __future__ import annotations
 
 import httpx
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.payment import Payment
 from app.models.user import User
-from app.services.subscription_service import SubscriptionService
-from app.services.wallet_service import WalletService
+from app.services.gateway_service import GatewayService
+from app.services.providers.base import PaymentProvider, VerifyResult
 
 log = get_logger("centralpay")
 
@@ -37,29 +39,11 @@ async def post_json(url: str, payload: dict, timeout: float = 20.0) -> dict:
         return {"success": False, "data": {"message": "http_error"}}
 
 
-class CentralPayService:
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
+class CentralPayProvider(PaymentProvider):
+    key = "centralpay"
+    title = "CentralPay"
 
-    async def _user(self, user_id: int) -> User | None:
-        return await self.session.scalar(select(User).where(User.id == user_id))
-
-    async def start(
-        self, user: User, amount: int, intent: str
-    ) -> tuple[int, str] | None:
-        """Create a pending payment (its id IS our orderId) and get a redirect URL.
-
-        Returns (order_id, redirect_url) on success so the caller can offer a
-        "check payment" button, or None if the gateway declined.
-        """
-        payment = Payment(
-            user_id=user.id, amount=amount, method="centralpay",
-            status="pending", intent=intent,
-        )
-        self.session.add(payment)
-        await self.session.commit()
-        await self.session.refresh(payment)
-
+    async def create(self, payment: Payment) -> str | None:
         return_url = (
             f"{settings.domain.rstrip('/')}/pay/centralpay/return?orderId={payment.id}"
         )
@@ -68,15 +52,14 @@ class CentralPayService:
             {
                 "api_key": settings.centralpay_getlink_key,
                 "type": "deposit",
-                "amount": amount,
-                "userId": user.id,
+                "amount": payment.amount,
+                "userId": payment.user_id,
                 "orderId": payment.id,
                 "returnUrl": return_url,
             },
         )
         if resp.get("success"):
-            log.info("centralpay_started", order_id=payment.id, amount=amount, intent=intent)
-            return payment.id, resp["data"]["redirectUrl"]
+            return resp["data"]["redirectUrl"]
         log.warning(
             "centralpay_getlink_failed",
             order_id=payment.id,
@@ -84,53 +67,32 @@ class CentralPayService:
         )
         return None
 
-    async def verify_and_apply(self, order_id: int) -> str:
-        """Idempotently verify + credit. Returns credited|already|failed|mismatch."""
-        payment = await self.session.scalar(
-            select(Payment)
-            .where(Payment.id == order_id, Payment.method == "centralpay")
-            .with_for_update()
-        )
-        if payment is None:
-            return "failed"
-        if payment.status == "approved":
-            return "already"  # doc rule: never re-verify a paid order
-        if payment.status == "rejected":
-            return "failed"
-
+    async def verify(self, payment: Payment) -> VerifyResult:
         resp = await post_json(
             VERIFY_URL,
-            {"api_key": settings.centralpay_verify_key, "orderId": order_id},
+            {"api_key": settings.centralpay_verify_key, "orderId": payment.id},
         )
         if not resp.get("success"):
-            return "failed"  # leave pending; the user may retry
-
+            return VerifyResult(ok=False)
         data = resp["data"]
-        if int(data["amount"]) != int(payment.amount) or int(data["userId"]) != int(
-            payment.user_id
-        ):
-            payment.status = "rejected"
-            await self.session.commit()
-            log.error("centralpay_mismatch", order_id=order_id, got=data)
-            return "mismatch"  # NEVER credit on mismatch
-
-        payment.status = "approved"
-        payment.provider_ref = str(data["referenceId"])
-        await WalletService(self.session).credit(
-            payment.user_id,
-            payment.amount,
-            ttype="deposit",
-            reference=f"centralpay:{data['referenceId']}",
-            description="CentralPay deposit",
+        return VerifyResult(
+            ok=True,
+            amount=int(data["amount"]),
+            ref=str(data["referenceId"]),
+            user_id=int(data["userId"]),
         )
-        await self.session.commit()
-        log.info("centralpay_credited", order_id=order_id, ref=data["referenceId"])
 
-        # a "plan:<key>" intent auto-runs the purchase after a successful deposit
-        if payment.intent and payment.intent.startswith("plan:"):
-            user = await self._user(payment.user_id)
-            if user is not None:
-                await SubscriptionService(self.session).purchase(
-                    user, payment.intent.split(":", 1)[1]
-                )
-        return "credited"
+
+class CentralPayService:
+    """Backward-compatible facade over the generic gateway service."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._gateway = GatewayService(session, CentralPayProvider())
+
+    async def start(
+        self, user: User, amount: int, intent: str
+    ) -> tuple[int, str] | None:
+        return await self._gateway.start(user, amount, intent)
+
+    async def verify_and_apply(self, order_id: int) -> str:
+        return await self._gateway.verify_and_apply(order_id)

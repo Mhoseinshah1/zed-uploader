@@ -15,6 +15,7 @@ from app.bot.callbacks import (
     FilesCb,
     FolderCb,
     FolderPickCb,
+    GateCb,
     JoinCb,
     MediaCb,
     PayCb,
@@ -596,4 +597,19 @@ def build_centralpay(redirect_url: str, order_id: int) -> InlineKeyboardMarkup:
             callback_data=PayCheckCb(order_id=order_id).pack(),
         )
     )
+    return b.as_markup()
+
+
+def build_provider_choice(
+    providers: list[str], *, amount: int = 0, plan: str = ""
+) -> InlineKeyboardMarkup:
+    """One button per enabled gateway (shown when more than one is enabled)."""
+    b = InlineKeyboardBuilder()
+    for key in providers:
+        b.row(
+            InlineKeyboardButton(
+                text=messages.provider_title(key),
+                callback_data=GateCb(provider=key, amount=amount, plan=plan).pack(),
+            )
+        )
     return b.as_markup()

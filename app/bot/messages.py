@@ -581,3 +581,21 @@ def centralpay_credited(balance: int) -> str:
 
 
 CENTRALPAY_ALREADY = "این پرداخت قبلاً تأیید و اعمال شده است. ✅"
+
+
+# ===========================================================================
+# Phase C1: pluggable gateways (the CENTRALPAY_* texts above are provider-
+# neutral in wording and serve every gateway)
+# ===========================================================================
+CHOOSE_PAY_PROVIDER = "درگاه پرداخت را انتخاب کنید:"
+
+_PROVIDER_TITLES = {"centralpay": "🏦 سنترال‌پی", "zarinpal": "💛 زرین‌پال"}
+
+
+def provider_title(key: str) -> str:
+    return _PROVIDER_TITLES.get(key, key)
+
+
+def zarinpal_description(order_id: int) -> str:
+    """Shown on the Zarinpal payment page."""
+    return f"شارژ کیف پول — سفارش {order_id}"

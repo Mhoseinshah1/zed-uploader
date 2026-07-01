@@ -30,6 +30,14 @@ class Payment(Base):
     # --- CentralPay (Phase 5) --------------------------------------------
     provider_ref: Mapped[str | None] = mapped_column(String(64), nullable=True)
     intent: Mapped[str | None] = mapped_column(String(32), nullable=True)  # topup | plan:<key>
+    # --- gateway seam (Phase C1) ------------------------------------------
+    # provider key for online payments ("centralpay"|"zarinpal"); legacy rows
+    # predate the column (NULL) and fall back to `method`, which carries the
+    # same key for gateway payments.
+    provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # gateway-issued transaction token (Zarinpal Authority) so the GET return
+    # can be resolved back to our order.
+    authority: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

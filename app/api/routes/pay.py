@@ -1,14 +1,16 @@
-"""Public CentralPay return route (redirect target after the gateway).
+"""Public gateway return route (redirect target after a payment).
 
-GET /pay/centralpay/return?orderId=<int> — verifies (idempotently) and renders
+GET /pay/{provider}/return?orderId=<int> — verifies (idempotently) and renders
 a simple RTL Persian result page. Rate-limited; no API key (it's user-facing).
-Requires HTTPS via nginx in production (CentralPay only returns over the domain).
+The same route shape serves every provider: CentralPay returns with our
+``orderId``; Zarinpal appends ``Authority`` + ``Status`` (OK|NOK) to the
+callback, and the payment can also be resolved by its stored authority.
 """
 from __future__ import annotations
 
 from html import escape
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 
@@ -17,7 +19,7 @@ from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.payment import Payment
 from app.models.user import User
-from app.services.centralpay_service import CentralPayService
+from app.services.providers import PROVIDER_KEYS, verify_order
 from app.services.wallet_service import WalletService
 
 router = APIRouter(tags=["pay"])
@@ -53,18 +55,63 @@ padding:10px 18px;border-radius:8px;text-decoration:none}}
 </body></html>"""
 
 
-@router.get("/pay/centralpay/return", dependencies=[RateLimitDep])
-async def centralpay_return(
-    request: Request, session: DbSession, orderId: int = 0
+def _render(result: str) -> HTMLResponse:
+    title, body, kind = _RESULT.get(result, _RESULT["failed"])
+    return HTMLResponse(_page(title, body, kind))
+
+
+async def _resolve_payment(
+    session, provider: str, order_id: int, authority: str
+) -> Payment | None:
+    if order_id > 0:
+        return await session.scalar(
+            select(Payment).where(
+                Payment.id == order_id, Payment.method == provider
+            )
+        )
+    if authority:
+        return await session.scalar(
+            select(Payment).where(
+                Payment.authority == authority, Payment.method == provider
+            )
+        )
+    return None
+
+
+@router.get("/pay/{provider}/return", dependencies=[RateLimitDep])
+async def gateway_return(
+    provider: str,
+    request: Request,
+    session: DbSession,
+    orderId: int = 0,
+    authority: str = Query("", alias="Authority"),
+    status: str = Query("", alias="Status"),
 ) -> HTMLResponse:
-    result = await CentralPayService(session).verify_and_apply(orderId)
-    log.info("centralpay_return", order_id=orderId, result=result)
+    if provider not in PROVIDER_KEYS:
+        return _render("failed")
+
+    payment = await _resolve_payment(session, provider, orderId, authority)
+    if payment is None:
+        log.info("gateway_return_unknown", provider=provider, order_id=orderId)
+        return _render("failed")
+    # a mismatched gateway token must never verify someone else's order
+    if authority and payment.authority and authority != payment.authority:
+        log.warning("gateway_return_authority_mismatch", order_id=payment.id)
+        return _render("failed")
+    if status and status.upper() != "OK":
+        # the gateway reports a cancelled/failed attempt: skip the verify call
+        log.info("gateway_return_not_ok", provider=provider, order_id=payment.id)
+        return _render("failed")
+
+    result = await verify_order(session, payment.id)
+    log.info("gateway_return", provider=provider, order_id=payment.id, result=result)
 
     if result == "credited":
-        payment = await session.scalar(select(Payment).where(Payment.id == orderId))
         bot = getattr(request.app.state, "bot", None)
-        if payment is not None and bot is not None:
-            user = await session.scalar(select(User).where(User.id == payment.user_id))
+        if bot is not None:
+            user = await session.scalar(
+                select(User).where(User.id == payment.user_id)
+            )
             balance = await WalletService(session).balance(payment.user_id)
             if user is not None:
                 try:
@@ -76,5 +123,4 @@ async def centralpay_return(
                 except Exception:
                     pass
 
-    title, body, kind = _RESULT.get(result, _RESULT["failed"])
-    return HTMLResponse(_page(title, body, kind))
+    return _render(result)
