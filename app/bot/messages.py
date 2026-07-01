@@ -454,3 +454,33 @@ def ask_duration(title: str) -> str:
 
 
 SELL_SAVED = "ذخیره شد. ✅"
+
+
+# ===========================================================================
+# Phase 5: CentralPay online gateway
+# ===========================================================================
+BTN_PAY_CARD = "💳 کارت‌به‌کارت"
+BTN_PAY_ONLINE = "🌐 پرداخت آنلاین"
+BTN_PAY_WALLET = "👛 پرداخت از کیف پول"
+BTN_PAY_LINK = "🌐 پرداخت"
+BTN_PAY_CHECK = "🔄 بررسی پرداخت"
+
+CHOOSE_TOPUP_METHOD = "روش افزایش موجودی را انتخاب کنید:"
+CHOOSE_PAY_METHOD = "روش پرداخت را انتخاب کنید:"
+ASK_ONLINE_AMOUNT = "مبلغ پرداخت آنلاین را به تومان بفرست (فقط عدد):"
+CENTRALPAY_DISABLED = "پرداخت آنلاین در حال حاضر فعال نیست."
+CENTRALPAY_START_FAILED = "ایجاد لینک پرداخت ناموفق بود. کمی بعد دوباره تلاش کنید."
+CENTRALPAY_PENDING = (
+    "لینک پرداخت ساخته شد. روی «پرداخت» بزنید و پس از پرداخت، «بررسی پرداخت» را بزنید."
+)
+
+# verify_and_apply result -> user message
+CENTRALPAY_FAILED = "پرداختی یافت نشد یا هنوز کامل نشده است. اگر پرداخت کرده‌اید، کمی بعد دوباره «بررسی پرداخت» را بزنید."
+CENTRALPAY_MISMATCH = "مغایرت در مبلغ پرداخت. لطفاً با پشتیبانی تماس بگیرید."
+
+
+def centralpay_credited(balance: int) -> str:
+    return f"✅ پرداخت با موفقیت انجام شد.\nموجودی جدید: {balance:,} تومان"
+
+
+CENTRALPAY_ALREADY = "این پرداخت قبلاً تأیید و اعمال شده است. ✅"

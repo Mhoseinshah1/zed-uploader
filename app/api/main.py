@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.routes import health, media, stats, users, webhook
+from app.api.routes import health, media, pay, stats, users, webhook
 from app.bot.factory import create_bot, create_dispatcher
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
@@ -42,6 +42,7 @@ app.include_router(media.router)
 app.include_router(users.router)
 app.include_router(stats.router)
 app.include_router(webhook.router)
+app.include_router(pay.router)
 
 # Web admin panel (Phase 4): mounts /panel, static, security headers, auth handler.
 setup_panel(app)

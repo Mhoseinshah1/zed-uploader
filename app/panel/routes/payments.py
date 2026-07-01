@@ -52,6 +52,10 @@ async def payment_approve(
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
+    # CentralPay rows are gateway-verified; manual credit is forbidden.
+    existing = await PaymentService(session).get(payment_id)
+    if existing is None or existing.method != "card":
+        return RedirectResponse(url=f"{settings.panel_path}/payments", status_code=302)
     result, payment = await PaymentService(session).approve(payment_id, admin_telegram_id=0)
     if result == "approved" and payment is not None:
         await audit(session, request, "payment_approve", target=str(payment_id))
@@ -71,6 +75,9 @@ async def payment_reject(
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
+    existing = await PaymentService(session).get(payment_id)
+    if existing is None or existing.method != "card":
+        return RedirectResponse(url=f"{settings.panel_path}/payments", status_code=302)
     payment = await PaymentService(session).reject(payment_id, admin_telegram_id=0)
     if payment is not None:
         await audit(session, request, "payment_reject", target=str(payment_id))

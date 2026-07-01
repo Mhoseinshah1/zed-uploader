@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     session_secret: str = "change_this_session_secret"
     panel_path: str = "/panel"
 
+    # --- CentralPay gateway (Phase 5) ------------------------------------
+    centralpay_getlink_key: str = ""
+    centralpay_verify_key: str = ""
+
     # --- media defaults --------------------------------------------------
     default_protect_content: bool = False
     default_auto_delete_seconds: int = 0
@@ -78,6 +82,11 @@ class Settings(BaseSettings):
     def webhook_url(self) -> str:
         """Full webhook URL = DOMAIN + WEBHOOK_PATH."""
         return f"{self.domain.rstrip('/')}{self.webhook_path}"
+
+    @property
+    def centralpay_enabled(self) -> bool:
+        """CentralPay is offered only when both keys are configured."""
+        return bool(self.centralpay_getlink_key and self.centralpay_verify_key)
 
 
 settings = Settings()
