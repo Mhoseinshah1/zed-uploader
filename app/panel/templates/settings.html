@@ -34,20 +34,7 @@
 
 <section class="panel-box">
   <h2>درگاه‌های پرداخت آنلاین</h2>
-  <form method="post" action="{{ panel_path }}/settings/providers">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label class="checkbox">
-      <input type="checkbox" name="centralpay_on" {{ "checked" if centralpay_on else "" }}>
-      سنترال‌پی {{ "" if centralpay_keys_set else "(کلیدهای API در .env تنظیم نشده)" }}
-    </label>
-    <label class="checkbox">
-      <input type="checkbox" name="zarinpal_on" {{ "checked" if zarinpal_on else "" }}>
-      زرین‌پال
-    </label>
-    <label>مرچنت زرین‌پال <input type="text" name="zarinpal_merchant" value="{{ zarinpal_merchant }}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></label>
-    <label class="checkbox"><input type="checkbox" name="zarinpal_sandbox" {{ "checked" if zarinpal_sandbox else "" }}> حالت سندباکس زرین‌پال</label>
-    <button type="submit">ذخیره</button>
-  </form>
+  <p><a href="{{ panel_path }}/providers">پیکربندی درگاه‌ها (سنترال‌پی، زرین‌پال، زیبال) ←</a></p>
 </section>
 
 <section class="panel-box">

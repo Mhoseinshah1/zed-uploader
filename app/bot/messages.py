@@ -589,13 +589,17 @@ CENTRALPAY_ALREADY = "این پرداخت قبلاً تأیید و اعمال ش
 # ===========================================================================
 CHOOSE_PAY_PROVIDER = "درگاه پرداخت را انتخاب کنید:"
 
-_PROVIDER_TITLES = {"centralpay": "🏦 سنترال‌پی", "zarinpal": "💛 زرین‌پال"}
+_PROVIDER_TITLES = {
+    "centralpay": "🏦 سنترال‌پی",
+    "zarinpal": "💛 زرین‌پال",
+    "zibal": "💜 زیبال",
+}
 
 
 def provider_title(key: str) -> str:
     return _PROVIDER_TITLES.get(key, key)
 
 
-def zarinpal_description(order_id: int) -> str:
-    """Shown on the Zarinpal payment page."""
+def gateway_description(order_id: int) -> str:
+    """Shown on the gateway's payment page (Zarinpal/Zibal)."""
     return f"شارژ کیف پول — سفارش {order_id}"

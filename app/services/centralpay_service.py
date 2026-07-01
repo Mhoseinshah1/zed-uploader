@@ -43,6 +43,23 @@ class CentralPayProvider(PaymentProvider):
     key = "centralpay"
     title = "CentralPay"
 
+    def __init__(
+        self, getlink_key: str | None = None, verify_key: str | None = None
+    ) -> None:
+        # keys may come from the panel's payment_providers.config row; when
+        # unset we fall back to the env vars so pre-C1b deployments keep
+        # working with zero changes.
+        self._getlink_key = getlink_key
+        self._verify_key = verify_key
+
+    @property
+    def getlink_key(self) -> str:
+        return self._getlink_key or settings.centralpay_getlink_key
+
+    @property
+    def verify_key(self) -> str:
+        return self._verify_key or settings.centralpay_verify_key
+
     async def create(self, payment: Payment) -> str | None:
         return_url = (
             f"{settings.domain.rstrip('/')}/pay/centralpay/return?orderId={payment.id}"
@@ -50,7 +67,7 @@ class CentralPayProvider(PaymentProvider):
         resp = await post_json(
             GETLINK_URL,
             {
-                "api_key": settings.centralpay_getlink_key,
+                "api_key": self.getlink_key,
                 "type": "deposit",
                 "amount": payment.amount,
                 "userId": payment.user_id,
@@ -70,7 +87,7 @@ class CentralPayProvider(PaymentProvider):
     async def verify(self, payment: Payment) -> VerifyResult:
         resp = await post_json(
             VERIFY_URL,
-            {"api_key": settings.centralpay_verify_key, "orderId": payment.id},
+            {"api_key": self.verify_key, "orderId": payment.id},
         )
         if not resp.get("success"):
             return VerifyResult(ok=False)
