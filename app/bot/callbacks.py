@@ -64,6 +64,14 @@ class BcastCb(CallbackData, prefix="bcast"):
     action: str
 
 
+class ReviewCb(CallbackData, prefix="rev"):
+    """Upload review queue. action ∈ {list, view, approve, reject}."""
+
+    action: str
+    id: int = 0
+    page: int = 0
+
+
 # --- Phase 3 (monetization) ------------------------------------------------
 class WalletCb(CallbackData, prefix="wal"):
     """Wallet actions. action ∈ {topup, tx}."""

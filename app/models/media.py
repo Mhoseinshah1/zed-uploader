@@ -37,6 +37,20 @@ class Media(Base):
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     caption: Mapped[str | None] = mapped_column(Text, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # B1 review workflow: default 'approved' so existing rows + admin uploads
+    # stay live; user uploads may be 'pending' until an admin approves them.
+    status: Mapped[str] = mapped_column(
+        String(16),
+        default="approved",
+        server_default=text("'approved'"),
+        index=True,
+        nullable=False,
+    )  # draft | pending | approved | rejected
+    reviewed_by_admin_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     download_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
     download_count: Mapped[int] = mapped_column(
         BigInteger, default=0, server_default=text("0"), nullable=False

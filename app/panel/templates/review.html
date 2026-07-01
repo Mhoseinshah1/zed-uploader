@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>بازبینی آپلودها ({{ total }})</h1>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>کد</th><th>نوع</th><th>کاربر</th><th>کپشن</th><th>اقدام</th></tr>
+  </thead>
+  <tbody>
+  {% for m in items %}
+    <tr>
+      <td>{{ m.id }}</td>
+      <td><a href="{{ panel_path }}/media/{{ m.id }}">{{ m.code }}</a></td>
+      <td>{{ m.files[0].file_type if m.files else "—" }}</td>
+      <td>{{ ("#" ~ m.owner_user_id) if m.owner_user_id else "—" }}</td>
+      <td>{{ (m.caption[:40] ~ "…") if m.caption and m.caption|length > 40 else (m.caption or "—") }}</td>
+      <td>
+        <form method="post" action="{{ panel_path }}/review/{{ m.id }}/approve" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">تأیید</button>
+        </form>
+        <form method="post" action="{{ panel_path }}/review/{{ m.id }}/reject" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="text" name="note" placeholder="دلیل رد (اختیاری)">
+          <button type="submit" class="danger">رد</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6">موردی در انتظار بازبینی نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if total > page_size %}
+<div class="pager">
+  {% if page > 0 %}<a href="{{ panel_path }}/review?page={{ page - 1 }}">قبلی</a>{% endif %}
+  {% if (page + 1) * page_size < total %}<a href="{{ panel_path }}/review?page={{ page + 1 }}">بعدی</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

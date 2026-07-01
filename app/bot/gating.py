@@ -34,5 +34,6 @@ async def within_file_limit(
     limit = await PlanService(session).max_files(user.effective_plan)
     if limit is None:
         return True
-    count = await MediaService(session).count_by_owner(user.id)
+    # count only media that occupy a quota slot (approved/pending, not rejected)
+    count = await MediaService(session).count_quota_by_owner(user.id)
     return count < limit
