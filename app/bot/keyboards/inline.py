@@ -96,6 +96,12 @@ def build_manage(media: Media, page: int) -> InlineKeyboardMarkup:
     )
     b.row(
         InlineKeyboardButton(
+            text=messages.lbl_password(media.password_hash is not None),
+            callback_data=MediaCb(action="setpw", id=mid, page=page).pack(),
+        )
+    )
+    b.row(
+        InlineKeyboardButton(
             text=messages.LBL_LINK,
             callback_data=MediaCb(action="link", id=mid, page=page).pack(),
         ),

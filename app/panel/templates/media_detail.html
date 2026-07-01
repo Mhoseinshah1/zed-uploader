@@ -7,6 +7,7 @@
   <tr><th>دانلود</th><td>{{ media.download_count }}{% if media.download_limit %} / {{ media.download_limit }}{% endif %}</td></tr>
   <tr><th>وضعیت</th><td>{{ "فعال" if media.is_active else "غیرفعال" }}</td></tr>
   <tr><th>محافظت محتوا</th><td>{{ "روشن" if media.protect_content else "خاموش" }}</td></tr>
+  <tr><th>گذرواژه</th><td>{{ "🔒 دارد" if media.password_hash else "🔓 ندارد" }}</td></tr>
   <tr><th>حذف خودکار</th><td>{{ media.auto_delete_seconds or "خاموش" }}</td></tr>
 </table>
 
@@ -20,6 +21,20 @@
     <button type="submit" class="danger">حذف</button>
   </form>
 </div>
+
+<h2>گذرواژهٔ فایل</h2>
+<form method="post" action="{{ panel_path }}/media/{{ media.id }}/password" class="actions">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="password" name="password" placeholder="گذرواژهٔ جدید" autocomplete="new-password">
+  <button type="submit">{{ "تغییر گذرواژه" if media.password_hash else "تنظیم گذرواژه" }}</button>
+</form>
+{% if media.password_hash %}
+<form method="post" action="{{ panel_path }}/media/{{ media.id }}/password" onsubmit="return confirm('گذرواژه حذف شود؟')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="password" value="">
+  <button type="submit" class="danger">حذف گذرواژه</button>
+</form>
+{% endif %}
 
 <h2>فایل‌های داخلی</h2>
 <table>

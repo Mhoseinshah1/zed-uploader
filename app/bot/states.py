@@ -8,6 +8,11 @@ class MediaEdit(StatesGroup):
     waiting_limit = State()
     waiting_autodelete = State()
     waiting_caption = State()
+    waiting_password = State()  # data: media_id, page — set/change/remove
+
+
+class Delivery(StatesGroup):
+    waiting_password = State()  # data: code — a viewer entering a file password
 
 
 class SettingsEdit(StatesGroup):

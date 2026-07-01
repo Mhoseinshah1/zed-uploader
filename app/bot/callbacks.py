@@ -17,7 +17,7 @@ class MediaCb(CallbackData, prefix="media"):
     """Per-file actions.
 
     action ∈ {manage, toggle_active, toggle_protect, autodel, setlimit,
-    editcap, link, stats, del, delok, back}
+    editcap, setpw, link, stats, del, delok, back}
     """
 
     action: str

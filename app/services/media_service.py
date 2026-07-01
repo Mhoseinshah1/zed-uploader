@@ -13,6 +13,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.security import hash_media_password, verify_media_password
 from app.models.download_log import DownloadLog
 from app.models.media import Media
 from app.models.media_file import MediaFile
@@ -222,6 +223,26 @@ class MediaService:
         self, media_id: int, owner_user_id: int, caption: str | None
     ) -> bool:
         return await self._owned_update(media_id, owner_user_id, caption=caption)
+
+    # ------------------------------------------------------------------
+    # per-file password (bcrypt; the raw password is never stored)
+    # ------------------------------------------------------------------
+    async def set_password(
+        self, media_id: int, owner_user_id: int, raw_password: str
+    ) -> bool:
+        return await self._owned_update(
+            media_id, owner_user_id, password_hash=hash_media_password(raw_password)
+        )
+
+    async def clear_password(self, media_id: int, owner_user_id: int) -> bool:
+        return await self._owned_update(media_id, owner_user_id, password_hash=None)
+
+    @staticmethod
+    def verify_password(media: Media, raw_password: str) -> bool:
+        """True if the file has no password, or the given one matches."""
+        if not media.password_hash:
+            return True
+        return verify_media_password(raw_password, media.password_hash)
 
     async def delete_media(self, media_id: int, owner_user_id: int) -> bool:
         result = await self.session.execute(

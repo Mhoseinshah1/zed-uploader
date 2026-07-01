@@ -72,6 +72,7 @@ def _manage_text(media: Media) -> str:
         auto_delete_seconds=media.auto_delete_seconds,
         download_count=media.download_count,
         download_limit=media.download_limit,
+        has_password=media.password_hash is not None,
     )
 
 
@@ -248,6 +249,12 @@ async def cb_media(
         await callback.message.answer(messages.ASK_CAPTION)
         await callback.answer()
 
+    elif action == "setpw":
+        await state.set_state(MediaEdit.waiting_password)
+        await state.update_data(media_id=mid, page=page)
+        await callback.message.answer(messages.ASK_MEDIA_PASSWORD)
+        await callback.answer()
+
     elif action == "link":
         await callback.answer()
         await callback.message.answer(messages.share_link(service.deep_link(media)))
@@ -398,6 +405,34 @@ async def input_caption(
         return
     log.info("media_updated", id=mid, field="caption")
     await message.answer(messages.CAPTION_SET)
+    await _reshow_manage(message, service, db_user.id, mid, page)
+
+
+@router.message(IsAdmin(), StateFilter(MediaEdit.waiting_password), F.text)
+async def input_media_password(
+    message: Message, state: FSMContext, session: AsyncSession, db_user: User | None
+) -> None:
+    raw = (message.text or "").strip()
+    if not raw:
+        await message.answer(messages.ASK_MEDIA_PASSWORD)  # re-prompt, keep state
+        return
+    data = await state.get_data()
+    await state.clear()
+    if db_user is None:
+        return
+    service = MediaService(session)
+    mid, page = int(data["media_id"]), int(data.get("page", 0))
+    if raw == "-":
+        ok = await service.clear_password(mid, db_user.id)
+        confirmation = messages.MEDIA_PASSWORD_REMOVED
+    else:
+        ok = await service.set_password(mid, db_user.id, raw)
+        confirmation = messages.MEDIA_PASSWORD_SET
+    if not ok:
+        await message.answer(messages.NOT_OWNED)
+        return
+    log.info("media_updated", id=mid, field="password_hash")
+    await message.answer(confirmation)
     await _reshow_manage(message, service, db_user.id, mid, page)
 
 
