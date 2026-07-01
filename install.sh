@@ -60,12 +60,25 @@ ensure_secret() {
     local key="$1" current
     current="$(get_env "$key")"
     case "$current" in
-        ""|change_this_secret|change_this_api_key|change_this_jwt_secret)
+        ""|change_this_secret|change_this_api_key|change_this_jwt_secret|change_this_session_secret)
             set_env "$key" "$(openssl rand -hex 32)"
             log "Generated ${key}" ;;
         *)
             log "${key} already set — keeping" ;;
     esac
+}
+
+# Ask for a password twice with no echo; result -> the named variable.
+ask_password() {
+    local label="$1" __outvar="$2" p1 p2
+    while true; do
+        read -r -s -p "$label: " p1 || die "Input aborted (stdin closed)."; echo
+        read -r -s -p "Confirm ${label}: " p2 || die "Input aborted (stdin closed)."; echo
+        if [ -z "$p1" ]; then warn "Password cannot be empty."; continue; fi
+        if [ "$p1" != "$p2" ]; then warn "Passwords do not match."; continue; fi
+        break
+    done
+    printf -v "$__outvar" '%s' "$p1"
 }
 
 require_root() {
@@ -122,6 +135,11 @@ if [ "$IN_BOT_MODE" = "webhook" ]; then
 fi
 
 echo
+log "Web panel login (used at <domain>/panel):"
+ask_required "Panel admin username" "" IN_PANEL_USER
+ask_password "Panel admin password" IN_PANEL_PASS
+
+echo
 log "All answers collected. The rest runs unattended — no more questions."
 
 # ===========================================================================
@@ -139,6 +157,7 @@ fi
 ensure_secret WEBHOOK_SECRET
 ensure_secret API_KEY
 ensure_secret JWT_SECRET
+ensure_secret SESSION_SECRET
 
 # DB password: generate + sync DATABASE_URL only if still the default, so a
 # re-run never breaks an already-initialized postgres volume.
@@ -184,6 +203,10 @@ done
 
 log "Running database migrations..."
 docker compose run --rm api alembic upgrade head
+
+log "Creating the web panel user..."
+docker compose run --rm api python -m app.panel.create_user \
+    --username "$IN_PANEL_USER" --password "$IN_PANEL_PASS"
 
 log "Starting all services..."
 docker compose up -d
@@ -243,6 +266,9 @@ log "Mode:          ${IN_BOT_MODE}"
 log "Bot:           https://t.me/${IN_BOT_USERNAME}"
 if [ "$IN_BOT_MODE" = "webhook" ]; then
     log "Health URL:    ${IN_DOMAIN}/health"
+    log "Panel:         ${IN_DOMAIN}/panel"
+else
+    log "Panel:         http://localhost:8000/panel (SSH-tunnel; api is 127.0.0.1-only)"
 fi
 log "Local health:  http://localhost:8000/health"
 log "Logs:          docker compose logs -f"

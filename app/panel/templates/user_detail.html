@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="{{ panel_path }}/users">◀ بازگشت به کاربران</a></p>
+<h1>کاربر #{{ user.id }}</h1>
+{% if msg == "adjusted" %}<p class="ok">موجودی تغییر کرد.</p>{% endif %}
+{% if msg == "insufficient" %}<p class="error">موجودی برای کسر کافی نیست.</p>{% endif %}
+
+<table class="kv">
+  <tr><th>آیدی تلگرام</th><td>{{ user.telegram_id }}</td></tr>
+  <tr><th>نام کاربری</th><td>{{ user.username or "—" }}</td></tr>
+  <tr><th>پلن مؤثر</th><td>{{ user.effective_plan }}</td></tr>
+  <tr><th>انقضای پلن</th><td>{{ user.plan_expires_at or "—" }}</td></tr>
+  <tr><th>موجودی</th><td>{{ "{:,}".format(user.balance) }} تومان</td></tr>
+  <tr><th>وضعیت</th><td>{{ "مسدود" if user.is_blocked else "فعال" }}</td></tr>
+</table>
+
+<div class="actions">
+  <form method="post" action="{{ panel_path }}/users/{{ user.id }}/block">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">{{ "رفع مسدودی" if user.is_blocked else "مسدودسازی" }}</button>
+  </form>
+  <form method="post" action="{{ panel_path }}/users/{{ user.id }}/adjust">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="number" name="amount" placeholder="مبلغ (منفی = کسر)" required>
+    <button type="submit">تعدیل موجودی</button>
+  </form>
+</div>
+
+<h2>اشتراک‌ها</h2>
+<table>
+  <thead><tr><th>پلن</th><th>شروع</th><th>انقضا</th><th>فعال</th></tr></thead>
+  <tbody>
+  {% for s in subs %}
+    <tr><td>{{ s.plan }}</td><td>{{ s.starts_at }}</td><td>{{ s.expires_at or "—" }}</td><td>{{ "بله" if s.is_active else "خیر" }}</td></tr>
+  {% else %}<tr><td colspan="4">موردی نیست</td></tr>{% endfor %}
+  </tbody>
+</table>
+
+<h2>آخرین تراکنش‌ها</h2>
+<table>
+  <thead><tr><th>مبلغ</th><th>نوع</th><th>مانده</th><th>توضیح</th></tr></thead>
+  <tbody>
+  {% for t in txns %}
+    <tr><td>{{ "{:,}".format(t.amount) }}</td><td>{{ t.type }}</td><td>{{ "{:,}".format(t.balance_after) }}</td><td>{{ t.description or "—" }}</td></tr>
+  {% else %}<tr><td colspan="4">موردی نیست</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

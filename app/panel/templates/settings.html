@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>تنظیمات</h1>
+
+<section class="panel-box">
+  <h2>کارت پرداخت</h2>
+  <form method="post" action="{{ panel_path }}/settings/card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>شمارهٔ کارت <input type="text" name="card_number" value="{{ card_number }}"></label>
+    <label>نام صاحب کارت <input type="text" name="card_holder" value="{{ card_holder }}"></label>
+    <button type="submit">ذخیره</button>
+  </form>
+</section>
+
+<section class="panel-box">
+  <h2>پیش‌فرض‌ها</h2>
+  <form method="post" action="{{ panel_path }}/settings/defaults">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="checkbox"><input type="checkbox" name="default_protect" {{ "checked" if default_protect else "" }}> محافظت محتوا پیش‌فرض</label>
+    <label>حذف خودکار پیش‌فرض (ثانیه) <input type="number" name="default_autodelete" value="{{ default_autodelete }}" min="0"></label>
+    <button type="submit">ذخیره</button>
+  </form>
+</section>
+
+<section class="panel-box">
+  <h2>کانال‌های عضویت اجباری</h2>
+  <form method="post" action="{{ panel_path }}/settings/channels/add">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="text" name="chat_id" placeholder="@username یا -100..." required>
+    <input type="text" name="title" placeholder="عنوان (اختیاری)">
+    <button type="submit">افزودن</button>
+  </form>
+  <table>
+    <thead><tr><th>کانال</th><th>عنوان</th><th>فعال</th><th>اقدام</th></tr></thead>
+    <tbody>
+    {% for c in channels %}
+      <tr>
+        <td>{{ c.chat_id }}</td>
+        <td>{{ c.title or "—" }}</td>
+        <td>{{ "بله" if c.is_active else "خیر" }}</td>
+        <td>
+          <form method="post" action="{{ panel_path }}/settings/channels/{{ c.id }}/toggle" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit">تغییر وضعیت</button>
+          </form>
+          <form method="post" action="{{ panel_path }}/settings/channels/{{ c.id }}/remove" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="danger">حذف</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}<tr><td colspan="4">موردی نیست</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

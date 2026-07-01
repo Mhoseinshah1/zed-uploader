@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="same-origin">
+  <title>{% block title %}پنل مدیریت زد‌آپلودر{% endblock %}</title>
+  <link rel="stylesheet" href="{{ panel_path }}/static/css/panel.css">
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">زد‌آپلودر</span>
+    {% if current_user %}
+    <nav class="nav">
+      <a href="{{ panel_path }}">داشبورد</a>
+      <a href="{{ panel_path }}/users">کاربران</a>
+      <a href="{{ panel_path }}/media">فایل‌ها</a>
+      <a href="{{ panel_path }}/payments">پرداخت‌ها</a>
+      <a href="{{ panel_path }}/plans">پلن‌ها</a>
+      <a href="{{ panel_path }}/admins">ادمین‌ها</a>
+      <a href="{{ panel_path }}/settings">تنظیمات</a>
+      <a href="{{ panel_path }}/broadcast">پیام همگانی</a>
+    </nav>
+    <form class="logout" method="post" action="{{ panel_path }}/logout">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <span class="user">{{ current_user.username }}</span>
+      <button type="submit">خروج</button>
+    </form>
+    {% endif %}
+  </header>
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
