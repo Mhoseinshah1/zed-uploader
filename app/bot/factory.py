@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from aiogram import Bot, Dispatcher
 
-from app.bot.handlers import start, upload
+from app.bot.handlers import common, start, upload
 from app.bot.middlewares import DbSessionMiddleware, UserContextMiddleware
 from app.core.config import settings
 from app.db.session import async_session_maker
@@ -35,12 +35,16 @@ def create_dispatcher() -> Dispatcher:
 
     dispatcher = Dispatcher()
 
-    # Order matters: session first so UserContext can use it.
-    dispatcher.message.middleware(DbSessionMiddleware(async_session_maker))
-    dispatcher.message.middleware(UserContextMiddleware())
+    # Registered on `update` (not just `message`) so session/db_user are injected
+    # for every update type — allowed_updates includes callback_query, and future
+    # inline buttons will need them. Order matters: session first, then user.
+    dispatcher.update.middleware(DbSessionMiddleware(async_session_maker))
+    dispatcher.update.middleware(UserContextMiddleware())
 
     dispatcher.include_router(start.router)
     dispatcher.include_router(upload.router)
+    # Catch-all router LAST so it never shadows start/upload.
+    dispatcher.include_router(common.router)
 
     _dispatcher = dispatcher
     return dispatcher

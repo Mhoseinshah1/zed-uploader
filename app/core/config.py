@@ -26,7 +26,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # --- telegram bot ----------------------------------------------------
-    bot_token: str
+    # Default "" so bare imports never crash without env; bot creation still
+    # fails clearly at runtime if the token is missing/invalid.
+    bot_token: str = ""
     bot_username: str = "your_bot_username"
     admin_ids: str = ""
     bot_mode: str = "webhook"  # "webhook" | "polling"
@@ -58,8 +60,15 @@ class Settings(BaseSettings):
 
     @property
     def admin_id_list(self) -> list[int]:
-        """Parse the comma-separated ``ADMIN_IDS`` string into ints."""
-        return [int(part.strip()) for part in self.admin_ids.split(",") if part.strip()]
+        """Parse the comma-separated ``ADMIN_IDS`` string into ints.
+
+        Non-numeric entries are ignored rather than raising.
+        """
+        return [
+            int(part)
+            for part in self.admin_ids.replace(" ", "").split(",")
+            if part.isdigit()
+        ]
 
     @property
     def webhook_url(self) -> str:

@@ -1,2 +1,146 @@
-# zed-uploader
-ربات آپلودر فایل تلگرام با Python، Aiogram، FastAPI، PostgreSQL، Redis و Docker؛ دارای آپلود ادمین، ذخیره file_id، لینک اختصاصی فایل، قفل فوروارد، حذف زمان‌دار پیام و نصب یک‌دست روی Ubuntu.
+# ZedUploader 🤖📁
+
+ربات آپلودر فایل تلگرام با معماری تولیدی (Production-ready) مبتنی بر
+Python · aiogram 3 · FastAPI · PostgreSQL · Redis · Docker.
+
+---
+
+## معرفی پروژه
+
+**ZedUploader** یک ربات تلگرامی است که به ادمین‌ها اجازه می‌دهد فایل/رسانه آپلود
+کنند. ربات به‌جای ذخیرهٔ خود فایل، شناسهٔ `file_id` تلگرام را به‌همراه متادیتا در
+PostgreSQL نگه می‌دارد، برای هر رسانه یک **کد کوتاه یکتا** می‌سازد، و کاربر از طریق
+یک **لینک اختصاصی (deep link)** فایل را دریافت می‌کند:
+
+```
+https://t.me/BOT_USERNAME?start=MEDIA_CODE
+```
+
+## امکانات MVP (فاز ۱)
+
+- 📤 آپلود فایل توسط ادمین‌ها (عکس، ویدیو، فایل، صوت، ویس، انیمیشن/گیف، استیکر)
+- 🔗 تولید کد کوتاه یکتا و لینک اختصاصی برای هر رسانه
+- 🔒 قفل فوروارد (`protect_content`) به‌صورت اختیاری
+- ⏳ حذف خودکار زمان‌دار پیام‌ها با صف پایدار Redis + ورکر مستقل
+  (پس از ری‌استارت هم از بین نمی‌رود)
+- 🎯 محدودیت تعداد دانلود به‌صورت **اتمیک و بدون Race**
+- 🧾 ثبت لاگ دانلودها
+- 🌐 API فقط-خواندنی محافظت‌شده با `X-API-Key` و محدودیت نرخ (rate limit)
+- 🧱 اجرای کامل با Docker Compose (api / bot / worker / db / redis)
+
+## پیش‌نیازها
+
+- سرور Ubuntu (۲۰.۰۴ یا جدیدتر)
+- دامنه‌ای که به IP سرور اشاره کند (برای وب‌هوک و SSL)
+- توکن ربات از [@BotFather](https://t.me/BotFather)
+- Docker و Docker Compose v2 (اسکریپت نصب در صورت نبود، آن‌ها را نصب می‌کند)
+
+## نصب روی Ubuntu (تک‌دستوری)
+
+```bash
+git clone <REPO> && cd zed-uploader && sudo bash install.sh
+```
+
+> ⚠️ **مهم:** همیشه پروژه را با `install.sh` اجرا کنید. این اسکریپت اسرار واقعی
+> (`WEBHOOK_SECRET`، `API_KEY`، `JWT_SECRET`) و رمز پایگاه‌داده را تولید می‌کند.
+> اگر مستقیماً `docker compose up` بزنید، مقادیر پیش‌فرض و ناامن `change_this_*`
+> و رمز پیش‌فرض دیتابیس استفاده می‌شود که برای محیط عملیاتی خطرناک است.
+
+اسکریپت `install.sh` این کارها را انجام می‌دهد:
+
+1. نصب بسته‌های پایه (curl، git، openssl) و در صورت نیاز Docker
+2. ساخت فایل `.env` از روی `.env.example`
+3. پرسیدن حالت ربات: **polling** (بدون نیاز به دامنه/SSL، مناسب تست) یا
+   **webhook** (عملیاتی، نیازمند دامنه)
+4. پرسیدن `BOT_TOKEN`، `BOT_USERNAME`، `ADMIN_IDS` (و `DOMAIN` فقط در حالت webhook)
+5. تولید خودکار `WEBHOOK_SECRET`، `API_KEY`، `JWT_SECRET` و رمز پایگاه‌داده
+   (و همگام نگه‌داشتن `DATABASE_URL` با `POSTGRES_PASSWORD`)
+6. ساخت ایمیج‌ها، اجرای دیتابیس/ردیس، اجرای مایگریشن‌ها و بالا آوردن سرویس‌ها
+7. در حالت **webhook**: نصب و پیکربندی خودکار nginx + گواهی Let's Encrypt و سپس
+   تنظیم وب‌هوک تلگرام. در حالت **polling** ربات بلافاصله کار می‌کند.
+
+## تنظیم دامنه و SSL (nginx + certbot)
+
+در حالت **webhook**، اسکریپت `install.sh` این مراحل را به‌صورت خودکار انجام می‌دهد.
+بخش زیر برای انجام دستی یا رفع اشکال است. فایل نمونهٔ `nginx/uploader-bot.conf`
+ترافیک را به `127.0.0.1:8000` (uvicorn با `--proxy-headers`) می‌رساند و برای
+certbot آماده است:
+
+```bash
+sudo cp nginx/uploader-bot.conf /etc/nginx/sites-available/uploader-bot.conf
+sudo ln -s /etc/nginx/sites-available/uploader-bot.conf /etc/nginx/sites-enabled/
+# مقدار server_name را به دامنهٔ خود تغییر دهید
+sudo nginx -t && sudo systemctl reload nginx
+
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d your.domain
+```
+
+پس از گرفتن گواهی SSL، مقدار `DOMAIN` در `.env` باید `https://your.domain` باشد و
+وب‌هوک را دوباره تنظیم کنید (اجرای مجدد `install.sh` یا فراخوانی دستی `setWebhook`).
+
+## گرفتن BOT_TOKEN از BotFather
+
+1. در تلگرام به [@BotFather](https://t.me/BotFather) پیام دهید.
+2. دستور `/newbot` را بزنید و نام و یوزرنیم ربات را وارد کنید.
+3. توکن داده‌شده را در `BOT_TOKEN` قرار دهید و یوزرنیم را در `BOT_USERNAME`.
+
+## گرفتن Telegram ID ادمین
+
+به [@userinfobot](https://t.me/userinfobot) پیام دهید تا عدد شناسهٔ عددی شما را
+بدهد؛ آن را در `ADMIN_IDS` بگذارید (چند ادمین را با کاما جدا کنید: `111,222`).
+
+## اجرا
+
+```bash
+docker compose up -d           # اجرای همهٔ سرویس‌ها
+docker compose ps              # وضعیت سرویس‌ها
+```
+
+سرویس‌ها:
+
+| سرویس   | دستور                         | توضیح                         |
+|---------|-------------------------------|-------------------------------|
+| `api`   | `uvicorn app.api.main:app`    | API و دریافت وب‌هوک تلگرام    |
+| `bot`   | `python -m app.bot.main`      | polling یا ثبت وب‌هوک         |
+| `worker`| `python -m app.workers.main`  | حذف خودکار زمان‌دار پیام‌ها   |
+| `db`    | postgres 16                   | پایگاه‌داده                   |
+| `redis` | redis 7                       | صف حذف خودکار + rate limit    |
+
+## مشاهده لاگ‌ها
+
+```bash
+docker compose logs -f            # همهٔ سرویس‌ها
+docker compose logs -f worker     # فقط ورکر حذف خودکار
+docker compose logs -f api bot    # api و bot
+```
+
+## اجرای migration
+
+```bash
+docker compose run --rm api alembic upgrade head     # اعمال آخرین نسخه
+docker compose run --rm api alembic downgrade -1     # بازگشت یک نسخه
+```
+
+## خطاهای رایج
+
+- **ربات پاسخ نمی‌دهد:** مقدار `BOT_MODE` را بررسی کنید. در حالت `webhook` باید
+  `DOMAIN` روی HTTPS معتبر تنظیم و وب‌هوک ست شده باشد؛ برای تست محلی می‌توانید
+  `BOT_MODE=polling` بگذارید.
+- **خطای اتصال به دیتابیس:** مطمئن شوید سرویس `db` سالم (`healthy`) است و
+  `DATABASE_URL` با `POSTGRES_*` هماهنگ است.
+- **وب‌هوک ست نمی‌شود:** `DOMAIN` باید در دسترس عمومی و دارای SSL معتبر باشد.
+- **حذف خودکار کار نمی‌کند:** لاگ سرویس `worker` و سلامت `redis` را بررسی کنید.
+
+## نقشه راه (Plus / Max / Pro)
+
+فاز ۱ فقط هستهٔ آپلود/دریافت را پیاده کرده و معماری برای افزودن موارد زیر باز است
+(بدون پیاده‌سازی در این نسخه):
+
+- **Plus:** پنل مدیریت وب، آمار پیشرفته، دسته‌بندی رسانه‌ها
+- **Max:** اشتراک‌ها و پلن‌ها (Feature Flag/plan از پیش در مدل‌ها لحاظ شده)
+- **Pro:** پرداخت (زرین‌پال / کریپتو)، محدودیت‌های پلن‌محور، چند-زبانه
+
+---
+
+ساخته‌شده برای فاز ۱ — ماژولار، async، و آمادهٔ توسعه.

@@ -2,7 +2,11 @@
 #
 # ZedUploader — single-command Ubuntu deploy.
 #
-#   git clone REPO && cd uploader-bot && sudo bash install.sh
+#   git clone <REPO> && cd zed-uploader && sudo bash install.sh
+#
+# Works end-to-end in BOTH modes:
+#   * polling  — no domain/SSL needed; the bot service long-polls Telegram.
+#   * webhook  — provisions nginx + Let's Encrypt, then registers the webhook.
 #
 set -euo pipefail
 
@@ -71,11 +75,22 @@ else
     log "$ENV_FILE already exists — keeping it (press Enter to keep current values)."
 fi
 
+# --- choose bot mode --------------------------------------------------------
+echo "Choose bot mode:"
+echo "  1) polling  — works immediately, no domain/SSL needed (good for testing)"
+echo "  2) webhook  — production, requires a domain with DNS pointing here"
+read -r -p "Mode [1/2] (default 1): " MODE_CHOICE
+if [ "$MODE_CHOICE" = "2" ]; then set_env BOT_MODE webhook; else set_env BOT_MODE polling; fi
+BOT_MODE="$(get_env BOT_MODE)"
+log "Bot mode: ${BOT_MODE}"
+
 log "Configure the required values:"
 prompt_env BOT_TOKEN    "Telegram BOT_TOKEN"
 prompt_env BOT_USERNAME "Bot username (without @)"
 prompt_env ADMIN_IDS    "Admin Telegram IDs (comma separated)"
-prompt_env DOMAIN       "Public domain (https://your.domain)"
+if [ "$BOT_MODE" = "webhook" ]; then
+    prompt_env DOMAIN   "Public domain (https://your.domain)"
+fi
 
 # --- generate secrets (hex => URL-safe + sed-safe) --------------------------
 log "Generating secrets..."
@@ -96,7 +111,7 @@ docker compose build
 
 log "Starting db + redis and waiting for health..."
 docker compose up -d db redis
-for i in $(seq 1 30); do
+for _ in $(seq 1 30); do
     if docker compose ps --format '{{.Service}} {{.Health}}' 2>/dev/null | grep -q "db healthy" \
        && docker compose ps --format '{{.Service}} {{.Health}}' 2>/dev/null | grep -q "redis healthy"; then
         break
@@ -110,14 +125,36 @@ docker compose run --rm api alembic upgrade head
 log "Starting all services..."
 docker compose up -d
 
-# --- set telegram webhook ---------------------------------------------------
-BOT_TOKEN="$(get_env BOT_TOKEN)"
-DOMAIN="$(get_env DOMAIN)"
-WEBHOOK_PATH="$(get_env WEBHOOK_PATH)"; WEBHOOK_PATH="${WEBHOOK_PATH:-/telegram/webhook}"
-WEBHOOK_SECRET="$(get_env WEBHOOK_SECRET)"
-BOT_MODE="$(get_env BOT_MODE)"; BOT_MODE="${BOT_MODE:-webhook}"
+# --- webhook mode: provision nginx + TLS, then register the webhook ---------
+if [ "$BOT_MODE" = "webhook" ]; then
+    BOT_TOKEN="$(get_env BOT_TOKEN)"
+    DOMAIN="$(get_env DOMAIN)"
+    WEBHOOK_PATH="$(get_env WEBHOOK_PATH)"; WEBHOOK_PATH="${WEBHOOK_PATH:-/telegram/webhook}"
+    WEBHOOK_SECRET="$(get_env WEBHOOK_SECRET)"
 
-if [ "$BOT_MODE" = "webhook" ] && [ -n "$BOT_TOKEN" ] && [ "$BOT_TOKEN" != "put_bot_token_here" ]; then
+    HOST=$(echo "$DOMAIN" | sed -E 's~^https?://~~; s~/.*$~~')   # bare domain, no scheme/path
+    read -r -p "Email for Let's Encrypt (for cert renewal notices): " LE_EMAIL
+
+    log "Provisioning nginx + certbot for ${HOST} ..."
+    apt-get install -y nginx certbot python3-certbot-nginx
+    mkdir -p /var/www/certbot
+
+    # deploy the provided conf with the real server_name
+    sed "s/server_name .*/server_name ${HOST};/" nginx/uploader-bot.conf \
+        > /etc/nginx/sites-available/zeduploader.conf
+    ln -sf /etc/nginx/sites-available/zeduploader.conf /etc/nginx/sites-enabled/zeduploader.conf
+    rm -f /etc/nginx/sites-enabled/default
+    nginx -t && systemctl reload nginx || warn "nginx config test/reload failed — check the config."
+
+    # obtain + install the cert and the 80->443 redirect; don't kill the script on failure
+    if certbot --nginx -d "${HOST}" --non-interactive --agree-tos -m "${LE_EMAIL}" --redirect; then
+        systemctl reload nginx
+        log "TLS ready for ${HOST}"
+    else
+        warn "certbot failed (is DNS for ${HOST} pointing here and ports 80/443 open?)."
+        warn "Fix DNS/firewall, run: certbot --nginx -d ${HOST}, then re-run setWebhook."
+    fi
+
     WEBHOOK_URL="${DOMAIN%/}${WEBHOOK_PATH}"
     log "Setting Telegram webhook -> ${WEBHOOK_URL}"
     curl -sS "https://api.telegram.org/bot${BOT_TOKEN}/setWebhook" \
@@ -125,11 +162,14 @@ if [ "$BOT_MODE" = "webhook" ] && [ -n "$BOT_TOKEN" ] && [ "$BOT_TOKEN" != "put_
         --data-urlencode "secret_token=${WEBHOOK_SECRET}" \
         --data-urlencode 'allowed_updates=["message","callback_query"]' \
         && echo
+
+    log "Done! ZedUploader is live in WEBHOOK mode."
+    log "Health:  ${DOMAIN%/}/health"
+    log "Bot:     https://t.me/$(get_env BOT_USERNAME)"
 else
-    warn "Skipping webhook setup (BOT_MODE=$BOT_MODE or BOT_TOKEN not set)."
+    log "Done! ZedUploader bot is LIVE in POLLING mode — open it in Telegram and send /start."
+    log "Bot:            https://t.me/$(get_env BOT_USERNAME)"
+    log "Local API only: http://127.0.0.1:8000/health"
 fi
 
-log "Done!"
-log "API health:  ${DOMAIN%/}/health   (local: http://localhost:8000/health)"
-log "Bot:         https://t.me/$(get_env BOT_USERNAME)"
 log "View logs:   docker compose logs -f"

@@ -26,10 +26,13 @@ services:
   api:
     build: .
     restart: unless-stopped
-    command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000
+    # --proxy-headers + trusting all forwarders is safe because the port is
+    # bound to 127.0.0.1 below: only the host's nginx can reach uvicorn and
+    # inject X-Forwarded-For, so external clients cannot spoof the client IP.
+    command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
     env_file: .env
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -47,6 +50,8 @@ services:
       redis:
         condition: service_healthy
 
+  # Keep the worker at a SINGLE replica: its pop_due -> ack is only race-safe
+  # with one instance (multiple workers could double-process due deletions).
   worker:
     build: .
     restart: unless-stopped
