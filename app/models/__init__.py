@@ -7,8 +7,12 @@ from app.models.channel import RequiredChannel
 from app.models.download_log import DownloadLog
 from app.models.media import Media
 from app.models.media_file import MediaFile
+from app.models.payment import Payment
+from app.models.plan import Plan
 from app.models.settings import BotSetting, FeatureFlag
+from app.models.subscription import Subscription
 from app.models.user import User
+from app.models.wallet import WalletTransaction
 
 __all__ = [
     "Base",
@@ -20,4 +24,8 @@ __all__ = [
     "BotSetting",
     "FeatureFlag",
     "RequiredChannel",
+    "Plan",
+    "Subscription",
+    "WalletTransaction",
+    "Payment",
 ]

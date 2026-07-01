@@ -16,10 +16,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bot import messages
 from app.bot.callbacks import FilesCb, MediaCb, SetCb
 from app.bot.filters import IsAdmin
+from app.bot.gating import feature_allowed
 from app.bot.keyboards.inline import (
     build_confirm_delete,
     build_files_list,
     build_manage,
+    build_open_plans,
     build_settings,
 )
 from app.bot.keyboards.reply import build_admin_menu
@@ -33,7 +35,20 @@ from app.services.bot_setting_service import (
     KEY_PROTECT,
     BotSettingService,
 )
+from app.services.feature_service import FeatureService
 from app.services.media_service import MediaService
+
+
+async def _deny_feature(
+    callback: CallbackQuery, session: AsyncSession, feature_key: str
+) -> None:
+    """Send a 'requires plan X' prompt with a link to the plans menu."""
+    required = await FeatureService.required_plan(session, feature_key)
+    if isinstance(callback.message, Message):
+        await callback.message.answer(
+            messages.requires_plan(required), reply_markup=build_open_plans()
+        )
+    await callback.answer()
 
 router = Router(name="menu")
 log = get_logger("handler.menu")
@@ -198,6 +213,13 @@ async def cb_media(
         await callback.answer(messages.ACTIVE_SET)
 
     elif action == "toggle_protect":
+        # Turning protection ON is gated; turning it OFF is always allowed.
+        tg_id = callback.from_user.id if callback.from_user else 0
+        if not media.protect_content and not await feature_allowed(
+            session, "protect_content", db_user, tg_id
+        ):
+            await _deny_feature(callback, session, "protect_content")
+            return
         await service.set_protect(mid, db_user.id, not media.protect_content)
         log.info("media_updated", id=mid, field="protect_content")
         media = await service.get_owned(mid, db_user.id)
@@ -205,6 +227,10 @@ async def cb_media(
         await callback.answer(messages.PROTECT_SET)
 
     elif action == "autodel":
+        tg_id = callback.from_user.id if callback.from_user else 0
+        if not await feature_allowed(session, "auto_delete", db_user, tg_id):
+            await _deny_feature(callback, session, "auto_delete")
+            return
         await state.set_state(MediaEdit.waiting_autodelete)
         await state.update_data(media_id=mid, page=page)
         await callback.message.answer(messages.ASK_AUTODELETE)

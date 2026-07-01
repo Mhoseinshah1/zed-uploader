@@ -62,3 +62,41 @@ class BcastCb(CallbackData, prefix="bcast"):
     """Broadcast confirm. action ∈ {confirm, cancel}."""
 
     action: str
+
+
+# --- Phase 3 (monetization) ------------------------------------------------
+class WalletCb(CallbackData, prefix="wal"):
+    """Wallet actions. action ∈ {topup, tx}."""
+
+    action: str
+
+
+class SubCb(CallbackData, prefix="sub"):
+    """Subscription menu. action ∈ {open}."""
+
+    action: str
+
+
+class BuyCb(CallbackData, prefix="buy"):
+    """Buy a plan by key. ok=0 shows the confirm, ok=1 performs the purchase."""
+
+    plan: str
+    ok: int = 0
+
+
+class PayCb(CallbackData, prefix="pay"):
+    """Owner payment decision. action ∈ {approve, reject}."""
+
+    action: str
+    id: int
+
+
+class SellCb(CallbackData, prefix="sell"):
+    """Owner sell settings. action ∈ {card, holder, price, duration}.
+
+    ``key`` is the plan key for price/duration; None for card/holder. It must be
+    Optional because aiogram unpacks an empty segment back to None.
+    """
+
+    action: str
+    key: str | None = None

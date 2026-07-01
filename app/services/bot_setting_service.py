@@ -13,6 +13,10 @@ from app.models.settings import BotSetting
 
 KEY_PROTECT = "default_protect_content"
 KEY_AUTODELETE = "default_auto_delete_seconds"
+KEY_CARD_NUMBER = "card_number"
+KEY_CARD_HOLDER = "card_holder"
+KEY_TOPUP_MIN = "topup_min"
+DEFAULT_TOPUP_MIN = 10000
 
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 

@@ -7,25 +7,29 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
+from datetime import datetime, timezone
 
 from aiogram.exceptions import (
     TelegramBadRequest,
     TelegramForbiddenError,
     TelegramRetryAfter,
 )
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.bot import messages
 from app.bot.factory import create_bot
 from app.core.logging import get_logger, setup_logging
 from app.core.redis_client import get_redis
 from app.db.session import async_session_maker
+from app.models.subscription import Subscription
 from app.models.user import User
 from app.services import broadcast as bcast
 from app.services.autodelete import AutoDeleteQueue
 
 log = get_logger("worker")
 POLL_INTERVAL = 2
+EXPIRY_SWEEP_INTERVAL = 60
 
 
 async def process_once(bot, queue) -> int:
@@ -132,11 +136,40 @@ async def _send_one(bot, job, user) -> str:
         return "failed"
 
 
+async def process_expiry_sweep(session_maker) -> int:
+    """Downgrade users whose paid plan has expired; deactivate their subs."""
+    async with session_maker() as session:
+        now = datetime.now(timezone.utc)
+        users = list(
+            await session.scalars(
+                select(User).where(
+                    User.plan != "free",
+                    User.plan_expires_at.is_not(None),
+                    User.plan_expires_at < now,
+                )
+            )
+        )
+        if not users:
+            return 0
+        ids = [u.id for u in users]
+        for u in users:
+            u.plan = "free"
+            log.info("plan_expired", user_id=u.id)
+        await session.execute(
+            update(Subscription)
+            .where(Subscription.user_id.in_(ids), Subscription.is_active.is_(True))
+            .values(is_active=False)
+        )
+        await session.commit()
+        return len(users)
+
+
 async def main() -> None:
     setup_logging()
     bot = create_bot()
     redis = get_redis()
     queue = AutoDeleteQueue(redis)
+    last_sweep = 0.0
     log.info("worker_started")
     try:
         while True:
@@ -150,6 +183,15 @@ async def main() -> None:
                 await process_broadcast_once(bot, redis, async_session_maker)
             except Exception as exc:
                 log.warning("broadcast_loop_error", error=str(exc))
+            now_m = time.monotonic()
+            if now_m - last_sweep >= EXPIRY_SWEEP_INTERVAL:
+                last_sweep = now_m
+                try:
+                    expired = await process_expiry_sweep(async_session_maker)
+                    if expired:
+                        log.info("plans_expired", count=expired)
+                except Exception as exc:
+                    log.warning("expiry_sweep_error", error=str(exc))
             await asyncio.sleep(POLL_INTERVAL)
     finally:
         await bot.session.close()

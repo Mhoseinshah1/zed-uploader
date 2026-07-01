@@ -15,7 +15,7 @@ from app.bot import messages
 from app.bot.callbacks import JoinCb
 from app.bot.delivery import DeliveryStatus, deliver_by_code
 from app.bot.keyboards.inline import build_join_gate
-from app.bot.keyboards.reply import build_admin_menu
+from app.bot.keyboards.reply import build_admin_menu, build_user_menu
 from app.core.logging import get_logger
 from app.models.user import User
 from app.services.admin_service import AdminService
@@ -38,7 +38,7 @@ async def _send_welcome(message: Message, session: AsyncSession) -> None:
         is_owner = await AdminService.is_owner(session, user.id)
         await message.answer(messages.WELCOME, reply_markup=build_admin_menu(is_owner))
     else:
-        await message.answer(messages.WELCOME)
+        await message.answer(messages.WELCOME, reply_markup=build_user_menu())
 
 
 @router.message(CommandStart(deep_link=True))
