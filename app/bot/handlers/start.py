@@ -16,7 +16,10 @@ from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import messages
+from app.bot.keyboards.inline import build_share
+from app.bot.keyboards.reply import build_admin_menu
 from app.bot.sender import notify_auto_delete, send_media_file
+from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.redis_client import get_redis
 from app.models.user import User
@@ -33,6 +36,15 @@ _STATUS_MESSAGES = {
 }
 
 
+async def _send_welcome(message: Message) -> None:
+    """Welcome; admins also get the persistent reply keyboard."""
+    user = message.from_user
+    if user is not None and user.id in settings.admin_id_list:
+        await message.answer(messages.WELCOME, reply_markup=build_admin_menu())
+    else:
+        await message.answer(messages.WELCOME)
+
+
 @router.message(CommandStart(deep_link=True))
 async def start_with_code(
     message: Message,
@@ -42,7 +54,7 @@ async def start_with_code(
 ) -> None:
     code = (command.args or "").strip()
     if not code:
-        await message.answer(messages.WELCOME)
+        await _send_welcome(message)
         return
 
     service = MediaService(session)
@@ -55,10 +67,12 @@ async def start_with_code(
         await message.answer(_STATUS_MESSAGES.get(status, messages.NOT_FOUND))
         return
 
-    # 3. send every related file (caption only on the first)
+    # 3. send every related file (caption + share button on the first only)
+    share_markup = build_share(service.deep_link(media))
     sent_ids: list[int] = []
     for index, media_file in enumerate(media.files):
         caption = media.caption if index == 0 else None
+        reply_markup = share_markup if index == 0 else None
         try:
             message_id = await send_media_file(
                 message.bot,
@@ -66,6 +80,7 @@ async def start_with_code(
                 media_file,
                 caption=caption,
                 protect_content=media.protect_content,
+                reply_markup=reply_markup,
             )
             sent_ids.append(message_id)
         except Exception as exc:  # keep going; a failed item shouldn't abort all
@@ -94,4 +109,4 @@ async def start_with_code(
 
 @router.message(CommandStart())
 async def start_plain(message: Message, db_user: User | None) -> None:
-    await message.answer(messages.WELCOME)
+    await _send_welcome(message)
