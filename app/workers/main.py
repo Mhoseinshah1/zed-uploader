@@ -138,6 +138,78 @@ async def _send_one(bot, from_chat_id, message_id, text, telegram_id) -> tuple[s
         return "failed", str(exc)[:255]
 
 
+async def process_albums_once(bot, redis, session_maker) -> int:
+    """Finalize any albums whose debounce elapsed. Returns how many finalized."""
+    from app.services.album_buffer import AlbumBuffer
+
+    groups = await AlbumBuffer(redis).pop_due(time.time())
+    for group in groups:
+        try:
+            await _finalize_album(bot, session_maker, group)
+        except Exception as exc:
+            log.warning("album_finalize_failed", gk=group.get("group_key"), error=str(exc))
+    return len(groups)
+
+
+async def _finalize_album(bot, session_maker, group) -> None:
+    from app.bot.gating import within_file_limit
+    from app.services.admin_service import AdminService
+    from app.services.bot_setting_service import BotSettingService
+    from app.services.media_service import MediaService
+    from app.services.plan_service import PlanService
+    from app.services.user_service import UserService
+
+    parts = group.get("parts") or []
+    if not parts:
+        return
+    chat_id = group["chat_id"]
+    telegram_id = group["telegram_id"]
+    files = [p["file"] for p in parts]
+    caption = parts[0].get("caption")  # first item's caption is the media caption
+
+    async with session_maker() as session:
+        is_admin = await AdminService.is_admin(session, telegram_id)
+        setting = BotSettingService(session)
+        user = await UserService(session).get_by_telegram_id(telegram_id)
+
+        if is_admin:
+            status = "approved"
+        else:
+            if not await setting.user_upload_enabled():
+                await _notify(bot, chat_id, messages.NOT_ADMIN_UPLOAD)
+                return
+            status = "pending" if await setting.user_upload_requires_review() else "approved"
+            if user is not None and not await within_file_limit(session, user, telegram_id):
+                limit = await PlanService(session).max_files(user.effective_plan)
+                await _notify(bot, chat_id, messages.file_limit_reached(limit or 0))
+                return
+
+        service = MediaService(session)
+        media = await service.create_media(
+            files=files,
+            owner_user_id=user.id if user else None,
+            caption=caption,
+            protect_content=await setting.effective_protect(),
+            auto_delete_seconds=(await setting.effective_autodelete()) or None,
+            status=status,
+        )
+        link = service.deep_link(media)
+        code, count = media.code, len(files)
+
+    log.info("album_finalized", chat_id=chat_id, count=count, status=status)
+    if status == "approved":
+        await _notify(bot, chat_id, messages.batch_done(link, code, count))
+    else:
+        await _notify(bot, chat_id, messages.UPLOAD_PENDING_REVIEW)
+
+
+async def _notify(bot, chat_id: int, text: str) -> None:
+    try:
+        await bot.send_message(chat_id, text)
+    except Exception as exc:
+        log.warning("album_notify_failed", chat_id=chat_id, error=str(exc))
+
+
 async def process_expiry_sweep(session_maker) -> int:
     """Downgrade users whose paid plan has expired; deactivate their subs."""
     async with session_maker() as session:
@@ -185,6 +257,12 @@ async def main() -> None:
                 await process_broadcast_once(bot, async_session_maker)
             except Exception as exc:
                 log.warning("broadcast_loop_error", error=str(exc))
+            try:
+                n = await process_albums_once(bot, redis, async_session_maker)
+                if n:
+                    log.info("albums_finalized", count=n)
+            except Exception as exc:
+                log.warning("album_loop_error", error=str(exc))
             now_m = time.monotonic()
             if now_m - last_sweep >= EXPIRY_SWEEP_INTERVAL:
                 last_sweep = now_m
