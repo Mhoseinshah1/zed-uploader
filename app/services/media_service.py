@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -384,6 +384,63 @@ class MediaService:
         return await self.session.scalar(
             select(User.telegram_id).where(User.id == owner_user_id)
         )
+
+    # ------------------------------------------------------------------
+    # search (B3) — bounded, ILIKE-escaped, optionally approved-only
+    # ------------------------------------------------------------------
+    MAX_SEARCH_LIMIT = 50
+
+    @staticmethod
+    def _escape_like(term: str) -> str:
+        """Escape LIKE wildcards so a user '%'/'_' is literal (no full scan)."""
+        return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+    async def search(
+        self,
+        query: str,
+        *,
+        owner_user_id: int | None = None,
+        approved_only: bool = False,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> tuple[list[Media], int]:
+        """Search media by code/title/caption/file_name.
+
+        - ``owner_user_id`` scopes to one owner (admin searching their own,
+          any status); ``approved_only`` restricts to approved+active (public).
+          The two combine (owner AND approved) when both are given.
+        - Always bounded by ``limit`` (capped) + ``offset``; returns (items, total).
+        """
+        q = query.strip()
+        if not q:
+            return [], 0
+        limit = max(1, min(limit, self.MAX_SEARCH_LIMIT))
+        pattern = f"%{self._escape_like(q)}%"
+        term = or_(
+            Media.code.ilike(pattern, escape="\\"),
+            Media.title.ilike(pattern, escape="\\"),
+            Media.caption.ilike(pattern, escape="\\"),
+            Media.id.in_(
+                select(MediaFile.media_id).where(
+                    MediaFile.file_name.ilike(pattern, escape="\\")
+                )
+            ),
+        )
+        stmt = select(Media).where(term)
+        if owner_user_id is not None:
+            stmt = stmt.where(Media.owner_user_id == owner_user_id)
+        if approved_only:
+            stmt = stmt.where(Media.status == APPROVED, Media.is_active.is_(True))
+        total = int(
+            await self.session.scalar(
+                select(func.count()).select_from(stmt.subquery())
+            )
+            or 0
+        )
+        rows = await self.session.scalars(
+            stmt.order_by(Media.id.desc()).limit(limit).offset(offset)
+        )
+        return list(rows.all()), total
 
     async def delete_media(self, media_id: int, owner_user_id: int) -> bool:
         result = await self.session.execute(

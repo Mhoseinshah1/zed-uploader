@@ -10,6 +10,7 @@ import os
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.models import Base
@@ -32,6 +33,8 @@ async def pg_sessionmaker():
         TEST_DATABASE_URL, pool_size=20, max_overflow=20, pool_pre_ping=True
     )
     async with engine.begin() as conn:
+        # pg_trgm is needed for the media trigram indexes create_all emits (B3).
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     maker = async_sessionmaker(engine, expire_on_commit=False)

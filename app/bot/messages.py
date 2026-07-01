@@ -101,6 +101,17 @@ def folder_view_header(name: str, sub_count: int, media_count: int) -> str:
     return f"📁 {name}\nزیرپوشه‌ها: {sub_count} · فایل‌ها: {media_count}"
 
 
+# --- search (B3) ------------------------------------------------------------
+BTN_SEARCH = "🔍 جستجو"
+ASK_SEARCH_QUERY = "عبارت جستجو را بفرست (کد، عنوان، کپشن یا نام فایل):"
+SEARCH_EMPTY = "نتیجه‌ای یافت نشد."
+SEARCH_DISABLED = "جستجو در حال حاضر فعال نیست."
+
+
+def search_results_header(total: int, page: int, pages: int) -> str:
+    return f"🔍 نتایج ({total}) — صفحه {page}/{pages}"
+
+
 def auto_delete_notice(seconds: int) -> str:
     """Notice shown before scheduling auto-deletion of delivered files."""
     if seconds % 3600 == 0 and seconds >= 3600:

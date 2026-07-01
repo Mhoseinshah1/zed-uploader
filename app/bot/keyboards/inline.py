@@ -20,6 +20,7 @@ from app.bot.callbacks import (
     PayCb,
     PayCheckCb,
     ReviewCb,
+    SearchCb,
     SellCb,
     SetCb,
     SubCb,
@@ -150,6 +151,36 @@ def build_folder_picker(folders: list[Folder]) -> InlineKeyboardMarkup:
                 callback_data=FolderPickCb(id=folder.id).pack(),
             )
         )
+    return b.as_markup()
+
+
+def build_search_results(
+    items: list[Media], page: int, total_pages: int
+) -> InlineKeyboardMarkup:
+    """One button per hit (opens manage) + a prev/next row using SearchCb."""
+    b = InlineKeyboardBuilder()
+    for media in items:
+        b.row(
+            InlineKeyboardButton(
+                text=messages.file_row_label(media.code, _media_type(media)),
+                callback_data=MediaCb(action="manage", id=media.id, page=0).pack(),
+            )
+        )
+    nav: list[InlineKeyboardButton] = []
+    if page > 0:
+        nav.append(
+            InlineKeyboardButton(
+                text=messages.LBL_PREV, callback_data=SearchCb(page=page - 1).pack()
+            )
+        )
+    if page < total_pages - 1:
+        nav.append(
+            InlineKeyboardButton(
+                text=messages.LBL_NEXT, callback_data=SearchCb(page=page + 1).pack()
+            )
+        )
+    if nav:
+        b.row(*nav)
     return b.as_markup()
 
 

@@ -32,6 +32,7 @@ def build_admin_menu(is_owner: bool = False) -> ReplyKeyboardMarkup:
         ],
         [
             KeyboardButton(text=messages.BTN_STATS),
+            KeyboardButton(text=messages.BTN_SEARCH),
         ],
         [
             KeyboardButton(text=messages.BTN_WALLET),

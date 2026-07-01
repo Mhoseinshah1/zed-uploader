@@ -19,6 +19,7 @@ from app.bot.handlers import (
     folders,
     menu,
     review,
+    search,
     start,
     upload,
 )
@@ -70,6 +71,9 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.include_router(billing_owner.router)
     dispatcher.include_router(batch.router)
     dispatcher.include_router(upload.router)
+    # `search` after the reply-keyboard routers so a menu-button tap while a
+    # search is active still routes to its own handler (which clears state).
+    dispatcher.include_router(search.router)
     dispatcher.include_router(common.router)
 
     _dispatcher = dispatcher

@@ -25,6 +25,10 @@ class Review(StatesGroup):
     waiting_reason = State()  # data: media_id, page — admin rejecting an upload
 
 
+class Search(StatesGroup):
+    active = State()  # data: query — holds the last query for paginated browsing
+
+
 class SettingsEdit(StatesGroup):
     waiting_default_autodelete = State()
 

@@ -33,6 +33,15 @@
 </section>
 
 <section class="panel-box">
+  <h2>جستجو</h2>
+  <form method="post" action="{{ panel_path }}/settings/search">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="checkbox"><input type="checkbox" name="public_search_enabled" {{ "checked" if public_search_enabled else "" }}> اجازهٔ جستجوی عمومی برای کاربران (فقط فایل‌های تأییدشده)</label>
+    <button type="submit">ذخیره</button>
+  </form>
+</section>
+
+<section class="panel-box">
   <h2>کانال‌های عضویت اجباری</h2>
   <form method="post" action="{{ panel_path }}/settings/channels/add">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

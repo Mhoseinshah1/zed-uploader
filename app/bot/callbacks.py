@@ -90,6 +90,12 @@ class FolderPickCb(CallbackData, prefix="fpick"):
     id: int = 0
 
 
+class SearchCb(CallbackData, prefix="srch"):
+    """Search results pagination (the query itself lives in FSM state)."""
+
+    page: int = 0
+
+
 # --- Phase 3 (monetization) ------------------------------------------------
 class WalletCb(CallbackData, prefix="wal"):
     """Wallet actions. action ∈ {topup, tx}."""
