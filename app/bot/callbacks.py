@@ -29,3 +29,36 @@ class SetCb(CallbackData, prefix="set"):
     """Settings actions. action ∈ {protect, autodel}."""
 
     action: str
+
+
+# --- Phase 2 ---------------------------------------------------------------
+class JoinCb(CallbackData, prefix="join"):
+    """Force-join recheck for a media code."""
+
+    code: str
+
+
+class ChanCb(CallbackData, prefix="chan"):
+    """Channel management. action ∈ {toggle, remove}."""
+
+    action: str
+    id: int
+
+
+class AdminCb(CallbackData, prefix="adm"):
+    """Admin management. action ∈ {toggle, remove}."""
+
+    action: str
+    id: int
+
+
+class BatchCb(CallbackData, prefix="batch"):
+    """Batch upload. action ∈ {finish, cancel}."""
+
+    action: str
+
+
+class BcastCb(CallbackData, prefix="bcast"):
+    """Broadcast confirm. action ∈ {confirm, cancel}."""
+
+    action: str

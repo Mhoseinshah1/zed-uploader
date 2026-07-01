@@ -179,3 +179,102 @@ def settings_view(protect: bool, seconds: int) -> str:
 
 def share_link(url: str) -> str:
     return f"🔗 لینک اشتراک‌گذاری:\n{url}"
+
+
+# ===========================================================================
+# Phase 2: force-join, batch upload, admin management, broadcast
+# ===========================================================================
+
+# --- reply keyboard (batch for admins; last three owners only) ---------------
+BTN_BATCH_UPLOAD = "📚 آپلود گروهی"
+BTN_CHANNELS = "🔐 عضویت اجباری"
+BTN_ADMINS = "👥 ادمین‌ها"
+BTN_BROADCAST = "📢 پیام همگانی"
+
+# --- 1) force-join gate ------------------------------------------------------
+GATE_PROMPT = (
+    "برای دریافت این فایل ابتدا در کانال‌(های) زیر عضو شوید،\n"
+    "سپس روی «عضو شدم، بررسی کن» بزنید:"
+)
+GATE_RECHECK_BTN = "✅ عضو شدم، بررسی کن"
+GATE_STILL = "هنوز عضو همهٔ کانال‌ها نشده‌اید."
+
+
+def channel_join_label(title: str | None, chat_id: str) -> str:
+    return f"📢 {title or chat_id}"
+
+
+# --- channel management (owners) ---------------------------------------------
+CHANNELS_HEADER = "🔐 کانال‌های عضویت اجباری:"
+CHANNELS_EMPTY = "هیچ کانال اجباری تعریف نشده است."
+BTN_ADD_CHANNEL = "➕ افزودن کانال"
+ASK_CHANNEL = (
+    "آیدی کانال را به‌صورت @username بفرست، یا یک پیام از آن کانال را فوروارد کن.\n"
+    "توجه: ربات باید در آن کانال ادمین باشد."
+)
+CHANNEL_ADDED = "کانال اضافه شد. ✅"
+CHANNEL_NOT_ADMIN_WARN = (
+    "⚠️ به نظر می‌رسد ربات در این کانال ادمین نیست؛ بررسی عضویت ممکن است کار نکند."
+)
+CHANNEL_INVALID = (
+    "کانال نامعتبر است. یک @username معتبر بفرست یا پیامی از کانال فوروارد کن."
+)
+CHANNEL_REMOVED = "کانال حذف شد."
+
+
+def channel_row_label(title: str | None, chat_id: str, is_active: bool) -> str:
+    return f"{'✅' if is_active else '⛔️'} {title or chat_id}"
+
+
+# --- 2) batch upload ---------------------------------------------------------
+BATCH_START = (
+    "حالت آپلود گروهی فعال شد.\nفایل‌ها را یکی‌یکی بفرست، سپس «پایان» را بزن."
+)
+BTN_BATCH_FINISH = "✅ پایان و ساخت لینک"
+BTN_BATCH_CANCEL = "❌ لغو"
+BATCH_EMPTY = "هیچ فایلی اضافه نشده است. یک فایل بفرست یا «لغو» را بزن."
+BATCH_HINT = "فایل بفرست یا «پایان» را بزن."
+BATCH_CANCELLED = "آپلود گروهی لغو شد."
+
+
+def batch_added(count: int) -> str:
+    return f"{count} فایل اضافه شد."
+
+
+def batch_done(deep_link: str, code: str, count: int) -> str:
+    return f"✅ {count} فایل ذخیره شد.\n\n🔗 لینک:\n{deep_link}\n\n🆔 کد: {code}"
+
+
+# --- 3) admin management (owners) --------------------------------------------
+ADMINS_HEADER = "👥 ادمین‌ها:"
+ADMINS_EMPTY = "هیچ ادمینی ثبت نشده است."
+BTN_ADD_ADMIN = "➕ افزودن ادمین"
+ASK_ADMIN = "آیدی عددی تلگرام کاربر را بفرست، یا یک پیام از او فوروارد کن."
+ADMIN_ADDED = "ادمین اضافه شد. ✅"
+ADMIN_REMOVED = "ادمین حذف شد."
+ADMIN_INVALID = "آیدی نامعتبر است. یک عدد بفرست یا پیامی از کاربر فوروارد کن."
+ERR_CANNOT_SELF = "نمی‌توانید خودتان را حذف یا غیرفعال کنید."
+ERR_CANNOT_ENV_OWNER = (
+    "این کاربر از طریق تنظیمات سرور مالک است و قابل حذف/غیرفعال‌سازی نیست."
+)
+
+
+def admin_row_label(telegram_id: int, role: str, is_active: bool) -> str:
+    return f"{'✅' if is_active else '⛔️'} {telegram_id} · {role}"
+
+
+# --- 4) broadcast (owners) ---------------------------------------------------
+BROADCAST_ASK = (
+    "پیام همگانی را بفرست (متن، عکس، ویدیو و ...).\nبرای انصراف /panel را بزن."
+)
+BROADCAST_NO_MESSAGE = "پیامی برای ارسال یافت نشد."
+BROADCAST_STARTED = "ارسال آغاز شد؛ نتیجه پس از اتمام اعلام می‌شود."
+BROADCAST_CANCELLED = "ارسال لغو شد."
+
+
+def broadcast_confirm(count: int) -> str:
+    return f"ارسال به {count} کاربر؟"
+
+
+def broadcast_summary(sent: int, failed: int) -> str:
+    return f"📢 ارسال شد: {sent} | ناموفق/مسدود: {failed}"

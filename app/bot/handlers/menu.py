@@ -27,6 +27,7 @@ from app.bot.states import MediaEdit, SettingsEdit
 from app.core.logging import get_logger
 from app.models.media import Media
 from app.models.user import User
+from app.services.admin_service import AdminService
 from app.services.bot_setting_service import (
     KEY_AUTODELETE,
     KEY_PROTECT,
@@ -101,9 +102,14 @@ async def _show_settings(target: Message, session: AsyncSession) -> None:
 # reply-keyboard buttons (admins only) — each clears any in-progress FSM flow
 # ---------------------------------------------------------------------------
 @router.message(IsAdmin(), Command("panel"))
-async def cmd_panel(message: Message, state: FSMContext) -> None:
+async def cmd_panel(
+    message: Message, state: FSMContext, session: AsyncSession
+) -> None:
     await state.clear()
-    await message.answer(messages.ADMIN_PANEL, reply_markup=build_admin_menu())
+    is_owner = message.from_user is not None and await AdminService.is_owner(
+        session, message.from_user.id
+    )
+    await message.answer(messages.ADMIN_PANEL, reply_markup=build_admin_menu(is_owner))
 
 
 @router.message(IsAdmin(), F.text == messages.BTN_UPLOAD)
