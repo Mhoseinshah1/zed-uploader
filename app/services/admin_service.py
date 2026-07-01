@@ -72,6 +72,18 @@ class AdminService:
         )
         return found is not None
 
+    @staticmethod
+    async def owner_telegram_ids(session: AsyncSession) -> list[int]:
+        """Env owners + active DB owners (deduped) — used to notify owners."""
+        ids = set(settings.admin_id_list)
+        rows = await session.scalars(
+            select(Admin.telegram_id).where(
+                Admin.is_active.is_(True), Admin.role == "owner"
+            )
+        )
+        ids.update(rows.all())
+        return list(ids)
+
     # ------------------------------------------------------------------
     # CRUD (owners-only surface, guarded at handler level)
     # ------------------------------------------------------------------

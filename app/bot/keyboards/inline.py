@@ -9,15 +9,21 @@ from app.bot.callbacks import (
     AdminCb,
     BatchCb,
     BcastCb,
+    BuyCb,
     ChanCb,
     FilesCb,
     JoinCb,
     MediaCb,
+    PayCb,
+    SellCb,
     SetCb,
+    SubCb,
+    WalletCb,
 )
 from app.models.admin import Admin
 from app.models.channel import RequiredChannel
 from app.models.media import Media
+from app.models.plan import Plan
 
 
 def _media_type(media: Media) -> str:
@@ -252,5 +258,97 @@ def build_broadcast_confirm() -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=messages.LBL_NO, callback_data=BcastCb(action="cancel").pack()
         ),
+    )
+    return b.as_markup()
+
+
+# --- Phase 3 keyboards -------------------------------------------------------
+def build_wallet() -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(
+            text=messages.BTN_TOPUP, callback_data=WalletCb(action="topup").pack()
+        )
+    )
+    b.row(
+        InlineKeyboardButton(
+            text=messages.BTN_TRANSACTIONS, callback_data=WalletCb(action="tx").pack()
+        )
+    )
+    return b.as_markup()
+
+
+def build_plans(plans: list[Plan]) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    for plan in plans:
+        b.row(
+            InlineKeyboardButton(
+                text=messages.plan_button_label(
+                    plan.title, plan.price, plan.duration_days
+                ),
+                callback_data=BuyCb(plan=plan.key).pack(),
+            )
+        )
+    return b.as_markup()
+
+
+def build_open_plans() -> InlineKeyboardMarkup:
+    """Single 'view plans' button used by feature-gate prompts."""
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(
+            text=messages.BTN_OPEN_PLANS, callback_data=SubCb(action="open").pack()
+        )
+    )
+    return b.as_markup()
+
+
+def build_payment_actions(payment_id: int) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(
+            text=messages.PAY_APPROVE,
+            callback_data=PayCb(action="approve", id=payment_id).pack(),
+        ),
+        InlineKeyboardButton(
+            text=messages.PAY_REJECT,
+            callback_data=PayCb(action="reject", id=payment_id).pack(),
+        ),
+    )
+    return b.as_markup()
+
+
+def build_sell(card_number: str | None, card_holder: str | None, plans: list[Plan]) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(
+            text=messages.BTN_SET_CARD, callback_data=SellCb(action="card").pack()
+        ),
+        InlineKeyboardButton(
+            text=messages.BTN_SET_HOLDER, callback_data=SellCb(action="holder").pack()
+        ),
+    )
+    for plan in plans:
+        if plan.key == "free":
+            continue
+        b.row(
+            InlineKeyboardButton(
+                text=messages.sell_price_label(plan.title, plan.price),
+                callback_data=SellCb(action="price", key=plan.key).pack(),
+            ),
+            InlineKeyboardButton(
+                text=messages.sell_duration_label(plan.title, plan.duration_days),
+                callback_data=SellCb(action="duration", key=plan.key).pack(),
+            ),
+        )
+    return b.as_markup()
+
+
+def build_buy_confirm(plan_key: str) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(
+            text=messages.LBL_YES, callback_data=BuyCb(plan=plan_key, ok=1).pack()
+        )
     )
     return b.as_markup()

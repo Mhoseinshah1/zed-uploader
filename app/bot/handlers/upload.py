@@ -13,10 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import messages
 from app.bot.filters import IsAdmin
+from app.bot.gating import within_file_limit
+from app.bot.keyboards.inline import build_open_plans
 from app.core.logging import get_logger
 from app.models.user import User
 from app.services.bot_setting_service import BotSettingService
 from app.services.media_service import MediaService
+from app.services.plan_service import PlanService
 
 router = Router(name="upload")
 log = get_logger("handler.upload")
@@ -147,6 +150,18 @@ async def admin_upload(
         return
 
     file_data, caption = extracted
+
+    # enforce the plan's max_files quota (env owners are unlimited)
+    tg_id = message.from_user.id if message.from_user else 0
+    if not await within_file_limit(session, db_user, tg_id):
+        limit = await PlanService(session).max_files(
+            db_user.effective_plan if db_user else "free"
+        )
+        await message.answer(
+            messages.file_limit_reached(limit or 0), reply_markup=build_open_plans()
+        )
+        return
+
     service = MediaService(session)
 
     # Honor the admin's effective defaults (BotSetting, falling back to env),

@@ -278,3 +278,179 @@ def broadcast_confirm(count: int) -> str:
 
 def broadcast_summary(sent: int, failed: int) -> str:
     return f"📢 ارسال شد: {sent} | ناموفق/مسدود: {failed}"
+
+
+# ===========================================================================
+# Phase 3: wallet, top-up, plans, subscriptions, feature gating
+# ===========================================================================
+
+# --- reply keyboard buttons --------------------------------------------------
+BTN_WALLET = "💳 کیف پول"
+BTN_SUBSCRIPTION = "⭐️ اشتراک"
+BTN_SELL = "💼 فروش"  # owners only
+
+
+def _toman(amount: int) -> str:
+    return f"{amount:,} تومان"
+
+
+# --- wallet ------------------------------------------------------------------
+def wallet_view(balance: int) -> str:
+    return f"💳 موجودی شما: {_toman(balance)}"
+
+
+BTN_TOPUP = "➕ افزایش موجودی"
+BTN_TRANSACTIONS = "📜 تراکنش‌ها"
+ASK_TOPUP_AMOUNT = "مبلغ افزایش موجودی را به تومان بفرست (فقط عدد):"
+INVALID_AMOUNT = "مبلغ نامعتبر است. یک عدد معتبر (بزرگ‌تر از حداقل) بفرست."
+PAYMENT_DISABLED = "پرداخت موقتاً غیرفعال است."
+TOPUP_PENDING = "رسید شما ثبت شد و در انتظار تأیید است. ✅"
+TRANSACTIONS_EMPTY = "تراکنشی وجود ندارد."
+
+
+def min_amount_hint(minimum: int) -> str:
+    return f"حداقل مبلغ: {_toman(minimum)}"
+
+
+def topup_instructions(card_number: str, card_holder: str, amount: int) -> str:
+    return (
+        f"مبلغ {_toman(amount)} را به کارت زیر واریز کنید:\n\n"
+        f"💳 {card_number}\n"
+        f"👤 {card_holder}\n\n"
+        "سپس رسید پرداخت (عکس) یا کد پیگیری را همین‌جا بفرستید."
+    )
+
+
+_TXN_LABELS = {
+    "deposit": "واریز",
+    "purchase": "خرید",
+    "refund": "بازگشت وجه",
+    "adjustment": "تعدیل",
+}
+
+
+def transactions_view(rows: list) -> str:
+    if not rows:
+        return TRANSACTIONS_EMPTY
+    lines = ["📜 آخرین تراکنش‌ها:"]
+    for tx in rows:
+        sign = "➕" if tx.amount >= 0 else "➖"
+        label = _TXN_LABELS.get(tx.type, tx.type)
+        lines.append(f"{sign} {abs(tx.amount):,} — {label} (مانده: {tx.balance_after:,})")
+    return "\n".join(lines)
+
+
+# --- subscription ------------------------------------------------------------
+def subscription_view(plan: str, expires: str | None) -> str:
+    title = {"free": "رایگان", "plus": "پلاس", "max": "مکس"}.get(plan, plan)
+    body = f"⭐️ پلن فعلی شما: {title}"
+    if expires:
+        body += f"\n⏳ انقضا: {expires}"
+    return body + "\n\nپلن‌های قابل خرید:"
+
+
+def plan_button_label(title: str, price: int, duration_days: int) -> str:
+    price_txt = "رایگان" if price <= 0 else f"{price:,} ت"
+    dur_txt = "بدون انقضا" if duration_days == 0 else f"{duration_days} روز"
+    return f"{title} — {price_txt} / {dur_txt}"
+
+
+BTN_BUY = "🛒 خرید"
+
+
+def buy_confirm(title: str, price: int) -> str:
+    price_txt = "رایگان" if price <= 0 else _toman(price)
+    return f"خرید پلن «{title}» به مبلغ {price_txt}؟"
+
+
+def plan_activated(expires: str | None) -> str:
+    if expires:
+        return f"✅ پلن شما فعال شد تا {expires}."
+    return "✅ پلن شما فعال شد (بدون انقضا)."
+
+
+def insufficient_funds(balance: int, price: int) -> str:
+    return (
+        "موجودی کافی نیست.\n"
+        f"موجودی: {_toman(balance)} | قیمت: {_toman(price)}\n"
+        "ابتدا کیف پول را شارژ کنید."
+    )
+
+
+PLAN_NOT_AVAILABLE = "این پلن در دسترس نیست."
+
+# --- feature gating ----------------------------------------------------------
+_PLAN_TITLES = {"free": "رایگان", "plus": "پلاس", "max": "مکس"}
+
+
+def requires_plan(plan_key: str) -> str:
+    return f"این قابلیت نیاز به پلن «{_PLAN_TITLES.get(plan_key, plan_key)}» دارد."
+
+
+def file_limit_reached(limit: int) -> str:
+    return (
+        f"به سقف تعداد فایل ({limit}) در پلن فعلی رسیده‌اید.\n"
+        "برای افزایش سقف، پلن خود را ارتقا دهید."
+    )
+
+
+BTN_OPEN_PLANS = "⭐️ مشاهده پلن‌ها"
+
+# --- owner: payments ---------------------------------------------------------
+PAY_APPROVE = "✅ تأیید"
+PAY_REJECT = "❌ رد"
+PAY_ALREADY = "قبلاً تأیید شده."
+PAY_APPROVED = "پرداخت تأیید شد. ✅"
+PAY_REJECTED = "پرداخت رد شد."
+
+
+def payment_notify(user_id: int, amount: int, method: str, payment_id: int) -> str:
+    return (
+        "💳 درخواست شارژ جدید\n\n"
+        f"کاربر: {user_id}\n"
+        f"مبلغ: {_toman(amount)}\n"
+        f"روش: {method}\n"
+        f"شناسه: {payment_id}"
+    )
+
+
+def user_credited(amount: int) -> str:
+    return f"✅ کیف پول شما {_toman(amount)} شارژ شد."
+
+
+USER_PAYMENT_REJECTED = "❌ پرداخت شما تأیید نشد. در صورت واریز، با پشتیبانی تماس بگیرید."
+
+# --- owner: sell settings ----------------------------------------------------
+def sell_view(card_number: str | None, card_holder: str | None) -> str:
+    return (
+        "💼 تنظیمات فروش\n\n"
+        f"شمارهٔ کارت: {card_number or '—'}\n"
+        f"صاحب کارت: {card_holder or '—'}\n\n"
+        "قیمت و مدت هر پلن را نیز می‌توانید تنظیم کنید."
+    )
+
+
+BTN_SET_CARD = "شمارهٔ کارت"
+BTN_SET_HOLDER = "نام صاحب کارت"
+ASK_CARD = "شمارهٔ کارت را بفرست:"
+ASK_HOLDER = "نام صاحب کارت را بفرست:"
+
+
+def sell_price_label(title: str, price: int) -> str:
+    price_txt = "رایگان" if price <= 0 else f"{price:,} ت"
+    return f"💰 قیمت {title}: {price_txt}"
+
+
+def sell_duration_label(title: str, days: int) -> str:
+    return f"⏳ مدت {title}: {days} روز"
+
+
+def ask_price(title: str) -> str:
+    return f"قیمت پلن «{title}» را به تومان بفرست (عدد):"
+
+
+def ask_duration(title: str) -> str:
+    return f"مدت پلن «{title}» را به روز بفرست (۰ = بدون انقضا):"
+
+
+SELL_SAVED = "ذخیره شد. ✅"

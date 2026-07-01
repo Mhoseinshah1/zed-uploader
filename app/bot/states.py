@@ -30,3 +30,16 @@ class AdminAdd(StatesGroup):
 class Broadcast(StatesGroup):
     waiting_message = State()
     confirming = State()
+
+
+# --- Phase 3 ---------------------------------------------------------------
+class Topup(StatesGroup):
+    waiting_amount = State()
+    waiting_receipt = State()
+
+
+class SellEdit(StatesGroup):
+    waiting_card = State()
+    waiting_holder = State()
+    waiting_price = State()      # data: plan key
+    waiting_duration = State()   # data: plan key

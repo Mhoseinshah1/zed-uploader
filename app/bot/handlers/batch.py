@@ -15,14 +15,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bot import messages
 from app.bot.callbacks import BatchCb
 from app.bot.filters import IsAdmin
+from app.bot.gating import feature_allowed, within_file_limit
 from app.bot.handlers.upload import MEDIA_FILTER, extract_file
-from app.bot.keyboards.inline import build_batch_controls
+from app.bot.keyboards.inline import build_batch_controls, build_open_plans
 from app.bot.states import Upload
 from app.core.logging import get_logger
 from app.core.redis_client import get_redis
 from app.models.user import User
 from app.services.bot_setting_service import BotSettingService
+from app.services.feature_service import FeatureService
 from app.services.media_service import MediaService
+from app.services.plan_service import PlanService
 
 router = Router(name="batch")
 log = get_logger("handler.batch")
@@ -35,9 +38,17 @@ def _key(telegram_id: int) -> str:
 
 
 @router.message(IsAdmin(), F.text == messages.BTN_BATCH_UPLOAD)
-async def batch_start(message: Message, state: FSMContext) -> None:
+async def batch_start(
+    message: Message, state: FSMContext, session: AsyncSession, db_user: User | None
+) -> None:
     await state.clear()
     if message.from_user is None:
+        return
+    if not await feature_allowed(session, "batch_upload", db_user, message.from_user.id):
+        required = await FeatureService.required_plan(session, "batch_upload")
+        await message.answer(
+            messages.requires_plan(required), reply_markup=build_open_plans()
+        )
         return
     await get_redis().delete(_key(message.from_user.id))
     await state.set_state(Upload.collecting)
@@ -80,6 +91,19 @@ async def batch_finish(
     raw_items = await redis.lrange(key, 0, -1)
     if not raw_items:
         await callback.answer(messages.BATCH_EMPTY, show_alert=True)
+        return
+
+    # enforce the plan's max_files (one batch = one media item)
+    tg_id = callback.from_user.id
+    if not await within_file_limit(session, db_user, tg_id):
+        limit = await PlanService(session).max_files(
+            db_user.effective_plan if db_user else "free"
+        )
+        if isinstance(callback.message, Message):
+            await callback.message.answer(
+                messages.file_limit_reached(limit or 0), reply_markup=build_open_plans()
+            )
+        await callback.answer()
         return
 
     items = [json.loads(r) for r in raw_items]
