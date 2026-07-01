@@ -14,7 +14,9 @@ python-multipart==0.0.12
 jinja2==3.1.4
 bcrypt==4.2.0
 pytest==8.3.3
+pytest-asyncio==0.24.0
 # aiosqlite + fakeredis are used only by the offline test suite (in-memory
-# SQLite + fake Redis); no live DB/Redis required to run pytest.
+# SQLite + fake Redis); no live DB/Redis required to run the unit tests.
+# Money-safety tests are integration tests gated on TEST_DATABASE_URL (real PG).
 aiosqlite==0.20.0
 fakeredis==2.25.1
