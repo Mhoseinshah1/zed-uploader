@@ -1,42 +1,67 @@
-"""Security helpers: password hashing and constant-time comparisons.
+"""Security helpers: password hashing, timing-safe compare, media-password
+brute-force lockout.
 
-Uses only the standard library (PBKDF2-HMAC-SHA256) so no extra native
-dependency is required. Media password protection is stored here but is not
-enforced in the Phase 1 delivery flow (the field/schema keeps Phase 2 open).
+Media passwords are hashed with **bcrypt** (the same primitive the web panel
+uses for admin logins) — never stored in plaintext, never SHA-256. The pbkdf2
+scheme used before Phase A2 is gone; there are no persisted media passwords yet
+so no migration of existing hashes is required.
 """
 from __future__ import annotations
 
-import hashlib
 import hmac
-import secrets
 
-_ALGORITHM = "pbkdf2_sha256"
-_ITERATIONS = 100_000
+import bcrypt
 
-
-def hash_password(password: str) -> str:
-    """Hash a plaintext password into a self-describing string."""
-    salt = secrets.token_hex(16)
-    derived = hashlib.pbkdf2_hmac(
-        "sha256", password.encode("utf-8"), salt.encode("utf-8"), _ITERATIONS
-    )
-    return f"{_ALGORITHM}${_ITERATIONS}${salt}${derived.hex()}"
+_BCRYPT_MAX_BYTES = 72  # bcrypt silently truncates beyond this; cap explicitly
 
 
-def verify_password(password: str, stored: str) -> bool:
-    """Verify a plaintext password against a previously hashed value."""
+# --- media password hashing (bcrypt) ---------------------------------------
+def hash_media_password(password: str) -> str:
+    """Hash a plaintext media password with bcrypt."""
+    pw = password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+    return bcrypt.hashpw(pw, bcrypt.gensalt(rounds=12)).decode("utf-8")
+
+
+def verify_media_password(password: str, password_hash: str) -> bool:
+    """Verify a plaintext media password against a stored bcrypt hash."""
     try:
-        algorithm, iterations, salt, hex_hash = stored.split("$")
-        if algorithm != _ALGORITHM:
-            return False
-        derived = hashlib.pbkdf2_hmac(
-            "sha256", password.encode("utf-8"), salt.encode("utf-8"), int(iterations)
-        )
-        return hmac.compare_digest(derived.hex(), hex_hash)
-    except (ValueError, AttributeError):
+        pw = password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+        return bcrypt.checkpw(pw, password_hash.encode("utf-8"))
+    except (ValueError, TypeError):
         return False
 
 
 def constant_time_compare(left: str, right: str) -> bool:
     """Timing-safe string comparison."""
     return hmac.compare_digest(left, right)
+
+
+# --- per-(user, code) media-password lockout (Redis fixed window) ----------
+MEDIA_PW_MAX_FAILURES = 3
+MEDIA_PW_LOCK_TTL = 5 * 60  # seconds a user stays locked out of one code
+
+
+def _media_pw_fail_key(user_id: int, code: str) -> str:
+    return f"mediapw:fail:{user_id}:{code}"
+
+
+async def media_password_locked(redis, user_id: int, code: str) -> bool:
+    """True once the user has burned all attempts for this code."""
+    value = await redis.get(_media_pw_fail_key(user_id, code))
+    return value is not None and int(value) >= MEDIA_PW_MAX_FAILURES
+
+
+async def record_media_password_failure(redis, user_id: int, code: str) -> int:
+    """Count one wrong attempt; return remaining attempts (0 = now locked).
+
+    The counter carries a fixed TTL, so the lockout releases itself.
+    """
+    key = _media_pw_fail_key(user_id, code)
+    count = await redis.incr(key)
+    if count == 1:
+        await redis.expire(key, MEDIA_PW_LOCK_TTL)
+    return max(0, MEDIA_PW_MAX_FAILURES - int(count))
+
+
+async def clear_media_password_failures(redis, user_id: int, code: str) -> None:
+    await redis.delete(_media_pw_fail_key(user_id, code))

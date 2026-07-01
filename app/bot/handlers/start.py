@@ -1,13 +1,16 @@
-"""/start handler + force-join recheck.
+"""/start handler + force-join recheck + per-file password gate.
 
 File delivery is delegated to ``deliver_by_code`` (app/bot/delivery.py), which
-enforces status -> force-join gate -> atomic claim -> send, and is shared with
-the join-recheck callback below.
+enforces status -> force-join gate -> password gate -> atomic claim -> send, and
+is shared with the join-recheck callback below. When a file is password
+protected the viewer is put into an FSM state and prompted; a wrong password is
+counted and, after a few tries, that (user, code) is locked out via Redis.
 """
 from __future__ import annotations
 
-from aiogram import Router
-from aiogram.filters import CommandObject, CommandStart
+from aiogram import F, Router
+from aiogram.filters import CommandObject, CommandStart, StateFilter
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,9 +19,17 @@ from app.bot.callbacks import JoinCb
 from app.bot.delivery import DeliveryStatus, deliver_by_code
 from app.bot.keyboards.inline import build_join_gate
 from app.bot.keyboards.reply import build_admin_menu, build_user_menu
+from app.bot.states import Delivery
 from app.core.logging import get_logger
+from app.core.redis_client import get_redis
+from app.core.security import (
+    clear_media_password_failures,
+    media_password_locked,
+    record_media_password_failure,
+)
 from app.models.user import User
 from app.services.admin_service import AdminService
+from app.services.media_service import MediaService
 
 router = Router(name="start")
 log = get_logger("handler.start")
@@ -41,10 +52,27 @@ async def _send_welcome(message: Message, session: AsyncSession) -> None:
         await message.answer(messages.WELCOME, reply_markup=build_user_menu())
 
 
+async def _reply_delivery(
+    message: Message, state: FSMContext, result, code: str
+) -> None:
+    """Translate a message-triggered delivery outcome into a user reply."""
+    if result.status is DeliveryStatus.GATED:
+        await message.answer(
+            messages.GATE_PROMPT, reply_markup=build_join_gate(result.channels, code)
+        )
+    elif result.status is DeliveryStatus.PASSWORD_REQUIRED:
+        await state.set_state(Delivery.waiting_password)
+        await state.update_data(code=code)
+        await message.answer(messages.PASSWORD_PROMPT)
+    elif result.status is not DeliveryStatus.DELIVERED:
+        await message.answer(_STATUS_MESSAGES.get(result.status, messages.NOT_FOUND))
+
+
 @router.message(CommandStart(deep_link=True))
 async def start_with_code(
     message: Message,
     command: CommandObject,
+    state: FSMContext,
     session: AsyncSession,
     db_user: User | None,
 ) -> None:
@@ -56,17 +84,15 @@ async def start_with_code(
     result = await deliver_by_code(
         message.bot, session, message.chat.id, message.from_user, code
     )
-    if result.status is DeliveryStatus.GATED:
-        await message.answer(
-            messages.GATE_PROMPT, reply_markup=build_join_gate(result.channels, code)
-        )
-    elif result.status is not DeliveryStatus.DELIVERED:
-        await message.answer(_STATUS_MESSAGES.get(result.status, messages.NOT_FOUND))
+    await _reply_delivery(message, state, result, code)
 
 
 @router.callback_query(JoinCb.filter())
 async def cb_join_recheck(
-    callback: CallbackQuery, callback_data: JoinCb, session: AsyncSession
+    callback: CallbackQuery,
+    callback_data: JoinCb,
+    state: FSMContext,
+    session: AsyncSession,
 ) -> None:
     """Re-run delivery after the user claims to have joined the channels."""
     if not isinstance(callback.message, Message):
@@ -82,6 +108,11 @@ async def cb_join_recheck(
     )
     if result.status is DeliveryStatus.GATED:
         await callback.answer(messages.GATE_STILL, show_alert=True)
+    elif result.status is DeliveryStatus.PASSWORD_REQUIRED:
+        await state.set_state(Delivery.waiting_password)
+        await state.update_data(code=callback_data.code)
+        await callback.answer()
+        await callback.message.answer(messages.PASSWORD_PROMPT)
     elif result.status is DeliveryStatus.DELIVERED:
         await callback.answer()
         try:
@@ -96,6 +127,57 @@ async def cb_join_recheck(
             )
         except Exception:
             pass
+
+
+@router.message(StateFilter(Delivery.waiting_password), F.text)
+async def input_delivery_password(
+    message: Message, state: FSMContext, session: AsyncSession, db_user: User | None
+) -> None:
+    """Verify a viewer-typed password, then deliver (or count the failure)."""
+    data = await state.get_data()
+    code = data.get("code")
+    if not code:
+        await state.clear()
+        return
+
+    user_id = message.from_user.id if message.from_user else message.chat.id
+    redis = get_redis()
+    if await media_password_locked(redis, user_id, code):
+        await message.answer(messages.PASSWORD_LOCKED)
+        return
+
+    service = MediaService(session)
+    media = await service.get_by_code(code)
+    if media is None or not media.password_hash:
+        # file vanished or lost its password meanwhile -> normal delivery attempt
+        await state.clear()
+        result = await deliver_by_code(
+            message.bot, session, message.chat.id, message.from_user, code
+        )
+        await _reply_delivery(message, state, result, code)
+        return
+
+    typed = (message.text or "").strip()
+    if MediaService.verify_password(media, typed):
+        await clear_media_password_failures(redis, user_id, code)
+        await state.clear()
+        result = await deliver_by_code(
+            message.bot,
+            session,
+            message.chat.id,
+            message.from_user,
+            code,
+            password_verified=True,
+        )
+        await _reply_delivery(message, state, result, code)
+        return
+
+    remaining = await record_media_password_failure(redis, user_id, code)
+    if remaining <= 0:
+        await state.clear()
+        await message.answer(messages.PASSWORD_LOCKED)
+    else:
+        await message.answer(messages.password_wrong(remaining))
 
 
 @router.message(CommandStart())

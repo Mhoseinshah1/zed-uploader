@@ -2,7 +2,7 @@
 force-join recheck callback.
 
 Order (Section 1): status check (no claim) -> force-join gate (no claim) ->
-atomic claim + send + log + schedule auto-delete.
+password gate (no claim) -> atomic claim + send + log + schedule auto-delete.
 """
 from __future__ import annotations
 
@@ -32,6 +32,7 @@ class DeliveryStatus(str, Enum):
     INACTIVE = "inactive"
     LIMIT_REACHED = "limit_reached"
     GATED = "gated"
+    PASSWORD_REQUIRED = "password_required"
     DELIVERED = "delivered"
     FAILED = "failed"
 
@@ -57,6 +58,8 @@ async def deliver_by_code(
     chat_id: int,
     user: TgUser | None,
     code: str,
+    *,
+    password_verified: bool = False,
 ) -> DeliveryResult:
     service = MediaService(session)
     user_id = user.id if user else chat_id
@@ -71,7 +74,12 @@ async def deliver_by_code(
     if channels:
         return DeliveryResult(DeliveryStatus.GATED, channels=channels)
 
-    # (c) atomic claim
+    # (c) password gate WITHOUT claiming (after force-join, before the claim)
+    protected = await service.get_by_code(code)
+    if protected is not None and protected.password_hash and not password_verified:
+        return DeliveryResult(DeliveryStatus.PASSWORD_REQUIRED, media=protected)
+
+    # (d) atomic claim
     claim_status, media = await service.try_claim_download(code)
     if claim_status is not MediaStatus.OK or media is None:
         return DeliveryResult(_FROM_MEDIA_STATUS.get(claim_status, DeliveryStatus.FAILED))
