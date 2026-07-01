@@ -2,7 +2,7 @@
 #
 # ZedUploader — single-command Ubuntu deploy.
 #
-#   git clone <REPO> && cd zed-uploader && sudo bash install.sh
+#   git clone https://github.com/Mhoseinshah1/zed-uploader && cd zed-uploader && sudo bash install.sh
 #
 # Works end-to-end in BOTH modes:
 #   * polling  — no domain/SSL needed; the bot service long-polls Telegram.
