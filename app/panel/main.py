@@ -18,6 +18,7 @@ from app.panel.routes import (
     media,
     payments,
     plans,
+    review,
     settings as settings_routes,
     users,
 )
@@ -29,6 +30,7 @@ for _module in (
     auth,
     users,
     media,
+    review,
     payments,
     plans,
     admins,

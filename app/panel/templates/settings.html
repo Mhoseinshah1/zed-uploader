@@ -23,6 +23,16 @@
 </section>
 
 <section class="panel-box">
+  <h2>آپلود کاربران</h2>
+  <form method="post" action="{{ panel_path }}/settings/uploads">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="checkbox"><input type="checkbox" name="user_upload_enabled" {{ "checked" if user_upload_enabled else "" }}> اجازهٔ آپلود به کاربران عادی</label>
+    <label class="checkbox"><input type="checkbox" name="user_upload_requires_review" {{ "checked" if user_upload_requires_review else "" }}> نیاز به تأیید ادمین پیش از انتشار</label>
+    <button type="submit">ذخیره</button>
+  </form>
+</section>
+
+<section class="panel-box">
   <h2>کانال‌های عضویت اجباری</h2>
   <form method="post" action="{{ panel_path }}/settings/channels/add">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

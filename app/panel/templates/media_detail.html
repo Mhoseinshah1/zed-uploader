@@ -6,6 +6,7 @@
   <tr><th>عنوان</th><td>{{ media.title or "—" }}</td></tr>
   <tr><th>دانلود</th><td>{{ media.download_count }}{% if media.download_limit %} / {{ media.download_limit }}{% endif %}</td></tr>
   <tr><th>وضعیت</th><td>{{ "فعال" if media.is_active else "غیرفعال" }}</td></tr>
+  <tr><th>بازبینی</th><td>{{ media.status }}</td></tr>
   <tr><th>محافظت محتوا</th><td>{{ "روشن" if media.protect_content else "خاموش" }}</td></tr>
   <tr><th>گذرواژه</th><td>{{ "🔒 دارد" if media.password_hash else "🔓 ندارد" }}</td></tr>
   <tr><th>حذف خودکار</th><td>{{ media.auto_delete_seconds or "خاموش" }}</td></tr>

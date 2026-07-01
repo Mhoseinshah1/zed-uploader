@@ -13,6 +13,8 @@ from app.services.bot_setting_service import (
     KEY_CARD_HOLDER,
     KEY_CARD_NUMBER,
     KEY_PROTECT,
+    KEY_USER_UPLOAD_ENABLED,
+    KEY_USER_UPLOAD_REVIEW,
     BotSettingService,
 )
 from app.services.channel_service import ChannelService
@@ -37,6 +39,8 @@ async def settings_page(
         "card_holder": await setting.get_raw(KEY_CARD_HOLDER) or "",
         "default_protect": await setting.effective_protect(),
         "default_autodelete": await setting.effective_autodelete(),
+        "user_upload_enabled": await setting.user_upload_enabled(),
+        "user_upload_requires_review": await setting.user_upload_requires_review(),
         "channels": channels,
     }
     return render(request, "settings.html", **ctx)
@@ -73,6 +77,23 @@ async def settings_defaults(
     await setting.set(KEY_PROTECT, default_protect == "on")
     await setting.set(KEY_AUTODELETE, max(0, default_autodelete))
     await audit(session, request, "settings_defaults")
+    return RedirectResponse(url=_p("/settings"), status_code=302)
+
+
+@router.post("/settings/uploads")
+async def settings_uploads(
+    request: Request,
+    user_upload_enabled: str = Form(""),
+    user_upload_requires_review: str = Form(""),
+    csrf_token: str = Form(""),
+    _=Depends(require_panel_user),
+    session: AsyncSession = Depends(get_session),
+):
+    await verify_csrf(request)
+    setting = BotSettingService(session)
+    await setting.set(KEY_USER_UPLOAD_ENABLED, user_upload_enabled == "on")
+    await setting.set(KEY_USER_UPLOAD_REVIEW, user_upload_requires_review == "on")
+    await audit(session, request, "settings_uploads")
     return RedirectResponse(url=_p("/settings"), status_code=302)
 
 

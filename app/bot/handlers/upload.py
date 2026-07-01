@@ -182,5 +182,46 @@ async def admin_upload(
 
 
 @router.message(MEDIA_FILTER)
-async def non_admin_upload(message: Message) -> None:
-    await message.answer(messages.NOT_ADMIN_UPLOAD)
+async def non_admin_upload(
+    message: Message, session: AsyncSession, db_user: User | None
+) -> None:
+    setting_service = BotSettingService(session)
+    if not await setting_service.user_upload_enabled():
+        await message.answer(messages.NOT_ADMIN_UPLOAD)
+        return
+    if db_user is None:
+        return
+
+    extracted = extract_file(message)
+    if extracted is None:
+        await message.answer(messages.UNSUPPORTED_UPLOAD)
+        return
+    file_data, caption = extracted
+
+    tg_id = message.from_user.id if message.from_user else 0
+    if not await within_file_limit(session, db_user, tg_id):
+        limit = await PlanService(session).max_files(db_user.effective_plan)
+        await message.answer(
+            messages.file_limit_reached(limit or 0), reply_markup=build_open_plans()
+        )
+        return
+
+    requires_review = await setting_service.user_upload_requires_review()
+    status = "pending" if requires_review else "approved"
+    protect = await setting_service.effective_protect()
+    autodelete = await setting_service.effective_autodelete()
+
+    service = MediaService(session)
+    media = await service.create_media(
+        files=[file_data],
+        owner_user_id=db_user.id,
+        caption=caption,
+        protect_content=protect,
+        auto_delete_seconds=autodelete or None,
+        status=status,
+    )
+    log.info("user_media_created", media_id=media.id, code=media.code, status=status)
+    if status == "approved":
+        await message.answer(messages.upload_success(service.deep_link(media), media.code))
+    else:
+        await message.answer(messages.UPLOAD_PENDING_REVIEW)

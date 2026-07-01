@@ -34,7 +34,10 @@ def build_admin_menu(is_owner: bool = False) -> ReplyKeyboardMarkup:
             KeyboardButton(text=messages.BTN_WALLET),
             KeyboardButton(text=messages.BTN_SUBSCRIPTION),
         ],
-        [KeyboardButton(text=messages.BTN_SETTINGS)],
+        [
+            KeyboardButton(text=messages.BTN_SETTINGS),
+            KeyboardButton(text=messages.BTN_REVIEW),
+        ],
     ]
     if is_owner:
         keyboard.append(

@@ -17,6 +17,7 @@ from app.bot.callbacks import (
     MediaCb,
     PayCb,
     PayCheckCb,
+    ReviewCb,
     SellCb,
     SetCb,
     SubCb,
@@ -30,6 +31,50 @@ from app.models.plan import Plan
 
 def _media_type(media: Media) -> str:
     return media.files[0].file_type if media.files else messages.UNKNOWN_TYPE
+
+
+def build_review_list(
+    items: list[Media], page: int, total_pages: int
+) -> InlineKeyboardMarkup:
+    """One row per pending media: view / approve / reject + a nav row."""
+    builder = InlineKeyboardBuilder()
+    for media in items:
+        builder.row(
+            InlineKeyboardButton(
+                text=messages.review_item_label(
+                    media.code, _media_type(media), media.owner_user_id
+                ),
+                callback_data=ReviewCb(action="view", id=media.id, page=page).pack(),
+            )
+        )
+        builder.row(
+            InlineKeyboardButton(
+                text=messages.LBL_APPROVE,
+                callback_data=ReviewCb(action="approve", id=media.id, page=page).pack(),
+            ),
+            InlineKeyboardButton(
+                text=messages.LBL_REJECT,
+                callback_data=ReviewCb(action="reject", id=media.id, page=page).pack(),
+            ),
+        )
+    nav: list[InlineKeyboardButton] = []
+    if page > 0:
+        nav.append(
+            InlineKeyboardButton(
+                text=messages.LBL_PREV,
+                callback_data=ReviewCb(action="list", page=page - 1).pack(),
+            )
+        )
+    if page < total_pages - 1:
+        nav.append(
+            InlineKeyboardButton(
+                text=messages.LBL_NEXT,
+                callback_data=ReviewCb(action="list", page=page + 1).pack(),
+            )
+        )
+    if nav:
+        builder.row(*nav)
+    return builder.as_markup()
 
 
 def build_files_list(

@@ -38,6 +38,45 @@ def upload_success(deep_link: str, code: str) -> str:
     )
 
 
+# --- user uploads + review (B1) ---------------------------------------------
+UPLOAD_PENDING_REVIEW = (
+    "✅ فایل شما ثبت شد و پس از تأیید ادمین، لینک آن برایتان ارسال می‌شود. ⏳"
+)
+
+
+def upload_approved_notify(deep_link: str, code: str) -> str:
+    return (
+        "✅ فایل شما تأیید شد!\n\n"
+        f"🔗 لینک اختصاصی:\n{deep_link}\n\n"
+        f"🆔 کد فایل: {code}"
+    )
+
+
+def upload_rejected_notify(reason: str | None) -> str:
+    base = "❌ متأسفانه فایل شما تأیید نشد."
+    return f"{base}\n\nدلیل: {reason}" if reason else base
+
+
+# review queue (admins)
+BTN_REVIEW = "🕵️ بازبینی آپلودها"
+REVIEW_QUEUE_EMPTY = "هیچ فایلی در انتظار بازبینی نیست."
+LBL_APPROVE = "✅ تأیید"
+LBL_REJECT = "❌ رد"
+ASK_REJECT_REASON = "دلیل رد را بنویس (برای رد بدون دلیل «-» بفرست):"
+REVIEW_APPROVED = "فایل تأیید شد و به کاربر اطلاع داده شد. ✅"
+REVIEW_REJECTED = "فایل رد شد و به کاربر اطلاع داده شد."
+REVIEW_GONE = "این مورد دیگر در صف بازبینی نیست."
+
+
+def review_queue_header(total: int, page: int, pages: int) -> str:
+    return f"🕵️ صف بازبینی ({total}) — صفحه {page}/{pages}"
+
+
+def review_item_label(code: str, file_type: str, owner_id: int | None) -> str:
+    owner = f" · کاربر #{owner_id}" if owner_id else ""
+    return f"👁 {code} · {file_type}{owner}"
+
+
 def auto_delete_notice(seconds: int) -> str:
     """Notice shown before scheduling auto-deletion of delivered files."""
     if seconds % 3600 == 0 and seconds >= 3600:

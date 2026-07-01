@@ -17,6 +17,7 @@ from app.bot.handlers import (
     channels,
     common,
     menu,
+    review,
     start,
     upload,
 )
@@ -59,6 +60,7 @@ def create_dispatcher() -> Dispatcher:
     # media handler wins while batching; the catch-all `common` MUST stay last.
     dispatcher.include_router(start.router)
     dispatcher.include_router(menu.router)
+    dispatcher.include_router(review.router)
     dispatcher.include_router(channels.router)
     dispatcher.include_router(admins.router)
     dispatcher.include_router(broadcast.router)

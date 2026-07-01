@@ -15,6 +15,10 @@ class Delivery(StatesGroup):
     waiting_password = State()  # data: code — a viewer entering a file password
 
 
+class Review(StatesGroup):
+    waiting_reason = State()  # data: media_id, page — admin rejecting an upload
+
+
 class SettingsEdit(StatesGroup):
     waiting_default_autodelete = State()
 

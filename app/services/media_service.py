@@ -6,6 +6,7 @@ download counter is incremented with a single conditional
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -17,6 +18,7 @@ from app.core.security import hash_media_password, verify_media_password
 from app.models.download_log import DownloadLog
 from app.models.media import Media
 from app.models.media_file import MediaFile
+from app.models.user import User
 from app.services.code_generator import generate_unique_code
 
 
@@ -25,6 +27,13 @@ class MediaStatus(str, Enum):
     NOT_FOUND = "not_found"
     INACTIVE = "inactive"
     LIMIT_REACHED = "limit_reached"
+
+
+# review lifecycle for a media item (B1)
+APPROVED = "approved"
+PENDING = "pending"
+REJECTED = "rejected"
+DRAFT = "draft"
 
 
 class MediaService:
@@ -48,6 +57,7 @@ class MediaService:
         auto_delete_seconds: int | None = None,
         download_limit: int | None = None,
         password_hash: str | None = None,
+        status: str = APPROVED,
     ) -> Media:
         """Create a Media row plus its MediaFile children in one transaction."""
         code = await generate_unique_code(self.session)
@@ -57,6 +67,7 @@ class MediaService:
             title=title,
             caption=caption,
             password_hash=password_hash,
+            status=status,
             download_limit=download_limit,
             protect_content=(
                 settings.default_protect_content
@@ -84,6 +95,10 @@ class MediaService:
         media = await self.get_by_code(code)
         if media is None:
             return MediaStatus.NOT_FOUND
+        # Only approved media are retrievable by code. A pending/rejected/draft
+        # item must be indistinguishable from a non-existent one.
+        if media.status != APPROVED:
+            return MediaStatus.NOT_FOUND
         if not media.is_active:
             return MediaStatus.INACTIVE
         if (
@@ -100,11 +115,19 @@ class MediaService:
         media = await self.get_by_code(code)
         if media is None:
             return MediaStatus.NOT_FOUND, None
+        if media.status != APPROVED:
+            return MediaStatus.NOT_FOUND, None
         if not media.is_active:
             return MediaStatus.INACTIVE, media
+        # The status guard is repeated in the atomic UPDATE so a status change
+        # racing the claim can never hand out a non-approved item.
         stmt = (
             update(Media)
-            .where(Media.id == media.id, Media.is_active.is_(True))
+            .where(
+                Media.id == media.id,
+                Media.is_active.is_(True),
+                Media.status == APPROVED,
+            )
             .where(
                 (Media.download_limit.is_(None))
                 | (Media.download_count < Media.download_limit)
@@ -177,6 +200,19 @@ class MediaService:
             or 0
         )
 
+    async def count_quota_by_owner(self, owner_user_id: int) -> int:
+        """Media occupying a plan quota slot for an owner: everything except
+        rejected items (approved + pending + draft)."""
+        return int(
+            await self.session.scalar(
+                select(func.count(Media.id)).where(
+                    Media.owner_user_id == owner_user_id,
+                    Media.status != REJECTED,
+                )
+            )
+            or 0
+        )
+
     async def get_owned(self, media_id: int, owner_user_id: int) -> Media | None:
         return await self.session.scalar(
             select(Media).where(
@@ -243,6 +279,63 @@ class MediaService:
         if not media.password_hash:
             return True
         return verify_media_password(raw_password, media.password_hash)
+
+    # ------------------------------------------------------------------
+    # review queue (B1) — admin-facing, NOT owner-scoped
+    # ------------------------------------------------------------------
+    async def list_pending(self, *, limit: int = 5, offset: int = 0) -> list[Media]:
+        result = await self.session.scalars(
+            select(Media)
+            .where(Media.status == PENDING)
+            .order_by(Media.id.asc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(result.all())
+
+    async def count_pending(self) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count(Media.id)).where(Media.status == PENDING)
+            )
+            or 0
+        )
+
+    async def get_pending(self, media_id: int) -> Media | None:
+        return await self.session.scalar(
+            select(Media).where(Media.id == media_id, Media.status == PENDING)
+        )
+
+    async def approve(self, media_id: int, admin_id: int | None) -> Media | None:
+        """Approve a pending media. Returns the media, or None if not pending."""
+        media = await self.get_pending(media_id)
+        if media is None:
+            return None
+        media.status = APPROVED
+        media.approved_at = datetime.now(timezone.utc)
+        media.reviewed_by_admin_id = admin_id
+        await self.session.commit()
+        return media
+
+    async def reject(
+        self, media_id: int, admin_id: int | None, note: str | None = None
+    ) -> Media | None:
+        """Reject a pending media. Returns the media, or None if not pending."""
+        media = await self.get_pending(media_id)
+        if media is None:
+            return None
+        media.status = REJECTED
+        media.review_note = note
+        media.reviewed_by_admin_id = admin_id
+        await self.session.commit()
+        return media
+
+    async def owner_telegram_id(self, owner_user_id: int | None) -> int | None:
+        if owner_user_id is None:
+            return None
+        return await self.session.scalar(
+            select(User.telegram_id).where(User.id == owner_user_id)
+        )
 
     async def delete_media(self, media_id: int, owner_user_id: int) -> bool:
         result = await self.session.execute(

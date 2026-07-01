@@ -18,6 +18,12 @@ KEY_CARD_HOLDER = "card_holder"
 KEY_TOPUP_MIN = "topup_min"
 DEFAULT_TOPUP_MIN = 10000
 
+# B1 — user uploads
+KEY_USER_UPLOAD_ENABLED = "user_upload_enabled"
+KEY_USER_UPLOAD_REVIEW = "user_upload_requires_review"
+DEFAULT_USER_UPLOAD_ENABLED = False
+DEFAULT_USER_UPLOAD_REVIEW = True
+
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
@@ -63,3 +69,9 @@ class BotSettingService:
 
     async def effective_autodelete(self) -> int:
         return await self.get_int(KEY_AUTODELETE, settings.default_auto_delete_seconds)
+
+    async def user_upload_enabled(self) -> bool:
+        return await self.get_bool(KEY_USER_UPLOAD_ENABLED, DEFAULT_USER_UPLOAD_ENABLED)
+
+    async def user_upload_requires_review(self) -> bool:
+        return await self.get_bool(KEY_USER_UPLOAD_REVIEW, DEFAULT_USER_UPLOAD_REVIEW)
