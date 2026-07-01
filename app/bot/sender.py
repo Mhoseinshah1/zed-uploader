@@ -6,7 +6,7 @@ in-memory scheduling lives here. Only file sending and the auto-delete notice.
 from __future__ import annotations
 
 from aiogram import Bot
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardMarkup, Message
 
 from app.bot.messages import auto_delete_notice
 from app.models.media_file import MediaFile
@@ -19,11 +19,16 @@ async def send_media_file(
     *,
     caption: str | None = None,
     protect_content: bool = False,
+    reply_markup: InlineKeyboardMarkup | None = None,
 ) -> int:
     """Send a single stored file by its Telegram file_id; return message_id."""
     file_type = media_file.file_type
     file_id = media_file.telegram_file_id
-    common = {"chat_id": chat_id, "protect_content": protect_content}
+    common = {
+        "chat_id": chat_id,
+        "protect_content": protect_content,
+        "reply_markup": reply_markup,
+    }
 
     if file_type == "photo":
         sent = await bot.send_photo(photo=file_id, caption=caption, **common)

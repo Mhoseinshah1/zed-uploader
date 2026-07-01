@@ -9,7 +9,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -147,3 +147,97 @@ class MediaService:
 
     async def total_downloads(self) -> int:
         return int(await self.session.scalar(select(func.count(DownloadLog.id))) or 0)
+
+    # ------------------------------------------------------------------
+    # owner-scoped admin-panel methods (Phase 2)
+    #
+    # Every mutator's WHERE includes owner_user_id, so a wrong owner is a
+    # no-op that returns False. Each commits per call.
+    # ------------------------------------------------------------------
+    async def list_by_owner(
+        self, owner_user_id: int, *, limit: int = 5, offset: int = 0
+    ) -> list[Media]:
+        result = await self.session.scalars(
+            select(Media)
+            .where(Media.owner_user_id == owner_user_id)
+            .order_by(Media.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(result.all())
+
+    async def count_by_owner(self, owner_user_id: int) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count(Media.id)).where(
+                    Media.owner_user_id == owner_user_id
+                )
+            )
+            or 0
+        )
+
+    async def get_owned(self, media_id: int, owner_user_id: int) -> Media | None:
+        return await self.session.scalar(
+            select(Media).where(
+                Media.id == media_id, Media.owner_user_id == owner_user_id
+            )
+        )
+
+    async def _owned_update(self, media_id: int, owner_user_id: int, **values: Any) -> bool:
+        result = await self.session.execute(
+            update(Media)
+            .where(Media.id == media_id, Media.owner_user_id == owner_user_id)
+            .values(**values)
+        )
+        await self.session.commit()
+        return result.rowcount > 0
+
+    async def set_active(
+        self, media_id: int, owner_user_id: int, is_active: bool
+    ) -> bool:
+        return await self._owned_update(media_id, owner_user_id, is_active=is_active)
+
+    async def set_protect(
+        self, media_id: int, owner_user_id: int, protect: bool
+    ) -> bool:
+        return await self._owned_update(
+            media_id, owner_user_id, protect_content=protect
+        )
+
+    async def set_auto_delete(
+        self, media_id: int, owner_user_id: int, seconds: int | None
+    ) -> bool:
+        return await self._owned_update(
+            media_id, owner_user_id, auto_delete_seconds=seconds
+        )
+
+    async def set_download_limit(
+        self, media_id: int, owner_user_id: int, limit: int | None
+    ) -> bool:
+        return await self._owned_update(
+            media_id, owner_user_id, download_limit=limit
+        )
+
+    async def set_caption(
+        self, media_id: int, owner_user_id: int, caption: str | None
+    ) -> bool:
+        return await self._owned_update(media_id, owner_user_id, caption=caption)
+
+    async def delete_media(self, media_id: int, owner_user_id: int) -> bool:
+        result = await self.session.execute(
+            delete(Media).where(
+                Media.id == media_id, Media.owner_user_id == owner_user_id
+            )
+        )
+        await self.session.commit()
+        return result.rowcount > 0
+
+    async def owner_stats(self, owner_user_id: int) -> tuple[int, int]:
+        """Return (media_count, total_downloads) for one owner."""
+        media_count = await self.count_by_owner(owner_user_id)
+        total = await self.session.scalar(
+            select(func.count(DownloadLog.id))
+            .join(Media, DownloadLog.media_id == Media.id)
+            .where(Media.owner_user_id == owner_user_id)
+        )
+        return media_count, int(total or 0)

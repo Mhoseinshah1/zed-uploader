@@ -15,6 +15,7 @@ from app.bot import messages
 from app.bot.filters import IsAdmin
 from app.core.logging import get_logger
 from app.models.user import User
+from app.services.bot_setting_service import BotSettingService
 from app.services.media_service import MediaService
 
 router = Router(name="upload")
@@ -147,10 +148,19 @@ async def admin_upload(
 
     file_data, caption = extracted
     service = MediaService(session)
+
+    # Honor the admin's effective defaults (BotSetting, falling back to env),
+    # passed explicitly so new uploads use them (not just create_media's env).
+    setting_service = BotSettingService(session)
+    protect = await setting_service.effective_protect()
+    autodelete = await setting_service.effective_autodelete()
+
     media = await service.create_media(
         files=[file_data],
         owner_user_id=db_user.id if db_user else None,
         caption=caption,
+        protect_content=protect,
+        auto_delete_seconds=autodelete or None,
     )
     log.info("media_created", media_id=media.id, code=media.code)
     await message.answer(messages.upload_success(service.deep_link(media), media.code))
