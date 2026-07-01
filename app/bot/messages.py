@@ -297,8 +297,8 @@ def broadcast_confirm(count: int) -> str:
     return f"ارسال به {count} کاربر؟"
 
 
-def broadcast_summary(sent: int, failed: int) -> str:
-    return f"📢 ارسال شد: {sent} | ناموفق/مسدود: {failed}"
+def broadcast_summary(sent: int, failed: int, blocked: int = 0) -> str:
+    return f"📢 ارسال شد: {sent} | ناموفق: {failed} | مسدود: {blocked}"
 
 
 # ===========================================================================

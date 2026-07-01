@@ -4,6 +4,9 @@
 {% if request.query_params.get("sent") == "1" %}
 <p class="ok">پیام در صف ارسال قرار گرفت؛ ورکر آن را ارسال می‌کند.</p>
 {% endif %}
+{% if request.query_params.get("retried") %}
+<p class="ok">{{ request.query_params.get("retried") }} مورد ناموفق دوباره در صف قرار گرفت.</p>
+{% endif %}
 
 {% if confirm %}
 <div class="panel-box">
@@ -25,4 +28,34 @@
   <button type="submit">ادامه</button>
 </form>
 {% endif %}
+
+<h2>ارسال‌های اخیر</h2>
+<table>
+  <thead>
+    <tr><th>#</th><th>وضعیت</th><th>کل</th><th>ارسال</th><th>ناموفق</th><th>مسدود</th><th>زمان</th><th></th></tr>
+  </thead>
+  <tbody>
+  {% for job in jobs %}
+    <tr>
+      <td>{{ job.id }}</td>
+      <td>{{ job.status }}</td>
+      <td>{{ job.total }}</td>
+      <td>{{ job.sent }}</td>
+      <td>{{ job.failed }}</td>
+      <td>{{ job.blocked }}</td>
+      <td>{{ job.created_at.strftime("%Y-%m-%d %H:%M") if job.created_at else "—" }}</td>
+      <td>
+        {% if job.failed and job.failed > 0 %}
+        <form method="post" action="{{ panel_path }}/broadcast/{{ job.id }}/retry">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">تلاش مجدد ناموفق‌ها</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8">موردی نیست</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
 {% endblock %}

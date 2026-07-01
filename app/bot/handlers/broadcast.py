@@ -12,7 +12,6 @@ from app.bot.filters import IsOwner
 from app.bot.keyboards.inline import build_broadcast_confirm
 from app.bot.states import Broadcast
 from app.core.logging import get_logger
-from app.core.redis_client import get_redis
 from app.services import broadcast as broadcast_service
 
 router = Router(name="broadcast")
@@ -41,7 +40,7 @@ async def broadcast_capture(
 
 @router.callback_query(IsOwner(), BcastCb.filter(F.action == "confirm"))
 async def broadcast_confirm(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, session: AsyncSession
 ) -> None:
     data = await state.get_data()
     await state.clear()
@@ -50,13 +49,14 @@ async def broadcast_confirm(
     if from_chat_id is None or message_id is None:
         await callback.answer(messages.BROADCAST_NO_MESSAGE, show_alert=True)
         return
-    await broadcast_service.enqueue(
-        get_redis(),
+    requested_by = callback.from_user.id if callback.from_user else int(from_chat_id)
+    job = await broadcast_service.create_job(
+        session,
         from_chat_id=int(from_chat_id),
         message_id=int(message_id),
-        requested_by=callback.from_user.id if callback.from_user else int(from_chat_id),
+        created_by=requested_by,
     )
-    log.info("broadcast_enqueued", requested_by=callback.from_user.id if callback.from_user else None)
+    log.info("broadcast_enqueued", job_id=job.id, total=job.total, requested_by=requested_by)
     if isinstance(callback.message, Message):
         await callback.message.answer(messages.BROADCAST_STARTED)
     await callback.answer()

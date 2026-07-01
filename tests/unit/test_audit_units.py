@@ -8,7 +8,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-import fakeredis.aioredis as fakeredis
 import pytest_asyncio
 from aiogram.exceptions import TelegramForbiddenError
 from sqlalchemy import select
@@ -17,7 +16,15 @@ from sqlalchemy.pool import StaticPool
 
 import app.workers.main as worker
 from app.bot.filters import IsAdmin, IsOwner
-from app.models import Admin, Base, FeatureFlag, Media, User
+from app.models import (
+    Admin,
+    Base,
+    BroadcastJob,
+    BroadcastRecipient,
+    FeatureFlag,
+    Media,
+    User,
+)
 from app.services import broadcast as bcast
 from app.services.admin_service import AdminService
 from app.services.channel_service import ChannelService
@@ -136,19 +143,20 @@ async def test_broadcast_owner_guard(sqlite_maker):
         assert await IsOwner()(owner, s) is True
 
 
-# 13b broadcast worker marks blocked + advances cursor ----------------------
+# 13b broadcast worker marks blocked + records per-recipient statuses --------
 class _BroadcastBot:
     def __init__(self, blocked_telegram_id):
         self.blocked = blocked_telegram_id
-        self.copied = []
+        self.copied = []       # copy_message targets that succeeded
+        self.summaries = []    # send_message (job completion summary) targets
 
     async def copy_message(self, chat_id, from_chat_id, message_id):
         if chat_id == self.blocked:
             raise TelegramForbiddenError(method=SimpleNamespace(), message="blocked")
         self.copied.append(chat_id)
 
-    async def send_message(self, chat_id, text):  # not used on the copy path
-        self.copied.append(chat_id)
+    async def send_message(self, chat_id, text):  # completion summary only here
+        self.summaries.append(chat_id)
 
 
 async def test_broadcast_worker_marks_blocked_and_advances(sqlite_maker):
@@ -159,21 +167,34 @@ async def test_broadcast_worker_marks_blocked_and_advances(sqlite_maker):
         s.add_all([u1, u2, u3])
         await s.commit()
         ids = (u1.id, u2.id, u3.id)
+        job = await bcast.create_job(s, from_chat_id=1, message_id=10, created_by=555)
+        job_id = job.id
 
-    redis = fakeredis.FakeRedis(decode_responses=True)
-    await bcast.enqueue(redis, from_chat_id=1, message_id=10, requested_by=555)
     bot = _BroadcastBot(blocked_telegram_id=7002)
-
-    await worker.process_broadcast_once(bot, redis, sqlite_maker)
+    # drain the job to completion (page -> finalize -> idle)
+    assert await worker.process_broadcast_once(bot, sqlite_maker) is True
+    while await worker.process_broadcast_once(bot, sqlite_maker):
+        pass
 
     async with sqlite_maker() as s:
         blocked = await s.get(User, ids[1])
         others = [await s.get(User, ids[0]), await s.get(User, ids[2])]
+        done = await s.get(BroadcastJob, job_id)
+        recips = list(
+            await s.scalars(
+                select(BroadcastRecipient).where(
+                    BroadcastRecipient.broadcast_id == job_id
+                )
+            )
+        )
     assert blocked.is_blocked is True
     assert all(u.is_blocked is False for u in others)
+    assert done.status == "done"
+    assert done.sent == 2 and done.blocked == 1 and done.failed == 0
+    assert sorted(bot.copied) == [7001, 7003]  # blocked user never delivered
+    assert all(r.status != "pending" for r in recips)  # ledger fully drained
 
-    import json
-    active = json.loads(await redis.get(bcast.ACTIVE_KEY))
-    assert active["cursor_id"] == ids[2]  # cursor advanced to the last user
-    assert active["sent"] == 2 and active["failed"] == 1
-    await redis.aclose()
+    # exactly-once: another pass must not re-send anything
+    before = list(bot.copied)
+    await worker.process_broadcast_once(bot, sqlite_maker)
+    assert bot.copied == before

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from app.db.base import Base
 from app.models.admin import Admin
+from app.models.broadcast import BroadcastJob, BroadcastRecipient
 from app.models.channel import RequiredChannel
 from app.models.download_log import DownloadLog
 from app.models.media import Media
@@ -31,4 +32,6 @@ __all__ = [
     "Payment",
     "PanelUser",
     "PanelAudit",
+    "BroadcastJob",
+    "BroadcastRecipient",
 ]
