@@ -7,6 +7,7 @@ from app.models.channel import RequiredChannel
 from app.models.download_log import DownloadLog
 from app.models.media import Media
 from app.models.media_file import MediaFile
+from app.models.panel import PanelAudit, PanelUser
 from app.models.payment import Payment
 from app.models.plan import Plan
 from app.models.settings import BotSetting, FeatureFlag
@@ -28,4 +29,6 @@ __all__ = [
     "Subscription",
     "WalletTransaction",
     "Payment",
+    "PanelUser",
+    "PanelAudit",
 ]

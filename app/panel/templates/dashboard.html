@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>داشبورد</h1>
+<section class="cards">
+  <div class="card"><span class="num">{{ stats.total_users }}</span><span class="lbl">کاربران</span></div>
+  <div class="card"><span class="num">{{ stats.total_media }}</span><span class="lbl">فایل‌ها</span></div>
+  <div class="card"><span class="num">{{ stats.total_downloads }}</span><span class="lbl">دانلودها</span></div>
+  <div class="card"><span class="num">{{ "{:,}".format(stats.revenue) }}</span><span class="lbl">درآمد این ماه (تومان)</span></div>
+  <div class="card"><span class="num">{{ stats.pending }}</span><span class="lbl">پرداخت‌های در انتظار</span></div>
+  <div class="card"><span class="num">{{ stats.active_subs }}</span><span class="lbl">اشتراک‌های فعال</span></div>
+</section>
+
+<h2>پرطرفدارترین فایل‌ها</h2>
+<table>
+  <thead><tr><th>کد</th><th>عنوان</th><th>دانلود</th></tr></thead>
+  <tbody>
+  {% for m in top_files %}
+    <tr><td><a href="{{ panel_path }}/media/{{ m.id }}">{{ m.code }}</a></td><td>{{ m.title or "—" }}</td><td>{{ m.download_count }}</td></tr>
+  {% else %}
+    <tr><td colspan="3">موردی نیست</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2>پرداخت‌های اخیر</h2>
+<table>
+  <thead><tr><th>#</th><th>کاربر</th><th>مبلغ</th><th>وضعیت</th></tr></thead>
+  <tbody>
+  {% for p in recent_payments %}
+    <tr><td>{{ p.id }}</td><td>{{ p.user_id }}</td><td>{{ "{:,}".format(p.amount) }}</td><td>{{ p.status }}</td></tr>
+  {% else %}
+    <tr><td colspan="4">موردی نیست</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>ادمین‌ها</h1>
+<form class="search" method="post" action="{{ panel_path }}/admins/add">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="number" name="telegram_id" placeholder="آیدی عددی تلگرام" required>
+  <button type="submit">افزودن ادمین</button>
+</form>
+<table>
+  <thead><tr><th>#</th><th>آیدی تلگرام</th><th>نقش</th><th>فعال</th><th>اقدام</th></tr></thead>
+  <tbody>
+  {% for a in admins %}
+    <tr>
+      <td>{{ a.id }}</td>
+      <td>{{ a.telegram_id }}</td>
+      <td>{{ a.role }}</td>
+      <td>{{ "بله" if a.is_active else "خیر" }}</td>
+      <td>
+        {% if a.telegram_id in env_owners %}
+          <span class="muted">مالک سرور</span>
+        {% else %}
+        <form method="post" action="{{ panel_path }}/admins/{{ a.id }}/remove" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="danger">حذف</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}<tr><td colspan="5">موردی نیست</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

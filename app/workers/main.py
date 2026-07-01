@@ -101,11 +101,15 @@ async def process_broadcast_once(bot, redis, session_maker) -> bool:
 
 
 async def _copy(bot, job, user) -> None:
-    await bot.copy_message(
-        chat_id=user.telegram_id,
-        from_chat_id=job["from_chat_id"],
-        message_id=job["message_id"],
-    )
+    # Panel text broadcasts carry "text"; bot broadcasts carry a message to copy.
+    if job.get("text") is not None:
+        await bot.send_message(user.telegram_id, job["text"])
+    else:
+        await bot.copy_message(
+            chat_id=user.telegram_id,
+            from_chat_id=job["from_chat_id"],
+            message_id=job["message_id"],
+        )
 
 
 async def _send_one(bot, job, user) -> str:

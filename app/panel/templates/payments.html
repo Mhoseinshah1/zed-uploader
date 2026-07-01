@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>پرداخت‌ها</h1>
+<div class="tabs">
+  <a href="{{ panel_path }}/payments?status=pending" class="{{ 'active' if status == 'pending' else '' }}">در انتظار</a>
+  <a href="{{ panel_path }}/payments?status=all" class="{{ 'active' if status == 'all' else '' }}">همه</a>
+</div>
+<table>
+  <thead><tr><th>#</th><th>کاربر</th><th>مبلغ</th><th>روش</th><th>وضعیت</th><th>رسید</th><th>اقدام</th></tr></thead>
+  <tbody>
+  {% for p in payments %}
+    <tr>
+      <td>{{ p.id }}</td>
+      <td>{{ p.user_id }}</td>
+      <td>{{ "{:,}".format(p.amount) }}</td>
+      <td>{{ p.method }}</td>
+      <td>{{ p.status }}</td>
+      <td>{{ (p.receipt[:24] ~ "…") if p.receipt else "—" }}</td>
+      <td>
+        {% if p.status == "pending" %}
+        <form method="post" action="{{ panel_path }}/payments/{{ p.id }}/approve" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">تأیید</button>
+        </form>
+        <form method="post" action="{{ panel_path }}/payments/{{ p.id }}/reject" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="danger">رد</button>
+        </form>
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+  {% else %}<tr><td colspan="7">موردی نیست</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

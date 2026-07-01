@@ -1,0 +1,73 @@
+:root {
+  --bg: #0f1115; --panel: #171a21; --muted: #8b93a7; --text: #e6e9ef;
+  --accent: #3b82f6; --danger: #ef4444; --ok: #22c55e; --border: #262b36;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: Tahoma, "Segoe UI", Vazirmatn, sans-serif; line-height: 1.7;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.topbar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--border);
+}
+.brand { font-weight: bold; font-size: 1.1rem; }
+.nav { display: flex; gap: 14px; flex-wrap: wrap; }
+.nav a { color: var(--text); }
+.logout { margin-inline-start: auto; display: flex; align-items: center; gap: 8px; }
+.user { color: var(--muted); }
+
+.content { max-width: 1000px; margin: 0 auto; padding: 20px; }
+h1 { font-size: 1.4rem; } h2 { font-size: 1.15rem; margin-top: 24px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; display: flex; flex-direction: column; gap: 6px;
+}
+.card .num { font-size: 1.6rem; font-weight: bold; }
+.card .lbl { color: var(--muted); font-size: .85rem; }
+
+table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: right; }
+th { color: var(--muted); font-weight: 600; }
+table.kv th { width: 180px; }
+
+input, textarea, button, select {
+  font-family: inherit; font-size: 1rem; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: #0d0f14; color: var(--text);
+}
+button {
+  background: var(--accent); border-color: var(--accent); color: white; cursor: pointer;
+}
+button.danger { background: var(--danger); border-color: var(--danger); }
+label { display: block; margin: 8px 0; }
+label.checkbox { display: flex; align-items: center; gap: 8px; }
+
+.actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+.actions form { display: flex; gap: 8px; align-items: center; }
+.search { display: flex; gap: 8px; margin: 12px 0; }
+.pager { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
+.tabs { display: flex; gap: 12px; margin: 12px 0; }
+.tabs a.active { font-weight: bold; text-decoration: underline; }
+
+.panel-box {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; margin: 16px 0;
+}
+.plan-row { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 12px 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+textarea { width: 100%; }
+blockquote { border-inline-start: 3px solid var(--accent); margin: 8px 0; padding: 6px 12px; color: var(--muted); }
+
+.error { color: var(--danger); } .ok { color: var(--ok); } .muted { color: var(--muted); }
+
+.login-body { display: flex; min-height: 100vh; align-items: center; justify-content: center; }
+.login-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 28px; width: 320px; display: flex; flex-direction: column; gap: 6px;
+}
+.login-card h1 { margin: 0 0 12px; font-size: 1.2rem; text-align: center; }
+.login-card button { margin-top: 12px; }

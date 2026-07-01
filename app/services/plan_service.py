@@ -36,6 +36,26 @@ class PlanService:
         await self.session.commit()
         return True
 
+    async def set_max_files(self, key: str, value: int | None) -> bool:
+        plan = await self.get(key)
+        if plan is None:
+            return False
+        plan.max_files = value
+        await self.session.commit()
+        return True
+
+    async def set_active(self, key: str, is_active: bool) -> bool:
+        plan = await self.get(key)
+        if plan is None:
+            return False
+        plan.is_active = is_active
+        await self.session.commit()
+        return True
+
+    async def list_all(self) -> list[Plan]:
+        result = await self.session.scalars(select(Plan).order_by(Plan.id))
+        return list(result.all())
+
     async def max_files(self, plan_key: str) -> int | None:
         """Return the plan's max_files (None = unlimited)."""
         plan = await self.get(plan_key)

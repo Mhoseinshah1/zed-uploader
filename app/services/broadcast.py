@@ -33,5 +33,17 @@ async def enqueue(
     await redis.rpush(QUEUE_KEY, json.dumps(job))
 
 
+async def enqueue_text(redis: Redis, *, text: str, requested_by: int) -> None:
+    """A plain-text broadcast job (worker uses send_message instead of copy)."""
+    job = {
+        "text": text,
+        "cursor_id": 0,
+        "requested_by": requested_by,
+        "sent": 0,
+        "failed": 0,
+    }
+    await redis.rpush(QUEUE_KEY, json.dumps(job))
+
+
 async def audience_count(session: AsyncSession) -> int:
     return int(await session.scalar(select(func.count(User.id))) or 0)

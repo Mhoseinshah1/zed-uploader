@@ -21,6 +21,15 @@ os.environ.setdefault("API_KEY", "test_api_key")
 os.environ.setdefault("WEBHOOK_SECRET", "test_webhook_secret")
 os.environ.setdefault("WEBHOOK_PATH", "/telegram/webhook")
 os.environ.setdefault("DOMAIN", "https://example.com")
+os.environ.setdefault("SESSION_SECRET", "test_session_secret")
+
+# Use fakeredis for the whole suite so Redis-backed features (rate limiting,
+# panel sessions, panel login lockout) behave deterministically offline.
+import fakeredis.aioredis as _fakeredis  # noqa: E402
+
+import app.core.redis_client as _redis_client  # noqa: E402
+
+_redis_client._client = _fakeredis.FakeRedis(decode_responses=True)
 
 import pytest
 from fastapi.testclient import TestClient

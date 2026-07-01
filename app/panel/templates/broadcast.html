@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>پیام همگانی</h1>
+{% if request.query_params.get("sent") == "1" %}
+<p class="ok">پیام در صف ارسال قرار گرفت؛ ورکر آن را ارسال می‌کند.</p>
+{% endif %}
+
+{% if confirm %}
+<div class="panel-box">
+  <p>این پیام برای <strong>{{ audience }}</strong> کاربر ارسال شود؟</p>
+  <blockquote>{{ text }}</blockquote>
+  <form method="post" action="{{ panel_path }}/broadcast">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="text" value="{{ text }}">
+    <input type="hidden" name="confirm" value="1">
+    <button type="submit">بله، ارسال کن</button>
+    <a href="{{ panel_path }}/broadcast">انصراف</a>
+  </form>
+</div>
+{% else %}
+<form class="panel-box" method="post" action="{{ panel_path }}/broadcast">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <p>مخاطبان: {{ audience }} کاربر</p>
+  <textarea name="text" rows="6" placeholder="متن پیام..." required>{{ text }}</textarea>
+  <button type="submit">ادامه</button>
+</form>
+{% endif %}
+{% endblock %}

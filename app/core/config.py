@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     api_key: str = "change_this_api_key"
     jwt_secret: str = "change_this_jwt_secret"
 
+    # --- web panel (Phase 4) ---------------------------------------------
+    session_secret: str = "change_this_session_secret"
+    panel_path: str = "/panel"
+
     # --- media defaults --------------------------------------------------
     default_protect_content: bool = False
     default_auto_delete_seconds: int = 0

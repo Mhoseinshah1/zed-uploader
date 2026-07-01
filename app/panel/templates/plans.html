@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>پلن‌ها</h1>
+{% for p in plans %}
+<form class="plan-row" method="post" action="{{ panel_path }}/plans/{{ p.key }}/update">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <h3>{{ p.title }} <small>({{ p.key }})</small></h3>
+  <label>قیمت (تومان)
+    <input type="number" name="price" value="{{ p.price }}" min="0">
+  </label>
+  <label>مدت (روز)
+    <input type="number" name="duration_days" value="{{ p.duration_days }}" min="0">
+  </label>
+  <label>سقف فایل (خالی = نامحدود)
+    <input type="number" name="max_files" value="{{ p.max_files if p.max_files is not none else '' }}" min="0">
+  </label>
+  <label class="checkbox">
+    <input type="checkbox" name="is_active" {{ "checked" if p.is_active else "" }}> فعال
+  </label>
+  <button type="submit">ذخیره</button>
+</form>
+{% endfor %}
+{% endblock %}

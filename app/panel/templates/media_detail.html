@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="{{ panel_path }}/media">◀ بازگشت به فایل‌ها</a></p>
+<h1>فایل {{ media.code }}</h1>
+<table class="kv">
+  <tr><th>عنوان</th><td>{{ media.title or "—" }}</td></tr>
+  <tr><th>دانلود</th><td>{{ media.download_count }}{% if media.download_limit %} / {{ media.download_limit }}{% endif %}</td></tr>
+  <tr><th>وضعیت</th><td>{{ "فعال" if media.is_active else "غیرفعال" }}</td></tr>
+  <tr><th>محافظت محتوا</th><td>{{ "روشن" if media.protect_content else "خاموش" }}</td></tr>
+  <tr><th>حذف خودکار</th><td>{{ media.auto_delete_seconds or "خاموش" }}</td></tr>
+</table>
+
+<div class="actions">
+  <form method="post" action="{{ panel_path }}/media/{{ media.id }}/toggle">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">{{ "غیرفعال کردن" if media.is_active else "فعال کردن" }}</button>
+  </form>
+  <form method="post" action="{{ panel_path }}/media/{{ media.id }}/delete" onsubmit="return confirm('حذف شود؟')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="danger">حذف</button>
+  </form>
+</div>
+
+<h2>فایل‌های داخلی</h2>
+<table>
+  <thead><tr><th>نوع</th><th>نام</th><th>حجم</th></tr></thead>
+  <tbody>
+  {% for f in media.files %}
+    <tr><td>{{ f.file_type }}</td><td>{{ f.file_name or "—" }}</td><td>{{ f.file_size or "—" }}</td></tr>
+  {% else %}<tr><td colspan="3">موردی نیست</td></tr>{% endfor %}
+  </tbody>
+</table>
+
+<h2>لاگ دانلود (اخیر)</h2>
+<table>
+  <thead><tr><th>#</th><th>آیدی تلگرام</th><th>زمان</th></tr></thead>
+  <tbody>
+  {% for l in logs %}
+    <tr><td>{{ l.id }}</td><td>{{ l.telegram_id }}</td><td>{{ l.created_at }}</td></tr>
+  {% else %}<tr><td colspan="3">موردی نیست</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endblock %}

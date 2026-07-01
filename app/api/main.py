@@ -15,6 +15,7 @@ from app.api.routes import health, media, stats, users, webhook
 from app.bot.factory import create_bot, create_dispatcher
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
+from app.panel.main import setup_panel
 
 log = get_logger("api")
 
@@ -41,3 +42,6 @@ app.include_router(media.router)
 app.include_router(users.router)
 app.include_router(stats.router)
 app.include_router(webhook.router)
+
+# Web admin panel (Phase 4): mounts /panel, static, security headers, auth handler.
+setup_panel(app)
