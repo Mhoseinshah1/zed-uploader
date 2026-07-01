@@ -38,7 +38,7 @@ https://t.me/BOT_USERNAME?start=MEDIA_CODE
 ## نصب روی Ubuntu (تک‌دستوری)
 
 ```bash
-git clone <REPO> && cd zed-uploader && sudo bash install.sh
+git clone https://github.com/Mhoseinshah1/zed-uploader && cd zed-uploader && sudo bash install.sh
 ```
 
 > ⚠️ **مهم:** همیشه پروژه را با `install.sh` اجرا کنید. این اسکریپت اسرار واقعی
