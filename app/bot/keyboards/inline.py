@@ -10,11 +10,13 @@ from app.bot.callbacks import (
     BatchCb,
     BcastCb,
     BuyCb,
+    BuyOnlineCb,
     ChanCb,
     FilesCb,
     JoinCb,
     MediaCb,
     PayCb,
+    PayCheckCb,
     SellCb,
     SetCb,
     SubCb,
@@ -344,11 +346,48 @@ def build_sell(card_number: str | None, card_holder: str | None, plans: list[Pla
     return b.as_markup()
 
 
-def build_buy_confirm(plan_key: str) -> InlineKeyboardMarkup:
+def build_buy_confirm(plan_key: str, centralpay: bool = False) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
         InlineKeyboardButton(
-            text=messages.LBL_YES, callback_data=BuyCb(plan=plan_key, ok=1).pack()
+            text=messages.BTN_PAY_WALLET,
+            callback_data=BuyCb(plan=plan_key, ok=1).pack(),
+        )
+    )
+    if centralpay:
+        b.row(
+            InlineKeyboardButton(
+                text=messages.BTN_PAY_ONLINE,
+                callback_data=BuyOnlineCb(plan=plan_key).pack(),
+            )
+        )
+    return b.as_markup()
+
+
+def build_topup_methods(centralpay: bool) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(
+            text=messages.BTN_PAY_CARD, callback_data=WalletCb(action="card").pack()
+        )
+    )
+    if centralpay:
+        b.row(
+            InlineKeyboardButton(
+                text=messages.BTN_PAY_ONLINE,
+                callback_data=WalletCb(action="online").pack(),
+            )
+        )
+    return b.as_markup()
+
+
+def build_centralpay(redirect_url: str, order_id: int) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.row(InlineKeyboardButton(text=messages.BTN_PAY_LINK, url=redirect_url))
+    b.row(
+        InlineKeyboardButton(
+            text=messages.BTN_PAY_CHECK,
+            callback_data=PayCheckCb(order_id=order_id).pack(),
         )
     )
     return b.as_markup()

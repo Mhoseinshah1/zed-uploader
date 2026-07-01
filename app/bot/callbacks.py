@@ -100,3 +100,16 @@ class SellCb(CallbackData, prefix="sell"):
 
     action: str
     key: str | None = None
+
+
+# --- Phase 5 (CentralPay) --------------------------------------------------
+class PayCheckCb(CallbackData, prefix="paychk"):
+    """Re-verify a CentralPay order (idempotent)."""
+
+    order_id: int
+
+
+class BuyOnlineCb(CallbackData, prefix="buyon"):
+    """Buy a plan by paying online via CentralPay."""
+
+    plan: str

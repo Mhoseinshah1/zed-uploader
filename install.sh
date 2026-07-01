@@ -140,6 +140,12 @@ ask_required "Panel admin username" "" IN_PANEL_USER
 ask_password "Panel admin password" IN_PANEL_PASS
 
 echo
+log "CentralPay online gateway (optional — leave BOTH blank to disable it;"
+log "card-to-card still works). Requires a valid DOMAIN + SSL to function."
+read -r -p "CENTRALPAY_GETLINK_KEY [$(get_env CENTRALPAY_GETLINK_KEY)]: " IN_CP_GETLINK || true
+read -r -p "CENTRALPAY_VERIFY_KEY [$(get_env CENTRALPAY_VERIFY_KEY)]: " IN_CP_VERIFY || true
+
+echo
 log "All answers collected. The rest runs unattended — no more questions."
 
 # ===========================================================================
@@ -158,6 +164,10 @@ ensure_secret WEBHOOK_SECRET
 ensure_secret API_KEY
 ensure_secret JWT_SECRET
 ensure_secret SESSION_SECRET
+
+# CentralPay keys are optional; only overwrite when the operator entered a value.
+[ -n "${IN_CP_GETLINK:-}" ] && set_env CENTRALPAY_GETLINK_KEY "$IN_CP_GETLINK"
+[ -n "${IN_CP_VERIFY:-}" ] && set_env CENTRALPAY_VERIFY_KEY "$IN_CP_VERIFY"
 
 # DB password: generate + sync DATABASE_URL only if still the default, so a
 # re-run never breaks an already-initialized postgres volume.
