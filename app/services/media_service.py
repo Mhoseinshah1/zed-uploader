@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -260,6 +260,54 @@ class MediaService:
     ) -> bool:
         return await self._owned_update(media_id, owner_user_id, caption=caption)
 
+    async def set_folder(
+        self, media_id: int, owner_user_id: int, folder_id: int | None
+    ) -> bool:
+        """Move an owned media into a folder (None = uncategorised).
+
+        A non-null folder_id must reference an existing folder, else this is a
+        no-op returning False (avoids a foreign-key violation).
+        """
+        if folder_id is not None:
+            from app.models.folder import Folder
+
+            exists = await self.session.scalar(
+                select(Folder.id).where(Folder.id == folder_id)
+            )
+            if exists is None:
+                return False
+        return await self._owned_update(media_id, owner_user_id, folder_id=folder_id)
+
+    async def list_by_folder(
+        self, folder_id: int | None, owner_user_id: int, *, limit: int = 5, offset: int = 0
+    ) -> list[Media]:
+        """Owner's media in a folder (None = uncategorised). All statuses — this
+        is the owner's own view, not a public listing."""
+        result = await self.session.scalars(
+            select(Media)
+            .where(
+                Media.owner_user_id == owner_user_id,
+                Media.folder_id.is_(None) if folder_id is None else Media.folder_id == folder_id,
+            )
+            .order_by(Media.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(result.all())
+
+    async def count_by_folder(self, folder_id: int | None, owner_user_id: int) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count(Media.id)).where(
+                    Media.owner_user_id == owner_user_id,
+                    Media.folder_id.is_(None)
+                    if folder_id is None
+                    else Media.folder_id == folder_id,
+                )
+            )
+            or 0
+        )
+
     # ------------------------------------------------------------------
     # per-file password (bcrypt; the raw password is never stored)
     # ------------------------------------------------------------------
@@ -336,6 +384,63 @@ class MediaService:
         return await self.session.scalar(
             select(User.telegram_id).where(User.id == owner_user_id)
         )
+
+    # ------------------------------------------------------------------
+    # search (B3) — bounded, ILIKE-escaped, optionally approved-only
+    # ------------------------------------------------------------------
+    MAX_SEARCH_LIMIT = 50
+
+    @staticmethod
+    def _escape_like(term: str) -> str:
+        """Escape LIKE wildcards so a user '%'/'_' is literal (no full scan)."""
+        return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+    async def search(
+        self,
+        query: str,
+        *,
+        owner_user_id: int | None = None,
+        approved_only: bool = False,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> tuple[list[Media], int]:
+        """Search media by code/title/caption/file_name.
+
+        - ``owner_user_id`` scopes to one owner (admin searching their own,
+          any status); ``approved_only`` restricts to approved+active (public).
+          The two combine (owner AND approved) when both are given.
+        - Always bounded by ``limit`` (capped) + ``offset``; returns (items, total).
+        """
+        q = query.strip()
+        if not q:
+            return [], 0
+        limit = max(1, min(limit, self.MAX_SEARCH_LIMIT))
+        pattern = f"%{self._escape_like(q)}%"
+        term = or_(
+            Media.code.ilike(pattern, escape="\\"),
+            Media.title.ilike(pattern, escape="\\"),
+            Media.caption.ilike(pattern, escape="\\"),
+            Media.id.in_(
+                select(MediaFile.media_id).where(
+                    MediaFile.file_name.ilike(pattern, escape="\\")
+                )
+            ),
+        )
+        stmt = select(Media).where(term)
+        if owner_user_id is not None:
+            stmt = stmt.where(Media.owner_user_id == owner_user_id)
+        if approved_only:
+            stmt = stmt.where(Media.status == APPROVED, Media.is_active.is_(True))
+        total = int(
+            await self.session.scalar(
+                select(func.count()).select_from(stmt.subquery())
+            )
+            or 0
+        )
+        rows = await self.session.scalars(
+            stmt.order_by(Media.id.desc()).limit(limit).offset(offset)
+        )
+        return list(rows.all()), total
 
     async def delete_media(self, media_id: int, owner_user_id: int) -> bool:
         result = await self.session.execute(

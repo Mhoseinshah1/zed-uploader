@@ -24,6 +24,10 @@ KEY_USER_UPLOAD_REVIEW = "user_upload_requires_review"
 DEFAULT_USER_UPLOAD_ENABLED = False
 DEFAULT_USER_UPLOAD_REVIEW = True
 
+# B3 — public search
+KEY_PUBLIC_SEARCH_ENABLED = "public_search_enabled"
+DEFAULT_PUBLIC_SEARCH_ENABLED = False
+
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
@@ -75,3 +79,8 @@ class BotSettingService:
 
     async def user_upload_requires_review(self) -> bool:
         return await self.get_bool(KEY_USER_UPLOAD_REVIEW, DEFAULT_USER_UPLOAD_REVIEW)
+
+    async def public_search_enabled(self) -> bool:
+        return await self.get_bool(
+            KEY_PUBLIC_SEARCH_ENABLED, DEFAULT_PUBLIC_SEARCH_ENABLED
+        )

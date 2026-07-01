@@ -12,6 +12,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -28,6 +29,18 @@ if TYPE_CHECKING:
 
 class Media(Base):
     __tablename__ = "media"
+    # B3: trigram GIN indexes make substring ILIKE search on the free-text
+    # fields fast. code already has its unique btree from the initial migration.
+    __table_args__ = (
+        Index(
+            "ix_media_title_trgm", "title",
+            postgresql_using="gin", postgresql_ops={"title": "gin_trgm_ops"},
+        ),
+        Index(
+            "ix_media_caption_trgm", "caption",
+            postgresql_using="gin", postgresql_ops={"caption": "gin_trgm_ops"},
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str] = mapped_column(String(32), unique=True, index=True, nullable=False)
@@ -50,6 +63,11 @@ class Media(Base):
     review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     approved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+    # B2: optional folder grouping. ON DELETE SET NULL -> media survive a folder
+    # deletion (they become uncategorised).
+    folder_id: Mapped[int | None] = mapped_column(
+        ForeignKey("folders.id", ondelete="SET NULL"), index=True, nullable=True
     )
     download_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
     download_count: Mapped[int] = mapped_column(

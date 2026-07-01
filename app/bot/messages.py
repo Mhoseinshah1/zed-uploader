@@ -77,6 +77,41 @@ def review_item_label(code: str, file_type: str, owner_id: int | None) -> str:
     return f"👁 {code} · {file_type}{owner}"
 
 
+# --- folders (B2) -----------------------------------------------------------
+BTN_FOLDERS = "📂 پوشه‌ها"
+FOLDERS_ROOT_HEADER = "📂 پوشه‌ها\nیک پوشه را باز کنید یا پوشهٔ جدیدی بسازید."
+FOLDERS_EMPTY = "هنوز پوشه‌ای ساخته نشده. با دکمهٔ زیر یکی بسازید."
+LBL_NEW_FOLDER = "➕ پوشهٔ جدید"
+LBL_NEW_SUBFOLDER = "➕ زیرپوشه"
+LBL_RENAME = "✏️ تغییر نام"
+LBL_NO_FOLDER = "🚫 بدون پوشه"
+LBL_MOVE_FOLDER = "📂 انتقال به پوشه"
+ASK_FOLDER_NAME = "نام پوشه را بفرست:"
+ASK_FOLDER_RENAME = "نام جدید پوشه را بفرست:"
+FOLDER_CREATED = "پوشه ساخته شد. ✅"
+FOLDER_RENAMED = "نام پوشه تغییر کرد. ✅"
+FOLDER_DELETED = "پوشه حذف شد (فایل‌های داخل آن حفظ شدند)."
+FOLDER_HAS_CHILDREN = "این پوشه زیرپوشه دارد؛ ابتدا زیرپوشه‌ها را حذف کنید."
+FOLDER_GONE = "این پوشه دیگر وجود ندارد."
+CHOOSE_TARGET_FOLDER = "این فایل به کدام پوشه منتقل شود؟"
+MEDIA_MOVED = "فایل به پوشهٔ موردنظر منتقل شد. ✅"
+
+
+def folder_view_header(name: str, sub_count: int, media_count: int) -> str:
+    return f"📁 {name}\nزیرپوشه‌ها: {sub_count} · فایل‌ها: {media_count}"
+
+
+# --- search (B3) ------------------------------------------------------------
+BTN_SEARCH = "🔍 جستجو"
+ASK_SEARCH_QUERY = "عبارت جستجو را بفرست (کد، عنوان، کپشن یا نام فایل):"
+SEARCH_EMPTY = "نتیجه‌ای یافت نشد."
+SEARCH_DISABLED = "جستجو در حال حاضر فعال نیست."
+
+
+def search_results_header(total: int, page: int, pages: int) -> str:
+    return f"🔍 نتایج ({total}) — صفحه {page}/{pages}"
+
+
 def auto_delete_notice(seconds: int) -> str:
     """Notice shown before scheduling auto-deletion of delivered files."""
     if seconds % 3600 == 0 and seconds >= 3600:

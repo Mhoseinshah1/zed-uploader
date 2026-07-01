@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>پوشه‌ها</h1>
+{% if request.query_params.get("error") == "has_children" %}
+<p class="ok" style="color:#b00">این پوشه زیرپوشه دارد؛ ابتدا زیرپوشه‌ها را حذف کنید.</p>
+{% endif %}
+
+<section class="panel-box">
+  <h2>ساخت پوشه</h2>
+  <form method="post" action="{{ panel_path }}/folders/create">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="text" name="name" placeholder="نام پوشه" required>
+    <select name="parent_id">
+      <option value="">— بدون والد (سطح بالا) —</option>
+      {% for f in folders %}
+      <option value="{{ f.id }}">{{ f.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">افزودن</button>
+  </form>
+</section>
+
+<table>
+  <thead><tr><th>#</th><th>نام</th><th>والد</th><th>اقدام</th></tr></thead>
+  <tbody>
+  {% for f in folders %}
+    <tr>
+      <td>{{ f.id }}</td>
+      <td>{{ f.name }}</td>
+      <td>{{ names.get(f.parent_id, "—") if f.parent_id else "—" }}</td>
+      <td>
+        <form method="post" action="{{ panel_path }}/folders/{{ f.id }}/rename" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="text" name="name" value="{{ f.name }}">
+          <button type="submit">تغییر نام</button>
+        </form>
+        <form method="post" action="{{ panel_path }}/folders/{{ f.id }}/delete" style="display:inline" onsubmit="return confirm('حذف شود؟')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="danger">حذف</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4">هنوز پوشه‌ای ساخته نشده.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

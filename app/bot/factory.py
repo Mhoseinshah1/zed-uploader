@@ -10,14 +10,17 @@ from aiogram.fsm.storage.redis import RedisStorage
 
 from app.bot.handlers import (
     admins,
+    albums,
     batch,
     billing,
     billing_owner,
     broadcast,
     channels,
     common,
+    folders,
     menu,
     review,
+    search,
     start,
     upload,
 )
@@ -61,13 +64,20 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.include_router(start.router)
     dispatcher.include_router(menu.router)
     dispatcher.include_router(review.router)
+    dispatcher.include_router(folders.router)
     dispatcher.include_router(channels.router)
     dispatcher.include_router(admins.router)
     dispatcher.include_router(broadcast.router)
     dispatcher.include_router(billing.router)
     dispatcher.include_router(billing_owner.router)
     dispatcher.include_router(batch.router)
+    # `albums` after batch (so batch-collecting still grabs parts) and before
+    # upload (so grouped media buffer instead of each becoming its own Media).
+    dispatcher.include_router(albums.router)
     dispatcher.include_router(upload.router)
+    # `search` after the reply-keyboard routers so a menu-button tap while a
+    # search is active still routes to its own handler (which clears state).
+    dispatcher.include_router(search.router)
     dispatcher.include_router(common.router)
 
     _dispatcher = dispatcher

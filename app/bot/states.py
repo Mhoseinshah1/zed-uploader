@@ -9,6 +9,12 @@ class MediaEdit(StatesGroup):
     waiting_autodelete = State()
     waiting_caption = State()
     waiting_password = State()  # data: media_id, page — set/change/remove
+    waiting_folder = State()    # data: media_id, page — picking a target folder
+
+
+class FolderEdit(StatesGroup):
+    waiting_name = State()    # data: parent_id — creating a folder/subfolder
+    waiting_rename = State()  # data: folder_id — renaming a folder
 
 
 class Delivery(StatesGroup):
@@ -17,6 +23,10 @@ class Delivery(StatesGroup):
 
 class Review(StatesGroup):
     waiting_reason = State()  # data: media_id, page — admin rejecting an upload
+
+
+class Search(StatesGroup):
+    active = State()  # data: query — holds the last query for paginated browsing
 
 
 class SettingsEdit(StatesGroup):

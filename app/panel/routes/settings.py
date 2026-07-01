@@ -13,6 +13,7 @@ from app.services.bot_setting_service import (
     KEY_CARD_HOLDER,
     KEY_CARD_NUMBER,
     KEY_PROTECT,
+    KEY_PUBLIC_SEARCH_ENABLED,
     KEY_USER_UPLOAD_ENABLED,
     KEY_USER_UPLOAD_REVIEW,
     BotSettingService,
@@ -41,6 +42,7 @@ async def settings_page(
         "default_autodelete": await setting.effective_autodelete(),
         "user_upload_enabled": await setting.user_upload_enabled(),
         "user_upload_requires_review": await setting.user_upload_requires_review(),
+        "public_search_enabled": await setting.public_search_enabled(),
         "channels": channels,
     }
     return render(request, "settings.html", **ctx)
@@ -94,6 +96,21 @@ async def settings_uploads(
     await setting.set(KEY_USER_UPLOAD_ENABLED, user_upload_enabled == "on")
     await setting.set(KEY_USER_UPLOAD_REVIEW, user_upload_requires_review == "on")
     await audit(session, request, "settings_uploads")
+    return RedirectResponse(url=_p("/settings"), status_code=302)
+
+
+@router.post("/settings/search")
+async def settings_search(
+    request: Request,
+    public_search_enabled: str = Form(""),
+    csrf_token: str = Form(""),
+    _=Depends(require_panel_user),
+    session: AsyncSession = Depends(get_session),
+):
+    await verify_csrf(request)
+    setting = BotSettingService(session)
+    await setting.set(KEY_PUBLIC_SEARCH_ENABLED, public_search_enabled == "on")
+    await audit(session, request, "settings_search")
     return RedirectResponse(url=_p("/settings"), status_code=302)
 
 

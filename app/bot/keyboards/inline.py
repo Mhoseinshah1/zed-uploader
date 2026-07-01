@@ -13,11 +13,14 @@ from app.bot.callbacks import (
     BuyOnlineCb,
     ChanCb,
     FilesCb,
+    FolderCb,
+    FolderPickCb,
     JoinCb,
     MediaCb,
     PayCb,
     PayCheckCb,
     ReviewCb,
+    SearchCb,
     SellCb,
     SetCb,
     SubCb,
@@ -25,12 +28,160 @@ from app.bot.callbacks import (
 )
 from app.models.admin import Admin
 from app.models.channel import RequiredChannel
+from app.models.folder import Folder
 from app.models.media import Media
 from app.models.plan import Plan
 
 
 def _media_type(media: Media) -> str:
     return media.files[0].file_type if media.files else messages.UNKNOWN_TYPE
+
+
+def build_folders_root(folders: list[Folder]) -> InlineKeyboardMarkup:
+    """Root folder listing: one button per folder + a 'new folder' button."""
+    b = InlineKeyboardBuilder()
+    for folder in folders:
+        b.row(
+            InlineKeyboardButton(
+                text=f"📁 {folder.name}",
+                callback_data=FolderCb(action="open", id=folder.id).pack(),
+            )
+        )
+    b.row(
+        InlineKeyboardButton(
+            text=messages.LBL_NEW_FOLDER,
+            callback_data=FolderCb(action="new", id=0).pack(),
+        )
+    )
+    return b.as_markup()
+
+
+def build_folder_view(
+    folder: Folder,
+    subfolders: list[Folder],
+    media_items: list[Media],
+    page: int,
+    total_pages: int,
+) -> InlineKeyboardMarkup:
+    """A folder's subfolders + its media (as manage links) + action buttons."""
+    b = InlineKeyboardBuilder()
+    for sub in subfolders:
+        b.row(
+            InlineKeyboardButton(
+                text=f"📁 {sub.name}",
+                callback_data=FolderCb(action="open", id=sub.id).pack(),
+            )
+        )
+    for media in media_items:
+        b.row(
+            InlineKeyboardButton(
+                text=messages.file_row_label(media.code, _media_type(media)),
+                callback_data=MediaCb(action="manage", id=media.id, page=0).pack(),
+            )
+        )
+    nav: list[InlineKeyboardButton] = []
+    if page > 0:
+        nav.append(
+            InlineKeyboardButton(
+                text=messages.LBL_PREV,
+                callback_data=FolderCb(action="open", id=folder.id, page=page - 1).pack(),
+            )
+        )
+    if page < total_pages - 1:
+        nav.append(
+            InlineKeyboardButton(
+                text=messages.LBL_NEXT,
+                callback_data=FolderCb(action="open", id=folder.id, page=page + 1).pack(),
+            )
+        )
+    if nav:
+        b.row(*nav)
+    b.row(
+        InlineKeyboardButton(
+            text=messages.LBL_NEW_SUBFOLDER,
+            callback_data=FolderCb(action="new", id=folder.id).pack(),
+        ),
+        InlineKeyboardButton(
+            text=messages.LBL_RENAME,
+            callback_data=FolderCb(action="rename", id=folder.id).pack(),
+        ),
+    )
+    b.row(
+        InlineKeyboardButton(
+            text=messages.LBL_DELETE,
+            callback_data=FolderCb(action="del", id=folder.id).pack(),
+        ),
+        InlineKeyboardButton(
+            text=messages.LBL_BACK,
+            callback_data=FolderCb(
+                action="open", id=folder.parent_id
+            ).pack() if folder.parent_id else FolderCb(action="root").pack(),
+        ),
+    )
+    return b.as_markup()
+
+
+def build_confirm_folder_delete(folder_id: int) -> InlineKeyboardMarkup:
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(
+            text=messages.LBL_YES,
+            callback_data=FolderCb(action="delok", id=folder_id).pack(),
+        ),
+        InlineKeyboardButton(
+            text=messages.LBL_NO,
+            callback_data=FolderCb(action="open", id=folder_id).pack(),
+        ),
+    )
+    return b.as_markup()
+
+
+def build_folder_picker(folders: list[Folder]) -> InlineKeyboardMarkup:
+    """Pick a target folder when moving a media (or 'uncategorised')."""
+    b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(
+            text=messages.LBL_NO_FOLDER, callback_data=FolderPickCb(id=0).pack()
+        )
+    )
+    for folder in folders:
+        b.row(
+            InlineKeyboardButton(
+                text=f"📁 {folder.name}",
+                callback_data=FolderPickCb(id=folder.id).pack(),
+            )
+        )
+    return b.as_markup()
+
+
+def build_search_results(
+    items: list[Media], page: int, total_pages: int
+) -> InlineKeyboardMarkup:
+    """One button per hit (opens manage) + a prev/next row using SearchCb."""
+    b = InlineKeyboardBuilder()
+    for media in items:
+        b.row(
+            InlineKeyboardButton(
+                text=messages.file_row_label(media.code, _media_type(media)),
+                callback_data=MediaCb(action="manage", id=media.id, page=0).pack(),
+            )
+        )
+    nav: list[InlineKeyboardButton] = []
+    if page > 0:
+        nav.append(
+            InlineKeyboardButton(
+                text=messages.LBL_PREV, callback_data=SearchCb(page=page - 1).pack()
+            )
+        )
+    if page < total_pages - 1:
+        nav.append(
+            InlineKeyboardButton(
+                text=messages.LBL_NEXT, callback_data=SearchCb(page=page + 1).pack()
+            )
+        )
+    if nav:
+        b.row(*nav)
+    return b.as_markup()
 
 
 def build_review_list(
@@ -143,7 +294,11 @@ def build_manage(media: Media, page: int) -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=messages.lbl_password(media.password_hash is not None),
             callback_data=MediaCb(action="setpw", id=mid, page=page).pack(),
-        )
+        ),
+        InlineKeyboardButton(
+            text=messages.LBL_MOVE_FOLDER,
+            callback_data=MediaCb(action="movefolder", id=mid, page=page).pack(),
+        ),
     )
     b.row(
         InlineKeyboardButton(
