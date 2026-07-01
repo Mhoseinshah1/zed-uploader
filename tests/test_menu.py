@@ -14,16 +14,33 @@ from app.models import Base, User
 from app.services.media_service import MediaService
 
 
-def test_build_admin_menu_has_four_buttons():
-    keyboard = build_admin_menu()
+def test_build_admin_menu_core_buttons():
+    keyboard = build_admin_menu(is_owner=False)
     texts = [button.text for row in keyboard.keyboard for button in row]
-    assert texts == [
+    for expected in (
         messages.BTN_UPLOAD,
         messages.BTN_MY_FILES,
         messages.BTN_STATS,
         messages.BTN_SETTINGS,
-    ]
+        messages.BTN_BATCH_UPLOAD,
+    ):
+        assert expected in texts
+    # owner-only buttons hidden for non-owners
+    assert messages.BTN_CHANNELS not in texts
+    assert messages.BTN_ADMINS not in texts
+    assert messages.BTN_BROADCAST not in texts
     assert keyboard.resize_keyboard is True
+
+
+def test_build_admin_menu_owner_extra_section():
+    texts = [
+        button.text
+        for row in build_admin_menu(is_owner=True).keyboard
+        for button in row
+    ]
+    assert messages.BTN_CHANNELS in texts
+    assert messages.BTN_ADMINS in texts
+    assert messages.BTN_BROADCAST in texts
 
 
 async def _owner_scoping() -> None:

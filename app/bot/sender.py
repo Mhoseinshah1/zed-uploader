@@ -6,7 +6,7 @@ in-memory scheduling lives here. Only file sending and the auto-delete notice.
 from __future__ import annotations
 
 from aiogram import Bot
-from aiogram.types import InlineKeyboardMarkup, Message
+from aiogram.types import InlineKeyboardMarkup
 
 from app.bot.messages import auto_delete_notice
 from app.models.media_file import MediaFile
@@ -50,6 +50,6 @@ async def send_media_file(
     return sent.message_id
 
 
-async def notify_auto_delete(message: Message, seconds: int) -> None:
+async def notify_auto_delete(bot: Bot, chat_id: int, seconds: int) -> None:
     """Tell the user the delivered files will be auto-deleted."""
-    await message.answer(auto_delete_notice(seconds))
+    await bot.send_message(chat_id, auto_delete_notice(seconds))

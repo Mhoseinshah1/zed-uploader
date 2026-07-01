@@ -8,7 +8,16 @@ from __future__ import annotations
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.redis import RedisStorage
 
-from app.bot.handlers import common, menu, start, upload
+from app.bot.handlers import (
+    admins,
+    batch,
+    broadcast,
+    channels,
+    common,
+    menu,
+    start,
+    upload,
+)
 from app.bot.middlewares import DbSessionMiddleware, UserContextMiddleware
 from app.core.config import settings
 from app.db.session import async_session_maker
@@ -44,10 +53,14 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.update.middleware(DbSessionMiddleware(async_session_maker))
     dispatcher.update.middleware(UserContextMiddleware())
 
-    # Order: start -> menu -> upload -> common. The catch-all `common` MUST stay
-    # last so it never shadows the menu handlers.
+    # Order matters. `batch` must precede `upload` so its StateFilter(collecting)
+    # media handler wins while batching; the catch-all `common` MUST stay last.
     dispatcher.include_router(start.router)
     dispatcher.include_router(menu.router)
+    dispatcher.include_router(channels.router)
+    dispatcher.include_router(admins.router)
+    dispatcher.include_router(broadcast.router)
+    dispatcher.include_router(batch.router)
     dispatcher.include_router(upload.router)
     dispatcher.include_router(common.router)
 
