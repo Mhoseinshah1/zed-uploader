@@ -262,6 +262,10 @@ async def buy_confirm(
             reply_markup=build_wallet(),
         )
         await callback.answer()
+    elif result.status is PurchaseStatus.DUPLICATE:
+        await callback.answer(messages.PURCHASE_IN_PROGRESS, show_alert=True)
+    elif result.status is PurchaseStatus.FAILED:
+        await callback.answer(messages.PURCHASE_FAILED, show_alert=True)
     else:
         await callback.answer(messages.PLAN_NOT_AVAILABLE, show_alert=True)
 

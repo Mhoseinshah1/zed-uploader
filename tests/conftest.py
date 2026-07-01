@@ -35,6 +35,19 @@ import pytest
 from fastapi.testclient import TestClient
 
 
+@pytest.fixture(autouse=True)
+def _fresh_fakeredis():
+    """Give every test a clean, empty fake Redis.
+
+    Redis-backed guards (e.g. the purchase double-tap lock) intentionally
+    outlive a single call via a short TTL. The suite shares one process, so
+    without a per-test reset a lingering key could leak between tests — which
+    matters most when successive tests reuse the same synthetic ids.
+    """
+    _redis_client._client = _fakeredis.FakeRedis(decode_responses=True)
+    yield
+
+
 @pytest.fixture()
 def client():
     from app.api.main import app

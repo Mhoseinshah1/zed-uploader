@@ -162,12 +162,16 @@ async def _purchase_insufficient() -> None:
         user = User(telegram_id=20, plan="free", balance=0)
         s.add(user)
         await s.commit()
+        uid = user.id  # capture before the purchase: a rollback expires the instance
 
         result = await SubscriptionService(s).purchase(user, "plus")
         assert result.status is PurchaseStatus.INSUFFICIENT
-        assert user.plan == "free"
-        assert user.plan_expires_at is None
-        assert await WalletService(s).balance(user.id) == 0
+        # the atomic purchase rolls its transaction back on insufficient funds,
+        # so re-read the persisted state rather than the now-expired instance.
+        refreshed = await s.get(User, uid)
+        assert refreshed.plan == "free"
+        assert refreshed.plan_expires_at is None
+        assert await WalletService(s).balance(uid) == 0
     await engine.dispose()
 
 
