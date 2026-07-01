@@ -378,6 +378,8 @@ def insufficient_funds(balance: int, price: int) -> str:
 
 
 PLAN_NOT_AVAILABLE = "این پلن در دسترس نیست."
+PURCHASE_IN_PROGRESS = "درخواست قبلی شما در حال پردازش است. لطفاً چند لحظه صبر کنید."
+PURCHASE_FAILED = "خطا در انجام خرید. مبلغی کسر نشد؛ لطفاً دوباره تلاش کنید."
 
 # --- feature gating ----------------------------------------------------------
 _PLAN_TITLES = {"free": "رایگان", "plus": "پلاس", "max": "مکس"}

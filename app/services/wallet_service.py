@@ -32,6 +32,7 @@ class WalletService:
         *,
         reference: str | None = None,
         description: str | None = None,
+        commit: bool = True,
     ) -> int:
         # Lock the user row so concurrent credits/debits serialize.
         user = await self.session.scalar(
@@ -53,7 +54,12 @@ class WalletService:
                 description=description,
             )
         )
-        await self.session.commit()
+        # commit=False lets the caller wrap this in a larger transaction and
+        # commit once (used by SubscriptionService for atomic plan purchase).
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
         return new_balance
 
     async def credit(
@@ -69,6 +75,16 @@ class WalletService:
         new_balance = await self._apply(user_id, -abs(amount), ttype, **kw)
         log.info("wallet_debit", user_id=user_id, amount=abs(amount), balance=new_balance)
         return new_balance
+
+    async def debit_nocommit(
+        self, user_id: int, amount: int, ttype: str = "purchase", **kw
+    ) -> int:
+        """Debit WITHOUT committing — the caller owns the transaction/commit.
+
+        Same row lock + ledger row + negative-balance guard as ``debit``; the
+        money-event log is left to the caller (after its single commit).
+        """
+        return await self._apply(user_id, -abs(amount), ttype, commit=False, **kw)
 
     async def balance(self, user_id: int) -> int:
         return int(
