@@ -7,17 +7,17 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import messages
-from app.bot.callbacks import BuyCb, BuyOnlineCb, PayCheckCb, SubCb, WalletCb
+from app.bot.callbacks import BuyCb, BuyOnlineCb, GateCb, PayCheckCb, SubCb, WalletCb
 from app.bot.keyboards.inline import (
     build_buy_confirm,
     build_centralpay,
     build_open_plans,
     build_plans,
+    build_provider_choice,
     build_topup_methods,
     build_wallet,
 )
 from app.bot.states import Topup
-from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.user import User
 from app.services.admin_service import AdminService
@@ -28,9 +28,10 @@ from app.services.bot_setting_service import (
     KEY_TOPUP_MIN,
     BotSettingService,
 )
-from app.services.centralpay_service import CentralPayService
+from app.services.gateway_service import GatewayService
 from app.services.payment_service import PaymentService
 from app.services.plan_service import PlanService
+from app.services.providers import enabled_providers, get_provider, verify_order
 from app.services.subscription_service import PurchaseStatus, SubscriptionService
 from app.services.wallet_service import WalletService
 
@@ -38,16 +39,51 @@ router = Router(name="billing")
 log = get_logger("handler.billing")
 
 
-async def _send_centralpay_link(
-    message: Message, session: AsyncSession, user: User, amount: int, intent: str
+async def _send_gateway_link(
+    message: Message,
+    session: AsyncSession,
+    user: User,
+    amount: int,
+    intent: str,
+    provider_key: str,
 ) -> None:
-    started = await CentralPayService(session).start(user, amount, intent)
+    """Start an online payment with one provider and send the pay/check buttons."""
+    provider = await get_provider(session, provider_key)
+    if provider is None:
+        await message.answer(messages.CENTRALPAY_DISABLED)
+        return
+    started = await GatewayService(session, provider).start(user, amount, intent)
     if started is None:
         await message.answer(messages.CENTRALPAY_START_FAILED)
         return
     order_id, redirect_url = started
     await message.answer(
         messages.CENTRALPAY_PENDING, reply_markup=build_centralpay(redirect_url, order_id)
+    )
+
+
+async def _start_online(
+    message: Message,
+    session: AsyncSession,
+    user: User,
+    amount: int,
+    intent: str,
+    *,
+    plan_key: str = "",
+) -> None:
+    """Provider-agnostic entry: direct link for one provider, chooser for many."""
+    providers = await enabled_providers(session)
+    if not providers:
+        await message.answer(messages.CENTRALPAY_DISABLED)
+        return
+    if len(providers) == 1:
+        await _send_gateway_link(message, session, user, amount, intent, providers[0])
+        return
+    await message.answer(
+        messages.CHOOSE_PAY_PROVIDER,
+        reply_markup=build_provider_choice(
+            providers, amount=0 if plan_key else amount, plan=plan_key
+        ),
     )
 
 
@@ -85,10 +121,10 @@ async def topup_start(
     if not isinstance(callback.message, Message):
         await callback.answer()
         return
-    if settings.centralpay_enabled:
+    if await enabled_providers(session):
         await callback.message.answer(
             messages.CHOOSE_TOPUP_METHOD,
-            reply_markup=build_topup_methods(settings.centralpay_enabled),
+            reply_markup=build_topup_methods(True),
         )
     else:
         await _ask_card_amount(callback.message, state, session)
@@ -123,7 +159,7 @@ async def topup_card(
 async def topup_online(
     callback: CallbackQuery, state: FSMContext, session: AsyncSession
 ) -> None:
-    if not settings.centralpay_enabled:
+    if not await enabled_providers(session):
         await callback.answer(messages.CENTRALPAY_DISABLED, show_alert=True)
         return
     minimum = await BotSettingService(session).get_int(KEY_TOPUP_MIN, DEFAULT_TOPUP_MIN)
@@ -152,7 +188,7 @@ async def topup_amount(
     if data.get("method") == "online":
         await state.clear()
         if db_user is not None:
-            await _send_centralpay_link(message, session, db_user, amount, intent="topup")
+            await _start_online(message, session, db_user, amount, intent="topup")
         return
 
     # card path
@@ -237,7 +273,9 @@ async def buy_prompt(
     if isinstance(callback.message, Message):
         await callback.message.answer(
             messages.buy_confirm(plan.title, plan.price),
-            reply_markup=build_buy_confirm(plan.key, settings.centralpay_enabled),
+            reply_markup=build_buy_confirm(
+                plan.key, bool(await enabled_providers(session))
+            ),
         )
     await callback.answer()
 
@@ -270,7 +308,7 @@ async def buy_confirm(
         await callback.answer(messages.PLAN_NOT_AVAILABLE, show_alert=True)
 
 
-# --- CentralPay online (Phase 5) -------------------------------------------
+# --- online gateways (Phase 5 CentralPay, generalized in C1) ----------------
 @router.callback_query(BuyOnlineCb.filter())
 async def buy_online(
     callback: CallbackQuery,
@@ -278,7 +316,7 @@ async def buy_online(
     session: AsyncSession,
     db_user: User | None,
 ) -> None:
-    if not settings.centralpay_enabled:
+    if not await enabled_providers(session):
         await callback.answer(messages.CENTRALPAY_DISABLED, show_alert=True)
         return
     plan = await PlanService(session).get(callback_data.plan)
@@ -286,9 +324,42 @@ async def buy_online(
         await callback.answer(messages.PLAN_NOT_AVAILABLE, show_alert=True)
         return
     if db_user is not None and isinstance(callback.message, Message):
-        await _send_centralpay_link(
-            callback.message, session, db_user, plan.price, intent=f"plan:{plan.key}"
+        await _start_online(
+            callback.message, session, db_user, plan.price,
+            intent=f"plan:{plan.key}", plan_key=plan.key,
         )
+    await callback.answer()
+
+
+@router.callback_query(GateCb.filter())
+async def gateway_choice(
+    callback: CallbackQuery,
+    callback_data: GateCb,
+    session: AsyncSession,
+    db_user: User | None,
+) -> None:
+    """The user picked a gateway from the provider-choice keyboard."""
+    if db_user is None or not isinstance(callback.message, Message):
+        await callback.answer()
+        return
+    if callback_data.plan:
+        plan = await PlanService(session).get(callback_data.plan)
+        if plan is None or not plan.is_active:
+            await callback.answer(messages.PLAN_NOT_AVAILABLE, show_alert=True)
+            return
+        # price re-read server-side; callback data is never trusted for it
+        amount, intent = plan.price, f"plan:{plan.key}"
+    else:
+        minimum = await BotSettingService(session).get_int(
+            KEY_TOPUP_MIN, DEFAULT_TOPUP_MIN
+        )
+        if callback_data.amount < minimum:
+            await callback.answer(messages.INVALID_AMOUNT, show_alert=True)
+            return
+        amount, intent = callback_data.amount, "topup"
+    await _send_gateway_link(
+        callback.message, session, db_user, amount, intent, callback_data.provider
+    )
     await callback.answer()
 
 
@@ -299,7 +370,7 @@ async def payment_check(
     session: AsyncSession,
     db_user: User | None,
 ) -> None:
-    result = await CentralPayService(session).verify_and_apply(callback_data.order_id)
+    result = await verify_order(session, callback_data.order_id)
     if not isinstance(callback.message, Message):
         await callback.answer()
         return

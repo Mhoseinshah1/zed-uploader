@@ -135,6 +135,18 @@ class SellCb(CallbackData, prefix="sell"):
 
 
 # --- Phase 5 (CentralPay) --------------------------------------------------
+class GateCb(CallbackData, prefix="gate"):
+    """Online-gateway provider choice (when several providers are enabled).
+
+    Exactly one of ``amount`` (wallet top-up) or ``plan`` (plan purchase) is
+    set; for plans the price is re-read server-side from the plan row.
+    """
+
+    provider: str
+    amount: int = 0
+    plan: str = ""
+
+
 class PayCheckCb(CallbackData, prefix="paychk"):
     """Re-verify a CentralPay order (idempotent)."""
 
