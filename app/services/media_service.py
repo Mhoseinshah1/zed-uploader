@@ -260,6 +260,54 @@ class MediaService:
     ) -> bool:
         return await self._owned_update(media_id, owner_user_id, caption=caption)
 
+    async def set_folder(
+        self, media_id: int, owner_user_id: int, folder_id: int | None
+    ) -> bool:
+        """Move an owned media into a folder (None = uncategorised).
+
+        A non-null folder_id must reference an existing folder, else this is a
+        no-op returning False (avoids a foreign-key violation).
+        """
+        if folder_id is not None:
+            from app.models.folder import Folder
+
+            exists = await self.session.scalar(
+                select(Folder.id).where(Folder.id == folder_id)
+            )
+            if exists is None:
+                return False
+        return await self._owned_update(media_id, owner_user_id, folder_id=folder_id)
+
+    async def list_by_folder(
+        self, folder_id: int | None, owner_user_id: int, *, limit: int = 5, offset: int = 0
+    ) -> list[Media]:
+        """Owner's media in a folder (None = uncategorised). All statuses — this
+        is the owner's own view, not a public listing."""
+        result = await self.session.scalars(
+            select(Media)
+            .where(
+                Media.owner_user_id == owner_user_id,
+                Media.folder_id.is_(None) if folder_id is None else Media.folder_id == folder_id,
+            )
+            .order_by(Media.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(result.all())
+
+    async def count_by_folder(self, folder_id: int | None, owner_user_id: int) -> int:
+        return int(
+            await self.session.scalar(
+                select(func.count(Media.id)).where(
+                    Media.owner_user_id == owner_user_id,
+                    Media.folder_id.is_(None)
+                    if folder_id is None
+                    else Media.folder_id == folder_id,
+                )
+            )
+            or 0
+        )
+
     # ------------------------------------------------------------------
     # per-file password (bcrypt; the raw password is never stored)
     # ------------------------------------------------------------------

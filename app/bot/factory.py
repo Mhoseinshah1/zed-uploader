@@ -16,6 +16,7 @@ from app.bot.handlers import (
     broadcast,
     channels,
     common,
+    folders,
     menu,
     review,
     start,
@@ -61,6 +62,7 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.include_router(start.router)
     dispatcher.include_router(menu.router)
     dispatcher.include_router(review.router)
+    dispatcher.include_router(folders.router)
     dispatcher.include_router(channels.router)
     dispatcher.include_router(admins.router)
     dispatcher.include_router(broadcast.router)

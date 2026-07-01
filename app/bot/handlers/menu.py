@@ -255,6 +255,18 @@ async def cb_media(
         await callback.message.answer(messages.ASK_MEDIA_PASSWORD)
         await callback.answer()
 
+    elif action == "movefolder":
+        from app.bot.keyboards.inline import build_folder_picker
+        from app.services.folder_service import FolderService
+
+        await state.set_state(MediaEdit.waiting_folder)
+        await state.update_data(media_id=mid, page=page)
+        folders = await FolderService(session).list_all()
+        await callback.message.answer(
+            messages.CHOOSE_TARGET_FOLDER, reply_markup=build_folder_picker(folders)
+        )
+        await callback.answer()
+
     elif action == "link":
         await callback.answer()
         await callback.message.answer(messages.share_link(service.deep_link(media)))

@@ -12,6 +12,7 @@ from app.db.session import get_session
 from app.models.download_log import DownloadLog
 from app.models.media import Media
 from app.panel.deps import audit, render, require_panel_user, verify_csrf
+from app.services.folder_service import FolderService
 
 router = APIRouter()
 PAGE_SIZE = 20
@@ -21,6 +22,7 @@ PAGE_SIZE = 20
 async def media_list(
     request: Request,
     q: str = "",
+    folder_id: str = "",
     page: int = 0,
     _=Depends(require_panel_user),
     session: AsyncSession = Depends(get_session),
@@ -29,6 +31,9 @@ async def media_list(
     q = q.strip()
     if q:
         stmt = stmt.where(Media.code.ilike(f"%{q}%"))
+    folder_val = int(folder_id) if folder_id.strip().isdigit() else None
+    if folder_val is not None:
+        stmt = stmt.where(Media.folder_id == folder_val)
     total = int(await session.scalar(select(func.count()).select_from(stmt.subquery())))
     page = max(0, page)
     rows = list(
@@ -36,9 +41,10 @@ async def media_list(
             stmt.order_by(Media.id.desc()).limit(PAGE_SIZE).offset(page * PAGE_SIZE)
         )
     )
+    folders = await FolderService(session).list_all()
     return render(
         request, "media.html", media=rows, q=q, page=page, total=total,
-        page_size=PAGE_SIZE,
+        page_size=PAGE_SIZE, folders=folders, folder_id=folder_val,
     )
 
 
@@ -60,7 +66,32 @@ async def media_detail(
             .limit(20)
         )
     )
-    return render(request, "media_detail.html", media=media, logs=logs)
+    folders = await FolderService(session).list_all()
+    return render(request, "media_detail.html", media=media, logs=logs, folders=folders)
+
+
+@router.post("/media/{media_id}/folder")
+async def media_move_folder(
+    request: Request,
+    media_id: int,
+    folder_id: str = Form(""),
+    csrf_token: str = Form(""),
+    _=Depends(require_panel_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Move a media into a folder (empty = uncategorised). Panel admins can move
+    any media, so this is not owner-scoped."""
+    await verify_csrf(request)
+    media = await session.scalar(select(Media).where(Media.id == media_id))
+    if media is not None:
+        target = int(folder_id) if folder_id.strip().isdigit() else None
+        if target is None or await FolderService(session).get(target) is not None:
+            media.folder_id = target
+            await session.commit()
+            await audit(session, request, "media_move_folder", target=str(media_id))
+    return RedirectResponse(
+        url=f"{settings.panel_path}/media/{media_id}", status_code=302
+    )
 
 
 @router.post("/media/{media_id}/toggle")

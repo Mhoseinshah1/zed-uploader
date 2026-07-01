@@ -51,6 +51,11 @@ class Media(Base):
     approved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # B2: optional folder grouping. ON DELETE SET NULL -> media survive a folder
+    # deletion (they become uncategorised).
+    folder_id: Mapped[int | None] = mapped_column(
+        ForeignKey("folders.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     download_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
     download_count: Mapped[int] = mapped_column(
         BigInteger, default=0, server_default=text("0"), nullable=False

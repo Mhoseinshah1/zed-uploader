@@ -7,6 +7,7 @@
   <tr><th>دانلود</th><td>{{ media.download_count }}{% if media.download_limit %} / {{ media.download_limit }}{% endif %}</td></tr>
   <tr><th>وضعیت</th><td>{{ "فعال" if media.is_active else "غیرفعال" }}</td></tr>
   <tr><th>بازبینی</th><td>{{ media.status }}</td></tr>
+  <tr><th>پوشه</th><td>{{ media.folder_id or "بدون پوشه" }}</td></tr>
   <tr><th>محافظت محتوا</th><td>{{ "روشن" if media.protect_content else "خاموش" }}</td></tr>
   <tr><th>گذرواژه</th><td>{{ "🔒 دارد" if media.password_hash else "🔓 ندارد" }}</td></tr>
   <tr><th>حذف خودکار</th><td>{{ media.auto_delete_seconds or "خاموش" }}</td></tr>
@@ -22,6 +23,18 @@
     <button type="submit" class="danger">حذف</button>
   </form>
 </div>
+
+<h2>پوشه</h2>
+<form method="post" action="{{ panel_path }}/media/{{ media.id }}/folder" class="actions">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <select name="folder_id">
+    <option value="" {{ "selected" if not media.folder_id else "" }}>— بدون پوشه —</option>
+    {% for f in folders %}
+    <option value="{{ f.id }}" {{ "selected" if media.folder_id == f.id else "" }}>{{ f.name }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">انتقال</button>
+</form>
 
 <h2>گذرواژهٔ فایل</h2>
 <form method="post" action="{{ panel_path }}/media/{{ media.id }}/password" class="actions">

@@ -17,7 +17,7 @@ class MediaCb(CallbackData, prefix="media"):
     """Per-file actions.
 
     action ∈ {manage, toggle_active, toggle_protect, autodel, setlimit,
-    editcap, setpw, link, stats, del, delok, back}
+    editcap, setpw, movefolder, link, stats, del, delok, back}
     """
 
     action: str
@@ -70,6 +70,24 @@ class ReviewCb(CallbackData, prefix="rev"):
     action: str
     id: int = 0
     page: int = 0
+
+
+class FolderCb(CallbackData, prefix="fld"):
+    """Folder browse/manage. action ∈ {root, open, new, rename, del, delok}.
+
+    ``id`` is the folder id (0 = root, or parent for ``new``); ``page`` paginates
+    the media inside a folder.
+    """
+
+    action: str
+    id: int = 0
+    page: int = 0
+
+
+class FolderPickCb(CallbackData, prefix="fpick"):
+    """Folder picker used when moving a media (id = folder id, 0 = uncategorised)."""
+
+    id: int = 0
 
 
 # --- Phase 3 (monetization) ------------------------------------------------

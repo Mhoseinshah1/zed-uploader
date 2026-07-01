@@ -6,6 +6,7 @@ from app.models.admin import Admin
 from app.models.broadcast import BroadcastJob, BroadcastRecipient
 from app.models.channel import RequiredChannel
 from app.models.download_log import DownloadLog
+from app.models.folder import Folder
 from app.models.media import Media
 from app.models.media_file import MediaFile
 from app.models.panel import PanelAudit, PanelUser
@@ -34,4 +35,5 @@ __all__ = [
     "PanelAudit",
     "BroadcastJob",
     "BroadcastRecipient",
+    "Folder",
 ]

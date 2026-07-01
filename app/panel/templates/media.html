@@ -3,25 +3,32 @@
 <h1>فایل‌ها</h1>
 <form class="search" method="get" action="{{ panel_path }}/media">
   <input type="text" name="q" value="{{ q }}" placeholder="جستجو با کد">
+  <select name="folder_id">
+    <option value="">— همهٔ پوشه‌ها —</option>
+    {% for f in folders %}
+    <option value="{{ f.id }}" {{ "selected" if folder_id == f.id else "" }}>{{ f.name }}</option>
+    {% endfor %}
+  </select>
   <button type="submit">جستجو</button>
 </form>
 <table>
-  <thead><tr><th>#</th><th>کد</th><th>عنوان</th><th>دانلود</th><th>وضعیت</th></tr></thead>
+  <thead><tr><th>#</th><th>کد</th><th>عنوان</th><th>پوشه</th><th>دانلود</th><th>وضعیت</th></tr></thead>
   <tbody>
   {% for m in media %}
     <tr>
       <td><a href="{{ panel_path }}/media/{{ m.id }}">{{ m.id }}</a></td>
       <td>{{ m.code }}</td>
       <td>{{ m.title or "—" }}</td>
+      <td>{{ m.folder_id or "—" }}</td>
       <td>{{ m.download_count }}{% if m.download_limit %}/{{ m.download_limit }}{% endif %}</td>
       <td>{{ "فعال" if m.is_active else "غیرفعال" }}</td>
     </tr>
-  {% else %}<tr><td colspan="5">فایلی یافت نشد</td></tr>{% endfor %}
+  {% else %}<tr><td colspan="6">فایلی یافت نشد</td></tr>{% endfor %}
   </tbody>
 </table>
 <div class="pager">
-  {% if page > 0 %}<a href="{{ panel_path }}/media?q={{ q }}&page={{ page - 1 }}">قبلی</a>{% endif %}
+  {% if page > 0 %}<a href="{{ panel_path }}/media?q={{ q }}&folder_id={{ folder_id or '' }}&page={{ page - 1 }}">قبلی</a>{% endif %}
   <span>صفحه {{ page + 1 }}</span>
-  {% if (page + 1) * page_size < total %}<a href="{{ panel_path }}/media?q={{ q }}&page={{ page + 1 }}">بعدی</a>{% endif %}
+  {% if (page + 1) * page_size < total %}<a href="{{ panel_path }}/media?q={{ q }}&folder_id={{ folder_id or '' }}&page={{ page + 1 }}">بعدی</a>{% endif %}
 </div>
 {% endblock %}

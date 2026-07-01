@@ -28,6 +28,9 @@ def build_admin_menu(is_owner: bool = False) -> ReplyKeyboardMarkup:
         ],
         [
             KeyboardButton(text=messages.BTN_MY_FILES),
+            KeyboardButton(text=messages.BTN_FOLDERS),
+        ],
+        [
             KeyboardButton(text=messages.BTN_STATS),
         ],
         [
