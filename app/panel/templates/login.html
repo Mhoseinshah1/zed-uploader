@@ -1,15 +1,20 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-theme="{{ theme }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ورود — پنل مدیریت</title>
+  <meta name="referrer" content="same-origin">
+  <title>ورود — پنل مدیریت زد‌آپلودر</title>
   <link rel="stylesheet" href="{{ panel_path }}/static/css/panel.css">
 </head>
 <body class="login-body">
   <form class="login-card" method="post" action="{{ panel_path }}/login">
+    <div class="brand">
+      <div class="logo">Z</div>
+      <div><b>ZedUploader</b><span>پنل مدیریت</span></div>
+    </div>
     <h1>ورود به پنل</h1>
-    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    {% if error %}<p class="flash error">{{ error }}</p>{% endif %}
     <input type="hidden" name="csrf_token" value="{{ login_csrf }}">
     <label>نام کاربری
       <input type="text" name="username" autocomplete="username" required autofocus>

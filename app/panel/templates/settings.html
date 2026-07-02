@@ -1,80 +1,89 @@
 {% extends "base.html" %}
+{% block title %}تنظیمات — پنل مدیریت{% endblock %}
 {% block content %}
-<h1>تنظیمات</h1>
+<div class="page-h">
+  <div><h1>تنظیمات</h1><p>کارت، پیش‌فرض‌ها، جستجو و عضویت اجباری</p></div>
+</div>
 
-<section class="panel-box">
-  <h2>کارت پرداخت</h2>
-  <form method="post" action="{{ panel_path }}/settings/card">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label>شمارهٔ کارت <input type="text" name="card_number" value="{{ card_number }}"></label>
-    <label>نام صاحب کارت <input type="text" name="card_holder" value="{{ card_holder }}"></label>
-    <button type="submit">ذخیره</button>
-  </form>
-</section>
+<div class="grid grid-2">
+  <section class="card">
+    <h2>کارت پرداخت</h2>
+    <form method="post" action="{{ panel_path }}/settings/card">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>شمارهٔ کارت <input type="text" name="card_number" value="{{ card_number }}"></label>
+      <label>نام صاحب کارت <input type="text" name="card_holder" value="{{ card_holder }}"></label>
+      <button type="submit">ذخیره</button>
+    </form>
+  </section>
 
-<section class="panel-box">
-  <h2>پیش‌فرض‌ها</h2>
-  <form method="post" action="{{ panel_path }}/settings/defaults">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label class="checkbox"><input type="checkbox" name="default_protect" {{ "checked" if default_protect else "" }}> محافظت محتوا پیش‌فرض</label>
-    <label>حذف خودکار پیش‌فرض (ثانیه) <input type="number" name="default_autodelete" value="{{ default_autodelete }}" min="0"></label>
-    <button type="submit">ذخیره</button>
-  </form>
-</section>
+  <section class="card">
+    <h2>پیش‌فرض‌ها</h2>
+    <form method="post" action="{{ panel_path }}/settings/defaults">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="checkbox"><input type="checkbox" name="default_protect" {{ "checked" if default_protect else "" }}> محافظت محتوا پیش‌فرض</label>
+      <label>حذف خودکار پیش‌فرض (ثانیه) <input type="number" name="default_autodelete" value="{{ default_autodelete }}" min="0"></label>
+      <button type="submit">ذخیره</button>
+    </form>
+  </section>
 
-<section class="panel-box">
-  <h2>آپلود کاربران</h2>
-  <form method="post" action="{{ panel_path }}/settings/uploads">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label class="checkbox"><input type="checkbox" name="user_upload_enabled" {{ "checked" if user_upload_enabled else "" }}> اجازهٔ آپلود به کاربران عادی</label>
-    <label class="checkbox"><input type="checkbox" name="user_upload_requires_review" {{ "checked" if user_upload_requires_review else "" }}> نیاز به تأیید ادمین پیش از انتشار</label>
-    <button type="submit">ذخیره</button>
-  </form>
-</section>
+  <section class="card">
+    <h2>آپلود کاربران</h2>
+    <form method="post" action="{{ panel_path }}/settings/uploads">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="checkbox"><input type="checkbox" name="user_upload_enabled" {{ "checked" if user_upload_enabled else "" }}> اجازهٔ آپلود به کاربران عادی</label>
+      <label class="checkbox"><input type="checkbox" name="user_upload_requires_review" {{ "checked" if user_upload_requires_review else "" }}> نیاز به تأیید ادمین پیش از انتشار</label>
+      <button type="submit">ذخیره</button>
+    </form>
+  </section>
 
-<section class="panel-box">
+  <section class="card">
+    <h2>جستجو</h2>
+    <form method="post" action="{{ panel_path }}/settings/search">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="checkbox"><input type="checkbox" name="public_search_enabled" {{ "checked" if public_search_enabled else "" }}> اجازهٔ جستجوی عمومی برای کاربران (فقط فایل‌های تأییدشده)</label>
+      <button type="submit">ذخیره</button>
+    </form>
+  </section>
+</div>
+
+<section class="card">
   <h2>درگاه‌های پرداخت آنلاین</h2>
   <p><a href="{{ panel_path }}/providers">پیکربندی درگاه‌ها (سنترال‌پی، زرین‌پال، زیبال) ←</a></p>
 </section>
 
-<section class="panel-box">
-  <h2>جستجو</h2>
-  <form method="post" action="{{ panel_path }}/settings/search">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label class="checkbox"><input type="checkbox" name="public_search_enabled" {{ "checked" if public_search_enabled else "" }}> اجازهٔ جستجوی عمومی برای کاربران (فقط فایل‌های تأییدشده)</label>
-    <button type="submit">ذخیره</button>
-  </form>
-</section>
-
-<section class="panel-box">
+<section class="card">
   <h2>کانال‌های عضویت اجباری</h2>
-  <form method="post" action="{{ panel_path }}/settings/channels/add">
+  <form method="post" action="{{ panel_path }}/settings/channels/add" class="form-grid">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="text" name="chat_id" placeholder="@username یا -100..." required>
     <input type="text" name="title" placeholder="عنوان (اختیاری)">
     <button type="submit">افزودن</button>
   </form>
-  <table>
-    <thead><tr><th>کانال</th><th>عنوان</th><th>فعال</th><th>اقدام</th></tr></thead>
-    <tbody>
-    {% for c in channels %}
-      <tr>
-        <td>{{ c.chat_id }}</td>
-        <td>{{ c.title or "—" }}</td>
-        <td>{{ "بله" if c.is_active else "خیر" }}</td>
-        <td>
-          <form method="post" action="{{ panel_path }}/settings/channels/{{ c.id }}/toggle" style="display:inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button type="submit">تغییر وضعیت</button>
-          </form>
-          <form method="post" action="{{ panel_path }}/settings/channels/{{ c.id }}/remove" style="display:inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button type="submit" class="danger">حذف</button>
-          </form>
-        </td>
-      </tr>
-    {% else %}<tr><td colspan="4">موردی نیست</td></tr>{% endfor %}
-    </tbody>
-  </table>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>کانال</th><th>عنوان</th><th>فعال</th><th>اقدام</th></tr></thead>
+      <tbody>
+      {% for c in channels %}
+        <tr>
+          <td dir="ltr">{{ c.chat_id }}</td>
+          <td>{{ c.title or "—" }}</td>
+          <td>{% if c.is_active %}<span class="pill p-green">بله</span>{% else %}<span class="pill p-gray">خیر</span>{% endif %}</td>
+          <td>
+            <div class="act">
+              <form method="post" action="{{ panel_path }}/settings/channels/{{ c.id }}/toggle">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit">تغییر وضعیت</button>
+              </form>
+              <form method="post" action="{{ panel_path }}/settings/channels/{{ c.id }}/remove">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="danger">حذف</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% else %}<tr><td colspan="4"><div class="empty">موردی نیست</div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 {% endblock %}

@@ -1,30 +1,42 @@
 {% extends "base.html" %}
+{% block title %}کاربران — پنل مدیریت{% endblock %}
 {% block content %}
-<h1>کاربران</h1>
-<form class="search" method="get" action="{{ panel_path }}/users">
-  <input type="text" name="q" value="{{ q }}" placeholder="جستجو با آیدی تلگرام یا نام کاربری">
+<div class="page-h">
+  <div><h1>کاربران</h1><p>مدیریت کاربران، پلن و کیف پول</p></div>
+</div>
+
+<form class="search-bar" method="get" action="{{ panel_path }}/users">
+  <div class="search"><span aria-hidden="true">🔍</span>
+    <input type="search" name="q" value="{{ q }}" placeholder="جستجو با آیدی تلگرام یا نام کاربری" aria-label="جستجو"></div>
   <button type="submit">جستجو</button>
 </form>
-<table>
-  <thead><tr><th>#</th><th>آیدی تلگرام</th><th>نام کاربری</th><th>پلن</th><th>موجودی</th><th>وضعیت</th></tr></thead>
-  <tbody>
-  {% for u in users %}
-    <tr>
-      <td><a href="{{ panel_path }}/users/{{ u.id }}">{{ u.id }}</a></td>
-      <td>{{ u.telegram_id }}</td>
-      <td>{{ u.username or "—" }}</td>
-      <td>{{ u.effective_plan }}</td>
-      <td>{{ "{:,}".format(u.balance) }}</td>
-      <td>{{ "مسدود" if u.is_blocked else "فعال" }}</td>
-    </tr>
-  {% else %}
-    <tr><td colspan="6">کاربری یافت نشد</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+
+<div class="card tbl-wrap">
+  <table>
+    <thead><tr><th>#</th><th>آیدی تلگرام</th><th>نام کاربری</th><th>پلن</th><th>موجودی</th><th>وضعیت</th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr>
+        <td><a href="{{ panel_path }}/users/{{ u.id }}">{{ u.id }}</a></td>
+        <td>
+          <div class="u"><div class="ua g{{ u.id % 8 }}">{{ (u.username[:1] | upper) if u.username else "#" }}</div>
+          <span dir="ltr">{{ u.telegram_id }}</span></div>
+        </td>
+        <td>{{ u.username or "—" }}</td>
+        <td><span class="pill p-blue">{{ u.effective_plan }}</span></td>
+        <td class="money">{{ "{:,}".format(u.balance) }}</td>
+        <td>{% if u.is_blocked %}<span class="pill p-red">مسدود</span>{% else %}<span class="pill p-green">فعال</span>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6"><div class="empty">کاربری یافت نشد</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 <div class="pager">
-  {% if page > 0 %}<a href="{{ panel_path }}/users?q={{ q }}&page={{ page - 1 }}">قبلی</a>{% endif %}
+  {% if page > 0 %}<a href="{{ panel_path }}/users?q={{ q }}&page={{ page - 1 }}">◀ قبلی</a>{% endif %}
   <span>صفحه {{ page + 1 }}</span>
-  {% if (page + 1) * page_size < total %}<a href="{{ panel_path }}/users?q={{ q }}&page={{ page + 1 }}">بعدی</a>{% endif %}
+  {% if (page + 1) * page_size < total %}<a href="{{ panel_path }}/users?q={{ q }}&page={{ page + 1 }}">بعدی ▶</a>{% endif %}
 </div>
 {% endblock %}

@@ -1,72 +1,81 @@
 {% extends "base.html" %}
+{% block title %}پشتیبان‌گیری — پنل مدیریت{% endblock %}
 {% block content %}
-<h1>پشتیبان‌گیری</h1>
+<div class="page-h">
+  <div><h1>پشتیبان‌گیری</h1><p>پشتیبان کامل دیتابیس (سطح پلتفرم)</p></div>
+</div>
 
-{% if error == "restored" %}<p class="ok">بازیابی با موفقیت انجام شد.</p>
-{% elif error == "confirm" %}<p style="color:#ef4444">نام فایل تایپ‌شده اشتباه بود؛ بازیابی انجام نشد.</p>
-{% elif error == "restore" %}<p style="color:#ef4444">بازیابی ناموفق بود؛ لاگ سرور را ببینید.</p>
-{% elif error in ("notfound", "filegone") %}<p style="color:#ef4444">فایل پشتیبان یافت نشد.</p>{% endif %}
+{% if error == "restored" %}<p class="flash ok">بازیابی با موفقیت انجام شد.</p>
+{% elif error == "confirm" %}<p class="flash error">نام فایل تایپ‌شده اشتباه بود؛ بازیابی انجام نشد.</p>
+{% elif error == "restore" %}<p class="flash error">بازیابی ناموفق بود؛ لاگ سرور را ببینید.</p>
+{% elif error in ("notfound", "filegone") %}<p class="flash error">فایل پشتیبان یافت نشد.</p>{% endif %}
 
-<section class="panel-box">
-  <form method="post" action="{{ panel_path }}/backups/trigger" style="display:inline">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button type="submit">📦 پشتیبان‌گیری دستی</button>
-  </form>
-  <form method="post" action="{{ panel_path }}/backups/settings" style="display:inline">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label>زمان‌بندی
-      <select name="schedule">
-        <option value="off" {{ "selected" if schedule == "off" else "" }}>خاموش</option>
-        <option value="daily" {{ "selected" if schedule == "daily" else "" }}>روزانه</option>
-        <option value="weekly" {{ "selected" if schedule == "weekly" else "" }}>هفتگی</option>
-      </select>
-    </label>
-    <label>نگه‌داری آخرین <input type="number" name="keep" value="{{ keep }}" min="1" style="width:70px"> نسخه</label>
-    <button type="submit">ذخیره</button>
-  </form>
+<section class="card">
+  <div class="actions">
+    <form method="post" action="{{ panel_path }}/backups/trigger">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">📦 پشتیبان‌گیری دستی</button>
+    </form>
+    <form method="post" action="{{ panel_path }}/backups/settings" class="actions">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>زمان‌بندی
+        <select name="schedule">
+          <option value="off" {{ "selected" if schedule == "off" else "" }}>خاموش</option>
+          <option value="daily" {{ "selected" if schedule == "daily" else "" }}>روزانه</option>
+          <option value="weekly" {{ "selected" if schedule == "weekly" else "" }}>هفتگی</option>
+        </select>
+      </label>
+      <label>نگه‌داری آخرین <input type="number" name="keep" value="{{ keep }}" min="1"> نسخه</label>
+      <button type="submit" class="ghost">ذخیره</button>
+    </form>
+  </div>
 </section>
 
-<div class="panel-box" style="border-color:#ef4444">
-  <strong style="color:#ef4444">⚠️ هشدار بازیابی:</strong>
+<div class="panel-box danger-box">
+  <strong class="error">⚠️ هشدار بازیابی:</strong>
   بازیابی، دیتابیس فعلی را با محتوای فایل پشتیبان جایگزین می‌کند و «غیرقابل بازگشت» است.
   قبل از بازیابی حتماً یک پشتیبان تازه بگیرید. برای تأیید باید نام دقیق فایل را تایپ کنید.
 </div>
 
-<table>
-  <thead>
-    <tr><th>#</th><th>نوع</th><th>وضعیت</th><th>فایل</th><th>حجم</th><th>زمان</th><th>اقدام</th></tr>
-  </thead>
-  <tbody>
-  {% for j in jobs %}
-    <tr>
-      <td>{{ j.id }}</td>
-      <td>{{ "دستی" if j.type == "manual" else "زمان‌بندی" }}</td>
-      <td>{{ j.status }}{% if j.error_message %} — <small>{{ j.error_message[:80] }}</small>{% endif %}</td>
-      <td dir="ltr">{{ j.file_path.split("/")[-1] if j.file_path else "—" }}</td>
-      <td>{{ "{:,}".format(j.file_size) if j.file_size else "—" }}</td>
-      <td dir="ltr">{{ j.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
-      <td>
-        {% if j.status == "success" and j.file_path %}
-        <a href="{{ panel_path }}/backups/{{ j.id }}/download">⬇ دانلود</a>
-        <details style="display:inline-block">
-          <summary style="color:#ef4444">بازیابی…</summary>
-          <form method="post" action="{{ panel_path }}/backups/{{ j.id }}/restore"
-                onsubmit="return confirm('بازیابی جایگزینِ کامل دیتابیس است. ادامه می‌دهید؟')">
+<div class="card tbl-wrap">
+  <table>
+    <thead>
+      <tr><th>#</th><th>نوع</th><th>وضعیت</th><th>فایل</th><th>حجم</th><th>زمان</th><th>اقدام</th></tr>
+    </thead>
+    <tbody>
+    {% for j in jobs %}
+      <tr>
+        <td>{{ j.id }}</td>
+        <td>{{ "دستی" if j.type == "manual" else "زمان‌بندی" }}</td>
+        <td>{{ j.status }}{% if j.error_message %} — <small class="muted">{{ j.error_message[:80] }}</small>{% endif %}</td>
+        <td dir="ltr">{{ j.file_path.split("/")[-1] if j.file_path else "—" }}</td>
+        <td>{{ "{:,}".format(j.file_size) if j.file_size else "—" }}</td>
+        <td dir="ltr">{{ j.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td>
+          <div class="act">
+          {% if j.status == "success" and j.file_path %}
+          <a class="btn sm ghost" href="{{ panel_path }}/backups/{{ j.id }}/download">⬇ دانلود</a>
+          <details>
+            <summary class="error">بازیابی…</summary>
+            <form method="post" action="{{ panel_path }}/backups/{{ j.id }}/restore"
+                  onsubmit="return confirm('بازیابی جایگزینِ کامل دیتابیس است. ادامه می‌دهید؟')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="text" name="confirm_filename" placeholder="نام دقیق فایل را تایپ کنید" dir="ltr" required>
+              <button type="submit" class="danger">بازیابی</button>
+            </form>
+          </details>
+          {% endif %}
+          <form method="post" action="{{ panel_path }}/backups/{{ j.id }}/delete" onsubmit="return confirm('حذف شود؟')">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <input type="text" name="confirm_filename" placeholder="نام دقیق فایل را تایپ کنید" dir="ltr" required>
-            <button type="submit" class="danger">بازیابی</button>
+            <button type="submit" class="danger">حذف</button>
           </form>
-        </details>
-        {% endif %}
-        <form method="post" action="{{ panel_path }}/backups/{{ j.id }}/delete" style="display:inline" onsubmit="return confirm('حذف شود؟')">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button type="submit" class="danger">حذف</button>
-        </form>
-      </td>
-    </tr>
-  {% else %}
-    <tr><td colspan="7">هنوز پشتیبانی گرفته نشده.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+          </div>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7"><div class="empty">هنوز پشتیبانی گرفته نشده.</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

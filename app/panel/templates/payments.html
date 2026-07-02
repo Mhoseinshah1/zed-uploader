@@ -1,37 +1,50 @@
 {% extends "base.html" %}
+{% block title %}پرداخت‌ها — پنل مدیریت{% endblock %}
 {% block content %}
-<h1>پرداخت‌ها</h1>
-<div class="tabs">
-  <a href="{{ panel_path }}/payments?status=pending" class="{{ 'active' if status == 'pending' else '' }}">در انتظار</a>
-  <a href="{{ panel_path }}/payments?status=all" class="{{ 'active' if status == 'all' else '' }}">همه</a>
+<div class="page-h">
+  <div><h1>پرداخت‌ها</h1><p>تأیید کارت‌به‌کارت و پیگیری تراکنش‌ها</p></div>
+  <div class="chips">
+    <a href="{{ panel_path }}/payments?status=pending" class="chip {{ 'on' if status == 'pending' else '' }}">در انتظار</a>
+    <a href="{{ panel_path }}/payments?status=all" class="chip {{ 'on' if status == 'all' else '' }}">همه</a>
+  </div>
 </div>
-<table>
-  <thead><tr><th>#</th><th>کاربر</th><th>مبلغ</th><th>روش</th><th>وضعیت</th><th>کد مرجع</th><th>رسید</th><th>اقدام</th></tr></thead>
-  <tbody>
-  {% for p in payments %}
-    <tr>
-      <td>{{ p.id }}</td>
-      <td>{{ p.user_id }}</td>
-      <td>{{ "{:,}".format(p.amount) }}</td>
-      <td>{{ p.method }}</td>
-      <td>{{ p.status }}</td>
-      <td>{{ p.provider_ref or "—" }}</td>
-      <td>{{ (p.receipt[:24] ~ "…") if p.receipt else "—" }}</td>
-      <td>
-        {% if p.status == "pending" and p.method == "card" %}
-        <form method="post" action="{{ panel_path }}/payments/{{ p.id }}/approve" style="display:inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button type="submit">تأیید</button>
-        </form>
-        <form method="post" action="{{ panel_path }}/payments/{{ p.id }}/reject" style="display:inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button type="submit" class="danger">رد</button>
-        </form>
-        {% elif p.method == "centralpay" %}<span class="muted">درگاه</span>
-        {% else %}—{% endif %}
-      </td>
-    </tr>
-  {% else %}<tr><td colspan="8">موردی نیست</td></tr>{% endfor %}
-  </tbody>
-</table>
+
+<div class="card tbl-wrap">
+  <table>
+    <thead><tr><th>#</th><th>کاربر</th><th>مبلغ</th><th>روش</th><th>وضعیت</th><th>کد مرجع</th><th>رسید</th><th>اقدام</th></tr></thead>
+    <tbody>
+    {% for p in payments %}
+      <tr>
+        <td>{{ p.id }}</td>
+        <td><div class="u"><div class="ua g{{ p.user_id % 8 }}">{{ p.user_id }}</div></div></td>
+        <td class="money">{{ "{:,}".format(p.amount) }}</td>
+        <td>{{ p.method }}</td>
+        <td>
+          {% if p.status == "approved" %}<span class="pill p-green">{{ p.status }}</span>
+          {% elif p.status == "pending" %}<span class="pill p-amber">{{ p.status }}</span>
+          {% elif p.status == "rejected" %}<span class="pill p-red">{{ p.status }}</span>
+          {% else %}<span class="pill p-gray">{{ p.status }}</span>{% endif %}
+        </td>
+        <td dir="ltr">{{ p.provider_ref or "—" }}</td>
+        <td>{{ (p.receipt[:24] ~ "…") if p.receipt else "—" }}</td>
+        <td>
+          {% if p.status == "pending" and p.method == "card" %}
+          <div class="act">
+            <form method="post" action="{{ panel_path }}/payments/{{ p.id }}/approve">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit">تأیید</button>
+            </form>
+            <form method="post" action="{{ panel_path }}/payments/{{ p.id }}/reject">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="danger">رد</button>
+            </form>
+          </div>
+          {% elif p.method == "centralpay" %}<span class="muted">درگاه</span>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+    {% else %}<tr><td colspan="8"><div class="empty">موردی نیست</div></td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

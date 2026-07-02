@@ -1,36 +1,39 @@
 {% extends "base.html" %}
+{% block title %}فروش ربات — پنل مدیریت{% endblock %}
 {% block content %}
-<h1>پلن‌های ساخت ربات</h1>
-<p>قیمت‌گذاری فروش ربات به مشتری‌ها. مدت ۰ = دائمی؛ بزرگ‌تر از ۰ = اجاره (روز). قیمت به تومان از کیف پول مشتری کسر می‌شود.</p>
+<div class="plat-ribbon">🛰️ حالت پلتفرم <span class="tag">قیمت‌گذاری فروش</span></div>
+<div class="page-h">
+  <div><h1>پلن‌های ساخت ربات</h1><p>قیمت‌گذاری فروش ربات به مشتری‌ها. مدت ۰ = دائمی؛ بزرگ‌تر از ۰ = اجاره (روز). قیمت به تومان از کیف پول مشتری کسر می‌شود.</p></div>
+</div>
 
 {% for p in plans %}
-<section class="panel-box">
+<section class="card platform">
   <h2 dir="ltr">{{ p.key }}</h2>
-  <form method="post" action="{{ panel_path }}/bot-plans/save">
+  <form method="post" action="{{ panel_path }}/bot-plans/save" class="form-grid">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="key" value="{{ p.key }}">
     <label>عنوان <input type="text" name="title" value="{{ p.title }}" required></label>
     <label>قیمت (تومان) <input type="number" name="price" value="{{ p.price }}" min="0"></label>
     <label>مدت (روز) <input type="number" name="duration_days" value="{{ p.duration_days }}" min="0"></label>
-    <label><input type="checkbox" name="is_active" {% if p.is_active %}checked{% endif %}> فعال</label>
+    <label class="checkbox"><input type="checkbox" name="is_active" {% if p.is_active %}checked{% endif %}> فعال</label>
     <button type="submit">ذخیره</button>
   </form>
-  <form method="post" action="{{ panel_path }}/bot-plans/{{ p.key }}/delete">
+  <form method="post" action="{{ panel_path }}/bot-plans/{{ p.key }}/delete" class="inline">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button type="submit">حذف</button>
+    <button type="submit" class="danger sm">حذف</button>
   </form>
 </section>
 {% endfor %}
 
-<section class="panel-box">
+<section class="card platform">
   <h2>افزودن پلن</h2>
-  <form method="post" action="{{ panel_path }}/bot-plans/save">
+  <form method="post" action="{{ panel_path }}/bot-plans/save" class="form-grid">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label>کلید <input type="text" name="key" dir="ltr" placeholder="monthly" required></label>
     <label>عنوان <input type="text" name="title" required></label>
     <label>قیمت (تومان) <input type="number" name="price" value="0" min="0"></label>
     <label>مدت (روز) <input type="number" name="duration_days" value="0" min="0"></label>
-    <label><input type="checkbox" name="is_active" checked> فعال</label>
+    <label class="checkbox"><input type="checkbox" name="is_active" checked> فعال</label>
     <button type="submit">افزودن</button>
   </form>
 </section>

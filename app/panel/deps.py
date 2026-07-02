@@ -142,11 +142,13 @@ async def audit(
 
 def render(request: Request, template: str, **context):
     data = getattr(request.state, "panel_session", None)
+    theme = request.cookies.get("panel_theme")
     base = {
         "request": request,
         "panel_path": settings.panel_path,
         "csrf_token": data.get("csrf") if data else "",
         "current_user": getattr(request.state, "panel_user", None),
+        "theme": "light" if theme == "light" else "dark",
     }
     base.update(context)
     return templates.TemplateResponse(request, template, base)
