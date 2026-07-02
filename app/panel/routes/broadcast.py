@@ -36,6 +36,12 @@ async def broadcast_submit(
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
+    from app.services.license_service import paid_features_allowed
+
+    if not await paid_features_allowed(session):
+        return RedirectResponse(
+            url=f"{settings.panel_path}/broadcast?error=license", status_code=302
+        )
     text = text.strip()
     count = await broadcast_service.audience_count(session)
     if not text:

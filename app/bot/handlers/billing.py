@@ -29,6 +29,7 @@ from app.services.bot_setting_service import (
     BotSettingService,
 )
 from app.services.gateway_service import GatewayService
+from app.services.license_service import paid_features_allowed
 from app.services.payment_service import PaymentService
 from app.services.plan_service import PlanService
 from app.services.providers import enabled_providers, get_provider, verify_order
@@ -72,6 +73,9 @@ async def _start_online(
     plan_key: str = "",
 ) -> None:
     """Provider-agnostic entry: direct link for one provider, chooser for many."""
+    if not await paid_features_allowed(session):
+        await message.answer(messages.LICENSE_BLOCKED)
+        return
     providers = await enabled_providers(session)
     if not providers:
         await message.answer(messages.CENTRALPAY_DISABLED)
@@ -288,6 +292,9 @@ async def buy_confirm(
 ) -> None:
     if db_user is None or not isinstance(callback.message, Message):
         await callback.answer()
+        return
+    if not await paid_features_allowed(session):
+        await callback.answer(messages.LICENSE_BLOCKED, show_alert=True)
         return
     result = await SubscriptionService(session).purchase(db_user, callback_data.plan)
     if result.status is PurchaseStatus.OK:

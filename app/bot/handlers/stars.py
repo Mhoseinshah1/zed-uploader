@@ -24,6 +24,11 @@ log = get_logger("handler.stars")
 async def stars_buy(
     callback: CallbackQuery, callback_data: StarsBuyCb, session: AsyncSession
 ) -> None:
+    from app.services.license_service import paid_features_allowed
+
+    if not await paid_features_allowed(session):
+        await callback.answer(messages.LICENSE_BLOCKED, show_alert=True)
+        return
     plan = await PlanService(session).get(callback_data.plan)
     if plan is None or not plan.is_active or plan.stars_price is None:
         await callback.answer(messages.PLAN_NOT_AVAILABLE, show_alert=True)

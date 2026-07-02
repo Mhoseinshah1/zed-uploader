@@ -310,6 +310,12 @@ async def main() -> None:
                     await process_backups_once(async_session_maker)
                 except Exception as exc:
                     log.warning("backup_loop_error", error=str(exc))
+                try:
+                    from app.services.license_service import maybe_daily_check
+
+                    await maybe_daily_check(async_session_maker)
+                except Exception as exc:
+                    log.warning("license_check_error", error=str(exc))
             await asyncio.sleep(POLL_INTERVAL)
     finally:
         await bot.session.close()

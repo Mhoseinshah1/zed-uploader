@@ -56,6 +56,16 @@ class Settings(BaseSettings):
     centralpay_getlink_key: str = ""
     centralpay_verify_key: str = ""
 
+    # --- licensing (Phase E) ----------------------------------------------
+    # LICENSE_DISABLED=true (the default) or missing key/server config fully
+    # bypasses licensing, so local dev, tests, and existing deployments are
+    # unaffected until an owner opts in.
+    license_key: str = ""
+    license_server_url: str = ""
+    license_grace_days: int = 7
+    license_disabled: bool = True
+    license_file: str = "license.json"
+
     # --- media defaults --------------------------------------------------
     default_protect_content: bool = False
     default_auto_delete_seconds: int = 0
