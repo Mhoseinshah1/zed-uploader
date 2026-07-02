@@ -71,3 +71,22 @@ blockquote { border-inline-start: 3px solid var(--accent); margin: 8px 0; paddin
 }
 .login-card h1 { margin: 0 0 12px; font-size: 1.2rem; text-align: center; }
 .login-card button { margin-top: 12px; }
+
+/* --- C3 stats charts (single-hue bars on the panel surface) --------------- */
+.chart {
+  display: flex; align-items: flex-end; gap: 2px; height: 140px;
+  padding: 8px 4px 0; border-bottom: 1px solid var(--border);
+}
+.chart .bar {
+  flex: 1 1 0; min-width: 2px; min-height: 2px;
+  background: var(--accent); border-radius: 4px 4px 0 0;
+}
+.chart .bar:hover { filter: brightness(1.2); }
+.hbar-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.hbar-label { width: 160px; color: var(--text); }
+.hbar-track { flex: 1; background: var(--bg); border-radius: 4px; }
+.hbar { height: 14px; background: var(--accent); border-radius: 4px; min-width: 2px; }
+.hbar-value { width: 110px; color: var(--muted); text-align: left; direction: ltr; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+a.csv { font-size: .8rem; margin-inline-start: 8px; }
