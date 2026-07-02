@@ -30,6 +30,7 @@ async def plan_update(
     price: int = Form(...),
     duration_days: int = Form(...),
     max_files: str = Form(""),
+    stars_price: str = Form(""),
     is_active: str = Form(""),
     csrf_token: str = Form(""),
     _=Depends(require_panel_user),
@@ -41,6 +42,8 @@ async def plan_update(
     await service.set_duration(key, max(0, duration_days))
     max_files_value = int(max_files) if max_files.strip().isdigit() else None
     await service.set_max_files(key, max_files_value)
+    stars_value = int(stars_price) if stars_price.strip().isdigit() else None
+    await service.set_stars_price(key, stars_value)
     await service.set_active(key, is_active == "on")
     await audit(session, request, "plan_update", target=key)
     return RedirectResponse(url=f"{settings.panel_path}/plans", status_code=302)

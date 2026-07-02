@@ -159,6 +159,12 @@ class GateCb(CallbackData, prefix="gate"):
     plan: str = ""
 
 
+class StarsBuyCb(CallbackData, prefix="stars"):
+    """Buy a plan with Telegram Stars (XTR invoice)."""
+
+    plan: str
+
+
 class PayCheckCb(CallbackData, prefix="paychk"):
     """Re-verify a CentralPay order (idempotent)."""
 

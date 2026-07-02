@@ -274,7 +274,9 @@ async def buy_prompt(
         await callback.message.answer(
             messages.buy_confirm(plan.title, plan.price),
             reply_markup=build_buy_confirm(
-                plan.key, bool(await enabled_providers(session))
+                plan.key,
+                bool(await enabled_providers(session)),
+                stars=plan.stars_price is not None,
             ),
         )
     await callback.answer()

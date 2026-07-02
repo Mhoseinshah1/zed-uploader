@@ -639,3 +639,24 @@ def ad_row_label(ad_id: int, title: str, placement: str, active: bool,
                  impressions: int, clicks: int) -> str:
     state = "✅" if active else "⛔️"
     return f"{state} {title} · {placement_title(placement)} · 👁 {impressions} · 👆 {clicks}"
+
+
+# ===========================================================================
+# Phase C4: Telegram Stars
+# ===========================================================================
+BTN_PAY_STARS = "⭐ پرداخت با استارز"
+STARS_INVALID = "این پرداخت معتبر نیست یا پلن در دسترس نیست."
+STARS_ALREADY = "این پرداخت قبلاً اعمال شده است. ✅"
+STARS_FAILED = (
+    "پرداخت شما دریافت شد اما فعال‌سازی خودکار انجام نشد؛ مبلغ به کیف پول شما "
+    "اضافه شد و می‌توانید پلن را از کیف پول بخرید."
+)
+
+
+def stars_invoice_title(plan_title: str) -> str:
+    return f"خرید پلن {plan_title}"
+
+
+def stars_invoice_description(plan_title: str, days: int) -> str:
+    period = f"{days}‌روزه" if days else "دائمی"
+    return f"اشتراک {period} پلن {plan_title}"

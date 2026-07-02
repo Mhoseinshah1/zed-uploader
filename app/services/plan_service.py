@@ -44,6 +44,14 @@ class PlanService:
         await self.session.commit()
         return True
 
+    async def set_stars_price(self, key: str, value: int | None) -> bool:
+        plan = await self.get(key)
+        if plan is None:
+            return False
+        plan.stars_price = value
+        await self.session.commit()
+        return True
+
     async def set_active(self, key: str, is_active: bool) -> bool:
         plan = await self.get(key)
         if plan is None:
