@@ -27,6 +27,14 @@ async def lifespan(app: FastAPI):
     dispatcher = create_dispatcher()
     app.state.bot = bot
     app.state.dp = dispatcher
+    try:  # record the installed version; never block startup (e.g. no DB in tests)
+        from app.core.version import sync_version
+        from app.db.session import async_session_maker
+
+        async with async_session_maker() as session:
+            await sync_version(session)
+    except Exception:
+        pass
     log.info("api_started", project=settings.project_name)
     try:
         yield

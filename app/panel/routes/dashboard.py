@@ -58,6 +58,8 @@ async def dashboard(
         await session.scalars(select(Payment).order_by(Payment.id.desc()).limit(5))
     )
 
+    from app.core.version import code_version, installed_version
+
     stats = {
         "total_users": await UserService(session).count_users(),
         "total_media": await media_service.count_media(),
@@ -72,4 +74,6 @@ async def dashboard(
         stats=stats,
         top_files=top_files,
         recent_payments=recent_payments,
+        installed_version=await installed_version(session),
+        code_version=code_version(),
     )

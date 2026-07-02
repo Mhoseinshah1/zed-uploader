@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
+<p><small>نسخهٔ نصب‌شده: <b dir="ltr">{{ installed_version }}</b>
+{% if code_version != installed_version %} · نسخهٔ کد: <b dir="ltr">{{ code_version }}</b> (پس از ری‌استارت ثبت می‌شود){% endif %}</small></p>
 <h1>داشبورد</h1>
 <section class="cards">
   <div class="card"><span class="num">{{ stats.total_users }}</span><span class="lbl">کاربران</span></div>
