@@ -92,32 +92,41 @@ async def gateway_return(
     if provider not in PROVIDER_KEYS:
         return _render("failed")
 
-    # Zarinpal returns ?Authority=..&Status=OK|NOK, Zibal ?trackId=..&success=1|0
-    token = authority or track_id
-    payment = await _resolve_payment(session, provider, orderId, token)
+    from app.core.tenant_context import all_tenants, reset_tenant, set_tenant
+
+    # The callback arrives with NO tenant context. Resolve the payment across
+    # ALL tenants (it is tenant-scoped, but we don't yet know which), then run
+    # everything under THAT payment's tenant so verify/credit is scoped to it.
+    token = authority or track_id  # Zarinpal Authority / Zibal trackId
+    with all_tenants():
+        payment = await _resolve_payment(session, provider, orderId, token)
     if payment is None:
         log.info("gateway_return_unknown", provider=provider, order_id=orderId)
-        return _render("failed")
-    # a mismatched gateway token must never verify someone else's order
-    if token and payment.authority and token != payment.authority:
-        log.warning("gateway_return_token_mismatch", order_id=payment.id)
-        return _render("failed")
-    if (status and status.upper() != "OK") or success == "0":
-        # the gateway reports a cancelled/failed attempt: skip the verify call
-        log.info("gateway_return_not_ok", provider=provider, order_id=payment.id)
-        return _render("failed")
+        return _render("failed")  # fail closed — never guess a tenant
 
-    result = await verify_order(session, payment.id)
-    log.info("gateway_return", provider=provider, order_id=payment.id, result=result)
+    ctx = set_tenant(payment.tenant_id)
+    try:
+        # a mismatched gateway token must never verify someone else's order
+        if token and payment.authority and token != payment.authority:
+            log.warning("gateway_return_token_mismatch", order_id=payment.id)
+            return _render("failed")
+        if (status and status.upper() != "OK") or success == "0":
+            log.info("gateway_return_not_ok", provider=provider, order_id=payment.id)
+            return _render("failed")
 
-    if result == "credited":
-        bot = getattr(request.app.state, "bot", None)
-        if bot is not None:
-            user = await session.scalar(
-                select(User).where(User.id == payment.user_id)
-            )
+        # verify_order keeps all A1 guarantees (idempotent, amount-match) and now
+        # credits the payment's own user within the payment's tenant.
+        result = await verify_order(session, payment.id)
+        log.info(
+            "gateway_return", provider=provider, order_id=payment.id,
+            tenant_id=payment.tenant_id, result=result,
+        )
+
+        if result == "credited":
+            user = await session.scalar(select(User).where(User.id == payment.user_id))
             balance = await WalletService(session).balance(payment.user_id)
-            if user is not None:
+            bot = await _tenant_notify_bot(request, session, payment.tenant_id)
+            if user is not None and bot is not None:
                 try:
                     from app.bot import messages
 
@@ -126,5 +135,24 @@ async def gateway_return(
                     )
                 except Exception:
                     pass
+        return _render(result)
+    finally:
+        reset_tenant(ctx)
 
-    return _render(result)
+
+async def _tenant_notify_bot(request: Request, session, tenant_id: int):
+    """The bot to notify the buyer with: the platform bot for tenant 1, else the
+    tenant's registered bot (API process holds the registry). None if absent —
+    the credit already happened; the notice is best-effort."""
+    from app.core.tenant_context import PLATFORM_TENANT_ID
+
+    if tenant_id == PLATFORM_TENANT_ID:
+        return getattr(request.app.state, "bot", None)
+    registry = getattr(request.app.state, "registry", None)
+    if registry is None:
+        return None
+    from app.models.tenant import Tenant
+
+    tenant = await session.scalar(select(Tenant).where(Tenant.id == tenant_id))
+    entry = registry.get(tenant.bot_id) if tenant and tenant.bot_id else None
+    return entry.bot if entry else None
