@@ -12,7 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.redis_client import get_redis
-from app.core.tenant_context import current_tenant, reset_tenant, set_tenant
+from app.core.tenant_context import (
+    ALL_TENANTS,
+    current_tenant,
+    reset_tenant,
+    set_tenant,
+)
 from app.db.session import get_session
 from app.models.panel import PanelAudit, PanelUser
 from app.panel import security
@@ -75,6 +80,26 @@ async def require_panel_user(
     request.state.panel_session = data
     request.state.panel_user = user
     token = set_tenant(user.tenant_id)
+    try:
+        yield user
+    finally:
+        reset_tenant(token)
+
+
+async def require_superadmin(
+    request: Request, user: PanelUser = Depends(require_panel_user)
+) -> AsyncIterator[PanelUser]:
+    """Gate + context for the cross-tenant platform surface (F5).
+
+    A non-super-admin login (any customer) is rejected with 403 — strict role
+    separation. For a super-admin, switch to the explicit ALL_TENANTS context so
+    the audited platform routes can read across tenants; this is the ONLY place
+    that bypasses per-tenant filtering. Reset on teardown (LIFO). Super-admin
+    audits carry tenant_id=NULL (a platform action).
+    """
+    if not user.is_superadmin:
+        raise HTTPException(status_code=403, detail="forbidden")
+    token = set_tenant(ALL_TENANTS)
     try:
         yield user
     finally:

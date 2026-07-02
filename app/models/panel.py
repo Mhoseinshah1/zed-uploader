@@ -28,6 +28,10 @@ class PanelUser(Base):
     tenant_id: Mapped[int] = mapped_column(
         ForeignKey("tenants.id", ondelete="CASCADE"), index=True, nullable=False
     )
+    # F5: cross-tenant super-admin surface (platform operators only).
+    is_superadmin: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false"), nullable=False
+    )
     is_active: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default=text("true"), nullable=False
     )
