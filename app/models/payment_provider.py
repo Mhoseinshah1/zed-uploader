@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, String, Text, func
 from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -29,6 +29,10 @@ class PaymentProviderConfig(Base):
         Boolean, default=False, server_default=sql_text("false"), nullable=False
     )
     extra: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # per-provider credentials/params (C1b): zarinpal {merchant_id}, zibal
+    # {merchant}, centralpay {getlink_key, verify_key}. Secrets live here (or
+    # in env for CentralPay's fallback) and are masked in the panel.
+    config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

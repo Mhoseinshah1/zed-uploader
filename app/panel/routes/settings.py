@@ -19,7 +19,6 @@ from app.services.bot_setting_service import (
     BotSettingService,
 )
 from app.services.channel_service import ChannelService
-from app.services.providers import get_config, upsert_config
 
 router = APIRouter()
 
@@ -46,15 +45,6 @@ async def settings_page(
         "public_search_enabled": await setting.public_search_enabled(),
         "channels": channels,
     }
-    centralpay_row = await get_config(session, "centralpay")
-    zarinpal_row = await get_config(session, "zarinpal")
-    ctx.update(
-        centralpay_keys_set=app_settings.centralpay_enabled,
-        centralpay_on=centralpay_row.is_enabled if centralpay_row else True,
-        zarinpal_on=zarinpal_row.is_enabled if zarinpal_row else False,
-        zarinpal_merchant=(zarinpal_row.merchant_id or "") if zarinpal_row else "",
-        zarinpal_sandbox=zarinpal_row.sandbox if zarinpal_row else False,
-    )
     return render(request, "settings.html", **ctx)
 
 
@@ -106,30 +96,6 @@ async def settings_uploads(
     await setting.set(KEY_USER_UPLOAD_ENABLED, user_upload_enabled == "on")
     await setting.set(KEY_USER_UPLOAD_REVIEW, user_upload_requires_review == "on")
     await audit(session, request, "settings_uploads")
-    return RedirectResponse(url=_p("/settings"), status_code=302)
-
-
-@router.post("/settings/providers")
-async def settings_providers(
-    request: Request,
-    centralpay_on: str = Form(""),
-    zarinpal_on: str = Form(""),
-    zarinpal_merchant: str = Form(""),
-    zarinpal_sandbox: str = Form(""),
-    csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
-    session: AsyncSession = Depends(get_session),
-):
-    await verify_csrf(request)
-    await upsert_config(session, "centralpay", is_enabled=centralpay_on == "on")
-    await upsert_config(
-        session,
-        "zarinpal",
-        is_enabled=zarinpal_on == "on",
-        merchant_id=zarinpal_merchant,
-        sandbox=zarinpal_sandbox == "on",
-    )
-    await audit(session, request, "settings_providers")
     return RedirectResponse(url=_p("/settings"), status_code=302)
 
 

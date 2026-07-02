@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>درگاه‌های پرداخت</h1>
+<p>هر درگاه را جداگانه پیکربندی کنید. مقادیر محرمانه نمایش داده نمی‌شوند؛ برای نگه‌داشتن مقدار فعلی، فیلد را خالی بگذارید.</p>
+
+{% macro badge(status) -%}
+  {% if status == "ready" %}<strong style="color:#22c55e">آماده ✅</strong>
+  {% elif status == "enabled-but-unconfigured" %}<strong style="color:#f59e0b">فعال؛ پیکربندی ناقص ⚠️</strong>
+  {% else %}<strong style="color:#9ca3af">غیرفعال</strong>{% endif %}
+{%- endmacro %}
+
+{% macro secret_input(name, label, is_set) -%}
+  <label>{{ label }}
+    <input type="password" name="{{ name }}" value="" autocomplete="new-password"
+           placeholder="{{ '••••• (تنظیم شده — برای تغییر تایپ کنید)' if is_set else 'تنظیم نشده' }}">
+  </label>
+{%- endmacro %}
+
+<section class="panel-box">
+  <h2>سنترال‌پی — {{ badge(providers.centralpay.status) }}</h2>
+  <form method="post" action="{{ panel_path }}/providers/centralpay">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="checkbox"><input type="checkbox" name="is_enabled" {{ "checked" if providers.centralpay.is_enabled else "" }}> فعال</label>
+    {{ secret_input("getlink_key", "کلید getLink", providers.centralpay.has.getlink_key) }}
+    {{ secret_input("verify_key", "کلید verify", providers.centralpay.has.verify_key) }}
+    {% if centralpay_env %}<p>کلیدهای .env تنظیم شده‌اند و در نبود مقدار پنل استفاده می‌شوند.</p>{% endif %}
+    <button type="submit">ذخیره</button>
+  </form>
+</section>
+
+<section class="panel-box">
+  <h2>زرین‌پال — {{ badge(providers.zarinpal.status) }}</h2>
+  <form method="post" action="{{ panel_path }}/providers/zarinpal">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="checkbox"><input type="checkbox" name="is_enabled" {{ "checked" if providers.zarinpal.is_enabled else "" }}> فعال</label>
+    <label class="checkbox"><input type="checkbox" name="sandbox" {{ "checked" if providers.zarinpal.sandbox else "" }}> حالت سندباکس</label>
+    {{ secret_input("merchant_id", "مرچنت (Merchant ID)", providers.zarinpal.has.merchant_id) }}
+    <button type="submit">ذخیره</button>
+  </form>
+</section>
+
+<section class="panel-box">
+  <h2>زیبال — {{ badge(providers.zibal.status) }}</h2>
+  <form method="post" action="{{ panel_path }}/providers/zibal">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="checkbox"><input type="checkbox" name="is_enabled" {{ "checked" if providers.zibal.is_enabled else "" }}> فعال</label>
+    <label class="checkbox"><input type="checkbox" name="sandbox" {{ "checked" if providers.zibal.sandbox else "" }}> حالت سندباکس (مرچنت تستی zibal)</label>
+    {{ secret_input("merchant", "مرچنت (merchant)", providers.zibal.has.merchant) }}
+    <button type="submit">ذخیره</button>
+  </form>
+</section>
+{% endblock %}

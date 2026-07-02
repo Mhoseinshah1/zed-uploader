@@ -55,7 +55,7 @@ class ZarinpalProvider(PaymentProvider):
             {
                 "MerchantID": self.merchant_id,
                 "Amount": payment.amount,
-                "Description": messages.zarinpal_description(payment.id),
+                "Description": messages.gateway_description(payment.id),
                 "CallbackURL": callback_url,
             },
         )

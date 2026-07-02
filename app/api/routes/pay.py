@@ -61,7 +61,7 @@ def _render(result: str) -> HTMLResponse:
 
 
 async def _resolve_payment(
-    session, provider: str, order_id: int, authority: str
+    session, provider: str, order_id: int, token: str
 ) -> Payment | None:
     if order_id > 0:
         return await session.scalar(
@@ -69,10 +69,10 @@ async def _resolve_payment(
                 Payment.id == order_id, Payment.method == provider
             )
         )
-    if authority:
+    if token:
         return await session.scalar(
             select(Payment).where(
-                Payment.authority == authority, Payment.method == provider
+                Payment.authority == token, Payment.method == provider
             )
         )
     return None
@@ -86,19 +86,23 @@ async def gateway_return(
     orderId: int = 0,
     authority: str = Query("", alias="Authority"),
     status: str = Query("", alias="Status"),
+    track_id: str = Query("", alias="trackId"),
+    success: str = Query("", alias="success"),
 ) -> HTMLResponse:
     if provider not in PROVIDER_KEYS:
         return _render("failed")
 
-    payment = await _resolve_payment(session, provider, orderId, authority)
+    # Zarinpal returns ?Authority=..&Status=OK|NOK, Zibal ?trackId=..&success=1|0
+    token = authority or track_id
+    payment = await _resolve_payment(session, provider, orderId, token)
     if payment is None:
         log.info("gateway_return_unknown", provider=provider, order_id=orderId)
         return _render("failed")
     # a mismatched gateway token must never verify someone else's order
-    if authority and payment.authority and authority != payment.authority:
-        log.warning("gateway_return_authority_mismatch", order_id=payment.id)
+    if token and payment.authority and token != payment.authority:
+        log.warning("gateway_return_token_mismatch", order_id=payment.id)
         return _render("failed")
-    if status and status.upper() != "OK":
+    if (status and status.upper() != "OK") or success == "0":
         # the gateway reports a cancelled/failed attempt: skip the verify call
         log.info("gateway_return_not_ok", provider=provider, order_id=payment.id)
         return _render("failed")
