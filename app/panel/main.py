@@ -18,6 +18,7 @@ from app.panel.routes import (
     broadcast,
     dashboard,
     folders,
+    license as license_routes,
     media,
     payments,
     plans,
@@ -49,6 +50,7 @@ for _module in (
     backups,
     reports,
     texts,
+    license_routes,
     broadcast,
 ):
     router.include_router(_module.router)

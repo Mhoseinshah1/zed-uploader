@@ -42,6 +42,11 @@ async def broadcast_capture(
 async def broadcast_confirm(
     callback: CallbackQuery, state: FSMContext, session: AsyncSession
 ) -> None:
+    from app.services.license_service import paid_features_allowed
+
+    if not await paid_features_allowed(session):
+        await callback.answer(messages.LICENSE_BLOCKED, show_alert=True)
+        return
     data = await state.get_data()
     await state.clear()
     from_chat_id = data.get("from_chat_id")

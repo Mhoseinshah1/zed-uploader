@@ -4,6 +4,9 @@
 {% if request.query_params.get("sent") == "1" %}
 <p class="ok">پیام در صف ارسال قرار گرفت؛ ورکر آن را ارسال می‌کند.</p>
 {% endif %}
+{% if request.query_params.get("error") == "license" %}
+<p style="color:#ef4444">⚠️ لایسنس معتبر نیست؛ ارسال همگانی موقتاً غیرفعال است.</p>
+{% endif %}
 {% if request.query_params.get("retried") %}
 <p class="ok">{{ request.query_params.get("retried") }} مورد ناموفق دوباره در صف قرار گرفت.</p>
 {% endif %}
