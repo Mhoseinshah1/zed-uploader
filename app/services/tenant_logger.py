@@ -33,6 +33,16 @@ CATEGORIES: dict[str, tuple[str, str]] = {
 }
 
 FAIL_BACKOFF_TTL = 300  # seconds a broken group is skipped after a send failure
+TELEGRAM_UPLOAD_LIMIT = 50 * 1024 * 1024  # ~50MB bot send_document limit
+
+
+def _human_size(n: int) -> str:
+    size = float(n)
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024 or unit == "GB":
+            return f"{size:.1f}{unit}"
+        size /= 1024
+    return f"{size:.1f}GB"
 
 
 def mask_card(number: str | None) -> str:
@@ -127,17 +137,21 @@ class TenantLogger:
 
     async def _bot_for_tenant(self):
         """Build a throwaway Bot from the current tenant's token (panel/worker
-        callers with no bot in hand). Returns None if unavailable."""
+        callers with no bot in hand). Returns None if unavailable. The platform
+        tenant (id 1) has no stored token — it uses the env bot token."""
         try:
             from aiogram import Bot
 
+            from app.core.config import settings
+            from app.core.tenant_context import PLATFORM_TENANT_ID
             from app.models.tenant import Tenant
             from app.services.tenant_service import TenantService
 
-            tenant = await self.session.scalar(
-                select(Tenant).where(Tenant.id == require_tenant())
-            )
+            tid = require_tenant()
+            tenant = await self.session.scalar(select(Tenant).where(Tenant.id == tid))
             token = TenantService.decrypt_token(tenant) if tenant else None
+            if not token and tid == PLATFORM_TENANT_ID:
+                token = settings.bot_token or None
             return Bot(token=token) if token else None
         except Exception:
             return None
@@ -174,3 +188,71 @@ class TenantLogger:
 
     async def log_backup(self, note: str, bot=None) -> None:
         await self.emit("backups", f"🗄 {note}", bot=bot)
+
+    async def deliver_backup(self, file_path: str, size: int, bot=None) -> bool:
+        """Send a completed DB backup to the current tenant's backup topic (G2).
+
+        Respects Telegram's ~50MB bot upload limit: gzips an oversized dump, and
+        if it is still too large sends a "download from panel" notice instead.
+        Best-effort — a Telegram failure never fails the backup job.
+        """
+        import gzip
+        import os
+        import shutil
+
+        row = await self.get_settings()
+        if row is None or not row.log_group_id:
+            return False
+
+        send_path, note = file_path, ""
+        try:
+            if size > TELEGRAM_UPLOAD_LIMIT:
+                gz_path = file_path + ".gz"
+                with open(file_path, "rb") as src, gzip.open(gz_path, "wb") as dst:
+                    shutil.copyfileobj(src, dst)
+                if os.path.getsize(gz_path) <= TELEGRAM_UPLOAD_LIMIT:
+                    send_path, note = gz_path, " (فشرده)"
+                else:
+                    await self.emit(
+                        "backups",
+                        "🗄 حجم بکاپ برای تلگرام زیاد است؛ از پنل دانلود کنید.",
+                        bot=bot,
+                    )
+                    return False
+        except Exception as exc:
+            log.warning("backup_gzip_failed", error=str(exc))
+            return False
+
+        caption = f"🗄 بکاپ دیتابیس{note} · حجم: {_human_size(os.path.getsize(send_path))}"
+        return await self._send_document("backups", send_path, caption, bot=bot)
+
+    async def _send_document(self, category, file_path, caption, bot=None) -> bool:
+        """Send a file to a topic (ensures the topic exists). Best-effort."""
+        from aiogram.types import FSInputFile
+
+        try:
+            row = await self.get_settings()
+            if row is None or not row.log_group_id:
+                return False
+            own_bot = False
+            if bot is None:
+                bot = await self._bot_for_tenant()
+                own_bot = bot is not None
+            if bot is None:
+                return False
+            try:
+                thread_id = await self._ensure_topic(bot, row, category)
+                await bot.send_document(
+                    chat_id=row.log_group_id, document=FSInputFile(file_path),
+                    caption=caption, message_thread_id=thread_id,
+                )
+                return True
+            finally:
+                if own_bot:
+                    try:
+                        await bot.session.close()
+                    except Exception:
+                        pass
+        except Exception as exc:
+            log.warning("tenant_log_document_failed", category=category, error=str(exc))
+            return False
