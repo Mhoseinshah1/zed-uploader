@@ -1,0 +1,16 @@
+# OPTIONAL standalone activation server — the main app runs fine without it
+# (LICENSE_DISABLED / grace). Run from the repo root:
+#   docker compose -f activation_server/docker-compose.yml up -d
+services:
+  activation:
+    build:
+      context: ..
+      dockerfile: activation_server/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8100:8100"
+    volumes:
+      - activation_data:/data
+
+volumes:
+  activation_data:
