@@ -63,6 +63,14 @@ async def payment_approve(
             request, session, payment.user_id,
             bot_messages.user_credited(payment.amount),
         )
+        try:  # best-effort tenant log (G1); no bot in the request -> logger builds one
+            from app.services.tenant_logger import TenantLogger
+
+            await TenantLogger(session).log_payment(
+                method="card", amount=payment.amount, status="approved",
+            )
+        except Exception:
+            pass
     return RedirectResponse(url=f"{settings.panel_path}/payments", status_code=302)
 
 

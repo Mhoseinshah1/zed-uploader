@@ -178,6 +178,14 @@ async def admin_upload(
         auto_delete_seconds=autodelete or None,
     )
     log.info("media_created", media_id=media.id, code=media.code)
+    try:  # best-effort tenant log (G1)
+        from app.services.tenant_logger import TenantLogger
+
+        await TenantLogger(session).log_upload(
+            media.code, message.from_user.id if message.from_user else 0, bot=message.bot
+        )
+    except Exception:
+        pass
     await message.answer(messages.upload_success(service.deep_link(media), media.code))
 
 

@@ -21,6 +21,7 @@ class UserService:
     async def upsert_from_telegram(self, tg_user: Any) -> User:
         """Create or update a :class:`User` from an aiogram ``types.User``."""
         user = await self.get_by_telegram_id(tg_user.id)
+        created = user is None
         if user is None:
             user = User(
                 telegram_id=tg_user.id,
@@ -36,6 +37,8 @@ class UserService:
             user.last_name = tg_user.last_name
             user.language_code = tg_user.language_code
         await self.session.commit()
+        # transient flag (not persisted) so the /start handler can log a new user
+        user.just_created = created
         return user
 
     async def list_users(self, *, limit: int = 50, offset: int = 0) -> list[User]:

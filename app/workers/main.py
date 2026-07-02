@@ -214,10 +214,13 @@ async def _notify(bot, chat_id: int, text: str) -> None:
         log.warning("album_notify_failed", chat_id=chat_id, error=str(exc))
 
 
-async def process_backups_once(session_maker) -> int:
+async def process_backups_once(session_maker, bot=None) -> int:
     """Create a due scheduled backup, then run ONE pending job (if any).
 
     Prunes old success backups after each successful run (keep-N from settings).
+    On success, best-effort delivers the dump to the platform tenant's backup
+    topic (G2). Backups are a whole-DB dump, so they belong to the platform
+    tenant only — never a customer topic.
     """
     from app.services.backup_service import (
         DEFAULT_BACKUP_KEEP,
@@ -241,6 +244,15 @@ async def process_backups_once(session_maker) -> int:
         if job.status == "success":
             keep = await setting.get_int(KEY_BACKUP_KEEP, DEFAULT_BACKUP_KEEP)
             await svc.prune(keep)
+            if job.file_path:
+                try:  # best-effort delivery to the backup topic; never fails the job
+                    from app.services.tenant_logger import TenantLogger
+
+                    await TenantLogger(session).deliver_backup(
+                        job.file_path, job.file_size or 0, bot=bot
+                    )
+                except Exception as exc:
+                    log.warning("backup_deliver_failed", error=str(exc))
         return 1
 
 
@@ -358,7 +370,7 @@ async def main() -> None:
                 except Exception as exc:
                     log.warning("tenant_expiry_error", error=str(exc))
                 try:
-                    await process_backups_once(async_session_maker)
+                    await process_backups_once(async_session_maker, bot=bot)
                 except Exception as exc:
                     log.warning("backup_loop_error", error=str(exc))
                 try:

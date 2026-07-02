@@ -61,7 +61,13 @@ def build_admin_menu(is_owner: bool = False, is_platform: bool = False) -> Reply
                 KeyboardButton(text=messages.BTN_SELL),
             ]
         )
-        keyboard.append([KeyboardButton(text=messages.BTN_ADS)])
+        keyboard.append(
+            [
+                KeyboardButton(text=messages.BTN_ADS),
+                KeyboardButton(text=messages.BTN_LOG_GROUP),
+            ]
+        )
+    keyboard.append([KeyboardButton(text=messages.BTN_PANEL)])
     if is_platform:
         keyboard.append([KeyboardButton(text=messages.BTN_CREATE_BOT)])
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)

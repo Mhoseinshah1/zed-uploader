@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_session
-from app.panel.deps import audit, render, require_panel_user, verify_csrf
+from app.panel.deps import audit, render, require_superadmin, verify_csrf
 from app.services.backup_service import (
     DEFAULT_BACKUP_KEEP,
     KEY_BACKUP_KEEP,
@@ -34,7 +34,7 @@ def _p() -> str:
 @router.get("/backups")
 async def backups_page(
     request: Request,
-    _=Depends(require_panel_user),
+    _=Depends(require_superadmin),
     session: AsyncSession = Depends(get_session),
 ):
     setting = BotSettingService(session)
@@ -52,7 +52,7 @@ async def backups_page(
 async def backups_trigger(
     request: Request,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_superadmin),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -67,7 +67,7 @@ async def backups_settings(
     schedule: str = Form("off"),
     keep: int = Form(DEFAULT_BACKUP_KEEP),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_superadmin),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -82,7 +82,7 @@ async def backups_settings(
 async def backups_download(
     request: Request,
     job_id: int,
-    _=Depends(require_panel_user),
+    _=Depends(require_superadmin),
     session: AsyncSession = Depends(get_session),
 ):
     job = await BackupService(session).get(job_id)
@@ -103,7 +103,7 @@ async def backups_delete(
     request: Request,
     job_id: int,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_superadmin),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -118,7 +118,7 @@ async def backups_restore(
     job_id: int,
     confirm_filename: str = Form(""),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_superadmin),
     session: AsyncSession = Depends(get_session),
 ):
     """DESTRUCTIVE: applies the dump over the live DB. The exact dump filename

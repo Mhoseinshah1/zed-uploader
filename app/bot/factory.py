@@ -9,6 +9,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.redis import RedisStorage
 
 from app.bot.handlers import (
+    admin_panel,
     admins,
     ads,
     albums,
@@ -87,6 +88,7 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.include_router(folders.router)
     dispatcher.include_router(channels.router)
     dispatcher.include_router(admins.router)
+    dispatcher.include_router(admin_panel.router)
     dispatcher.include_router(broadcast.router)
     dispatcher.include_router(billing.router)
     dispatcher.include_router(newbot.router)
