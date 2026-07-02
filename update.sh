@@ -55,6 +55,7 @@ wait_healthy() {
 }
 
 OLD_COMMIT=$(git rev-parse HEAD)
+OLD_VERSION=$(cat VERSION 2>/dev/null || echo "?")
 
 # --- 1) back up the database BEFORE pulling ---------------------------------
 log "Ensuring the database is up for a pre-update backup..."
@@ -83,6 +84,8 @@ if ! git pull --ff-only; then
     die "git pull failed (you have local changes). Commit or stash them, then re-run."
 fi
 NEW_COMMIT=$(git rev-parse HEAD)
+NEW_VERSION=$(cat VERSION 2>/dev/null || echo "?")
+log "Version: $OLD_VERSION -> $NEW_VERSION"
 
 # --- 3) build + start infra -------------------------------------------------
 log "Rebuilding images..."
@@ -97,9 +100,11 @@ wait_healthy redis || die "redis did not become healthy."
 log "Applying database migrations..."
 if ! docker compose run --rm api alembic upgrade head; then
     die "Migration FAILED — the stack was NOT fully updated (services keep the previous version).
-     Your pre-update backup is at: $BACKUP_FILE
-     To restore it:
-       cat '$BACKUP_FILE' | docker compose exec -T db psql -U '$POSTGRES_USER' '$POSTGRES_DB'
+     ROLLBACK GUIDANCE:
+       1) restore the pre-update backup:
+          cat '$BACKUP_FILE' | docker compose exec -T db psql -U '$POSTGRES_USER' '$POSTGRES_DB'
+       2) (optional) return the code to the previous release:
+          git checkout $OLD_COMMIT && docker compose build && docker compose up -d
      Fix the migration, then re-run update.sh."
 fi
 

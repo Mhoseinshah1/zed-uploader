@@ -278,6 +278,13 @@ async def main() -> None:
     redis = get_redis()
     queue = AutoDeleteQueue(redis)
     last_sweep = 0.0
+    try:
+        from app.core.version import sync_version
+
+        async with async_session_maker() as session:
+            await sync_version(session)
+    except Exception as exc:
+        log.warning("version_sync_failed", error=str(exc))
     log.info("worker_started")
     try:
         while True:
