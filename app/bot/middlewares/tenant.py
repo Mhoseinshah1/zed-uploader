@@ -1,9 +1,11 @@
 """TenantContextMiddleware — set the tenant context for each bot update.
 
-Phase F1: the single bot always runs as the platform tenant. Registered BEFORE
-DbSessionMiddleware (so it is outermost) — every query/insert in a handler,
-filter, or the user-upsert middleware runs tenant-scoped. F2 will pass the
-resolved per-bot tenant id here instead of the constant.
+Registered BEFORE DbSessionMiddleware (so it is outermost) — every query/insert
+in a handler, filter, or the user-upsert middleware runs tenant-scoped and fails
+closed otherwise. The tenant is taken from the ``tenant_id`` passed to
+``dp.feed_update(bot, update, tenant_id=...)`` by the per-tenant webhook route
+(F2); the legacy platform webhook and polling omit it, so it defaults to the
+platform tenant (the single bot behaves exactly as before).
 """
 from __future__ import annotations
 
@@ -17,8 +19,8 @@ from app.core.tenant_context import PLATFORM_TENANT_ID, reset_tenant, set_tenant
 
 
 class TenantContextMiddleware(BaseMiddleware):
-    def __init__(self, tenant_id: int = PLATFORM_TENANT_ID) -> None:
-        self.tenant_id = tenant_id
+    def __init__(self, default_tenant_id: int = PLATFORM_TENANT_ID) -> None:
+        self.default_tenant_id = default_tenant_id
 
     async def __call__(
         self,
@@ -26,7 +28,8 @@ class TenantContextMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
-        token = set_tenant(self.tenant_id)
+        tenant_id = data.get("tenant_id", self.default_tenant_id)
+        token = set_tenant(tenant_id)
         try:
             return await handler(event, data)
         finally:

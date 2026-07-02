@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>پلن‌های ساخت ربات</h1>
+<p>قیمت‌گذاری فروش ربات به مشتری‌ها. مدت ۰ = دائمی؛ بزرگ‌تر از ۰ = اجاره (روز). قیمت به تومان از کیف پول مشتری کسر می‌شود.</p>
+
+{% for p in plans %}
+<section class="panel-box">
+  <h2 dir="ltr">{{ p.key }}</h2>
+  <form method="post" action="{{ panel_path }}/bot-plans/save">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="key" value="{{ p.key }}">
+    <label>عنوان <input type="text" name="title" value="{{ p.title }}" required></label>
+    <label>قیمت (تومان) <input type="number" name="price" value="{{ p.price }}" min="0"></label>
+    <label>مدت (روز) <input type="number" name="duration_days" value="{{ p.duration_days }}" min="0"></label>
+    <label><input type="checkbox" name="is_active" {% if p.is_active %}checked{% endif %}> فعال</label>
+    <button type="submit">ذخیره</button>
+  </form>
+  <form method="post" action="{{ panel_path }}/bot-plans/{{ p.key }}/delete">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">حذف</button>
+  </form>
+</section>
+{% endfor %}
+
+<section class="panel-box">
+  <h2>افزودن پلن</h2>
+  <form method="post" action="{{ panel_path }}/bot-plans/save">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>کلید <input type="text" name="key" dir="ltr" placeholder="monthly" required></label>
+    <label>عنوان <input type="text" name="title" required></label>
+    <label>قیمت (تومان) <input type="number" name="price" value="0" min="0"></label>
+    <label>مدت (روز) <input type="number" name="duration_days" value="0" min="0"></label>
+    <label><input type="checkbox" name="is_active" checked> فعال</label>
+    <button type="submit">افزودن</button>
+  </form>
+</section>
+{% endblock %}

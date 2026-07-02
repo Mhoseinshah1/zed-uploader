@@ -13,6 +13,12 @@ class FilesCb(CallbackData, prefix="files"):
     page: int
 
 
+class NewBotCb(CallbackData, prefix="newbot"):
+    """Buy-a-bot: the customer picked a bot plan (F3)."""
+
+    plan_key: str
+
+
 class MediaCb(CallbackData, prefix="media"):
     """Per-file actions.
 

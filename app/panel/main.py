@@ -15,6 +15,7 @@ from app.panel.routes import (
     ads,
     auth,
     backups,
+    bot_plans,
     broadcast,
     commands,
     dashboard,
@@ -52,6 +53,7 @@ for _module in (
     reports,
     texts,
     commands,
+    bot_plans,
     license_routes,
     broadcast,
 ):

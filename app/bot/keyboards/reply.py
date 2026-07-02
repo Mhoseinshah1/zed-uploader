@@ -6,21 +6,26 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from app.bot import messages
 
 
-def build_user_menu() -> ReplyKeyboardMarkup:
-    """Menu for regular (non-admin) users: wallet + subscription."""
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [
-                KeyboardButton(text=messages.BTN_WALLET),
-                KeyboardButton(text=messages.BTN_SUBSCRIPTION),
-            ]
-        ],
-        resize_keyboard=True,
-    )
+def build_user_menu(is_platform: bool = False) -> ReplyKeyboardMarkup:
+    """Menu for regular (non-admin) users: wallet + subscription.
+
+    On the platform (master) bot only, a "ساخت ربات" button lets any user buy
+    their own hosted bot (F3); customer bots never show it.
+    """
+    keyboard = [
+        [
+            KeyboardButton(text=messages.BTN_WALLET),
+            KeyboardButton(text=messages.BTN_SUBSCRIPTION),
+        ]
+    ]
+    if is_platform:
+        keyboard.append([KeyboardButton(text=messages.BTN_CREATE_BOT)])
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 
-def build_admin_menu(is_owner: bool = False) -> ReplyKeyboardMarkup:
-    """Admin reply keyboard. Owners get an extra management/sell section."""
+def build_admin_menu(is_owner: bool = False, is_platform: bool = False) -> ReplyKeyboardMarkup:
+    """Admin reply keyboard. Owners get an extra management/sell section; on the
+    platform bot a "ساخت ربات" button is appended."""
     keyboard = [
         [
             KeyboardButton(text=messages.BTN_UPLOAD),
@@ -57,4 +62,6 @@ def build_admin_menu(is_owner: bool = False) -> ReplyKeyboardMarkup:
             ]
         )
         keyboard.append([KeyboardButton(text=messages.BTN_ADS)])
+    if is_platform:
+        keyboard.append([KeyboardButton(text=messages.BTN_CREATE_BOT)])
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
