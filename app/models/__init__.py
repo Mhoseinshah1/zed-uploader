@@ -4,6 +4,7 @@ from __future__ import annotations
 from app.db.base import Base
 from app.models.ad import Ad
 from app.models.admin import Admin
+from app.models.backup_job import BackupJob
 from app.models.broadcast import BroadcastJob, BroadcastRecipient
 from app.models.channel import RequiredChannel
 from app.models.download_log import DownloadLog
@@ -40,4 +41,5 @@ __all__ = [
     "Folder",
     "PaymentProviderConfig",
     "Ad",
+    "BackupJob",
 ]
