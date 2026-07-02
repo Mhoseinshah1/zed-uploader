@@ -93,6 +93,51 @@ async def login_submit(
     return response
 
 
+@router.get("/link/{token}")
+async def panel_link_login(
+    token: str,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    """Consume a one-time in-bot deep-link and open a tenant-scoped session (G3).
+
+    The token is single-use + expiring + tenant-scoped (see PanelLinkService).
+    We re-check the bound panel user is still active and its tenant matches the
+    token before minting a session, then redirect to the (validated) target.
+    """
+    from app.panel.link_service import PanelLinkService
+
+    redis = get_redis()
+    data = await PanelLinkService(redis).consume(token)
+    if not data:
+        return RedirectResponse(url=_login_url(), status_code=302)
+    user = await session.scalar(
+        select(PanelUser).where(
+            PanelUser.id == data.get("u"), PanelUser.is_active.is_(True)
+        )
+    )
+    if user is None or user.tenant_id != data.get("t"):
+        return RedirectResponse(url=_login_url(), status_code=302)
+
+    # only allow internal panel targets (no open redirect)
+    target = data.get("p") or settings.panel_path
+    if not target.startswith(settings.panel_path):
+        target = settings.panel_path
+
+    csrf = security.generate_csrf()
+    sid = await SessionStore(redis).create({"uid": user.id, "csrf": csrf})
+    response = RedirectResponse(url=target, status_code=302)
+    response.set_cookie(
+        COOKIE_NAME,
+        security.sign(sid),
+        httponly=True,
+        samesite="lax",
+        secure=is_secure(request),
+        max_age=SESSION_TTL,
+    )
+    return response
+
+
 @router.post("/logout")
 @router.get("/logout")
 async def logout(request: Request):

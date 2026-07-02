@@ -73,3 +73,8 @@ class SellEdit(StatesGroup):
 # --- Phase F3: buy-a-bot ----------------------------------------------------
 class NewBot(StatesGroup):
     waiting_token = State()  # data: plan_key — customer submitting a BotFather token
+
+
+# --- Phase G3: in-bot admin extras ------------------------------------------
+class LogSetup(StatesGroup):
+    waiting_group = State()  # owner entering the log group id in-chat
