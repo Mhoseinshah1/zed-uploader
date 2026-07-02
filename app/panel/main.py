@@ -22,6 +22,7 @@ from app.panel.routes import (
     payments,
     plans,
     providers,
+    reports,
     review,
     settings as settings_routes,
     stats,
@@ -45,6 +46,7 @@ for _module in (
     settings_routes,
     stats,
     backups,
+    reports,
     broadcast,
 ):
     router.include_router(_module.router)

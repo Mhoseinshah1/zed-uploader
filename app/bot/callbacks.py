@@ -159,6 +159,14 @@ class GateCb(CallbackData, prefix="gate"):
     plan: str = ""
 
 
+class ReportCb(CallbackData, prefix="rpt"):
+    """Media abuse report. action ∈ {start, reason}; value = reason key."""
+
+    action: str
+    id: int = 0
+    value: str = ""
+
+
 class StarsBuyCb(CallbackData, prefix="stars"):
     """Buy a plan with Telegram Stars (XTR invoice)."""
 

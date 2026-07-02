@@ -13,7 +13,7 @@ from aiogram import Bot
 from aiogram.types import User as TgUser
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot.keyboards.inline import build_share, build_url_button
+from app.bot.keyboards.inline import build_delivered_actions, build_url_button
 from app.bot.sender import notify_auto_delete, send_media_file
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -114,7 +114,7 @@ async def deliver_by_code(
     await send_placement_ads(bot, session, chat_id, user_id, "before_file")
 
     # send every file; caption + share button on the first only
-    share_markup = build_share(service.deep_link(media))
+    share_markup = build_delivered_actions(service.deep_link(media), media.id)
     sent_ids: list[int] = []
     for index, media_file in enumerate(media.files):
         caption = media.caption if index == 0 else None
