@@ -8,12 +8,13 @@ from __future__ import annotations
 
 from aiogram import Router
 from aiogram.types import Message
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot import messages
+from app.services.text_service import get_text
 
 router = Router(name="common")
 
 
 @router.message()
-async def fallback(message: Message) -> None:
-    await message.answer(messages.HELP)
+async def fallback(message: Message, session: AsyncSession) -> None:
+    await message.answer(await get_text(session, "help"))

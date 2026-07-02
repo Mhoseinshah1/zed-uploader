@@ -30,26 +30,32 @@ from app.core.security import (
 from app.models.user import User
 from app.services.admin_service import AdminService
 from app.services.media_service import MediaService
+from app.services.text_service import get_text
 
 router = Router(name="start")
 log = get_logger("handler.start")
 
-_STATUS_MESSAGES = {
-    DeliveryStatus.NOT_FOUND: messages.NOT_FOUND,
-    DeliveryStatus.INACTIVE: messages.INACTIVE,
-    DeliveryStatus.LIMIT_REACHED: messages.LIMIT_REACHED,
-    DeliveryStatus.FAILED: messages.GENERIC_ERROR,
+_STATUS_TEXT_KEYS = {
+    DeliveryStatus.NOT_FOUND: "not_found",
+    DeliveryStatus.INACTIVE: "inactive",
+    DeliveryStatus.LIMIT_REACHED: "limit_reached",
+    DeliveryStatus.FAILED: "generic_error",
 }
+
+
+async def _status_text(session: AsyncSession, status: DeliveryStatus) -> str:
+    return await get_text(session, _STATUS_TEXT_KEYS.get(status, "not_found"))
 
 
 async def _send_welcome(message: Message, session: AsyncSession) -> None:
     """Welcome; admins also get the persistent reply keyboard (owners: +extra)."""
     user = message.from_user
+    welcome = await get_text(session, "welcome")
     if user is not None and await AdminService.is_admin(session, user.id):
         is_owner = await AdminService.is_owner(session, user.id)
-        await message.answer(messages.WELCOME, reply_markup=build_admin_menu(is_owner))
+        await message.answer(welcome, reply_markup=build_admin_menu(is_owner))
     else:
-        await message.answer(messages.WELCOME, reply_markup=build_user_menu())
+        await message.answer(welcome, reply_markup=build_user_menu())
     # best-effort start_message ad (never blocks the welcome)
     from app.bot.delivery import send_placement_ads
 
@@ -60,19 +66,20 @@ async def _send_welcome(message: Message, session: AsyncSession) -> None:
 
 
 async def _reply_delivery(
-    message: Message, state: FSMContext, result, code: str
+    message: Message, state: FSMContext, result, code: str, session: AsyncSession
 ) -> None:
     """Translate a message-triggered delivery outcome into a user reply."""
     if result.status is DeliveryStatus.GATED:
         await message.answer(
-            messages.GATE_PROMPT, reply_markup=build_join_gate(result.channels, code)
+            await get_text(session, "force_join"),
+            reply_markup=build_join_gate(result.channels, code),
         )
     elif result.status is DeliveryStatus.PASSWORD_REQUIRED:
         await state.set_state(Delivery.waiting_password)
         await state.update_data(code=code)
-        await message.answer(messages.PASSWORD_PROMPT)
+        await message.answer(await get_text(session, "password_prompt"))
     elif result.status is not DeliveryStatus.DELIVERED:
-        await message.answer(_STATUS_MESSAGES.get(result.status, messages.NOT_FOUND))
+        await message.answer(await _status_text(session, result.status))
 
 
 @router.message(CommandStart(deep_link=True))
@@ -91,7 +98,7 @@ async def start_with_code(
     result = await deliver_by_code(
         message.bot, session, message.chat.id, message.from_user, code
     )
-    await _reply_delivery(message, state, result, code)
+    await _reply_delivery(message, state, result, code, session)
 
 
 @router.callback_query(JoinCb.filter())
@@ -119,7 +126,7 @@ async def cb_join_recheck(
         await state.set_state(Delivery.waiting_password)
         await state.update_data(code=callback_data.code)
         await callback.answer()
-        await callback.message.answer(messages.PASSWORD_PROMPT)
+        await callback.message.answer(await get_text(session, "password_prompt"))
     elif result.status is DeliveryStatus.DELIVERED:
         await callback.answer()
         try:
@@ -130,7 +137,7 @@ async def cb_join_recheck(
         await callback.answer()
         try:
             await callback.message.edit_text(
-                _STATUS_MESSAGES.get(result.status, messages.NOT_FOUND)
+                await _status_text(session, result.status)
             )
         except Exception:
             pass
@@ -161,7 +168,7 @@ async def input_delivery_password(
         result = await deliver_by_code(
             message.bot, session, message.chat.id, message.from_user, code
         )
-        await _reply_delivery(message, state, result, code)
+        await _reply_delivery(message, state, result, code, session)
         return
 
     typed = (message.text or "").strip()
@@ -176,7 +183,7 @@ async def input_delivery_password(
             code,
             password_verified=True,
         )
-        await _reply_delivery(message, state, result, code)
+        await _reply_delivery(message, state, result, code, session)
         return
 
     remaining = await record_media_password_failure(redis, user_id, code)

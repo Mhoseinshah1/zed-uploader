@@ -187,7 +187,9 @@ async def non_admin_upload(
 ) -> None:
     setting_service = BotSettingService(session)
     if not await setting_service.user_upload_enabled():
-        await message.answer(messages.NOT_ADMIN_UPLOAD)
+        from app.services.text_service import get_text
+
+        await message.answer(await get_text(session, "upload_disabled"))
         return
     if db_user is None:
         return
@@ -224,4 +226,6 @@ async def non_admin_upload(
     if status == "approved":
         await message.answer(messages.upload_success(service.deep_link(media), media.code))
     else:
-        await message.answer(messages.UPLOAD_PENDING_REVIEW)
+        from app.services.text_service import get_text
+
+        await message.answer(await get_text(session, "upload_pending_review"))

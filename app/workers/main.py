@@ -172,11 +172,13 @@ async def _finalize_album(bot, session_maker, group) -> None:
         setting = BotSettingService(session)
         user = await UserService(session).get_by_telegram_id(telegram_id)
 
+        from app.services.text_service import get_text
+
         if is_admin:
             status = "approved"
         else:
             if not await setting.user_upload_enabled():
-                await _notify(bot, chat_id, messages.NOT_ADMIN_UPLOAD)
+                await _notify(bot, chat_id, await get_text(session, "upload_disabled"))
                 return
             status = "pending" if await setting.user_upload_requires_review() else "approved"
             if user is not None and not await within_file_limit(session, user, telegram_id):
@@ -200,7 +202,9 @@ async def _finalize_album(bot, session_maker, group) -> None:
     if status == "approved":
         await _notify(bot, chat_id, messages.batch_done(link, code, count))
     else:
-        await _notify(bot, chat_id, messages.UPLOAD_PENDING_REVIEW)
+        async with session_maker() as session:
+            pending_text = await get_text(session, "upload_pending_review")
+        await _notify(bot, chat_id, pending_text)
 
 
 async def _notify(bot, chat_id: int, text: str) -> None:
