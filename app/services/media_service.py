@@ -15,9 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.security import hash_media_password, verify_media_password
+from app.core.tenant_context import PLATFORM_TENANT_ID, current_tenant
 from app.models.download_log import DownloadLog
 from app.models.media import Media
 from app.models.media_file import MediaFile
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.services.code_generator import generate_unique_code
 
@@ -86,9 +88,29 @@ class MediaService:
         await self.session.commit()
         return media
 
-    def deep_link(self, media: Media) -> str:
-        """Build the t.me deep link for a media item."""
-        return f"https://t.me/{settings.bot_username}?start={media.code}"
+    async def deep_link(self, media: Media) -> str:
+        """Build the t.me deep link using the CURRENT tenant's own bot username.
+
+        Each tenant's files must link at that tenant's bot, not the platform's.
+        The platform tenant (id 1) uses the env BOT_USERNAME (its tenant row
+        carries only the placeholder 'platform'); customer tenants use the
+        username captured from getMe at creation. Cached per service instance
+        (one tenant per request)."""
+        return f"https://t.me/{await self._bot_username()}?start={media.code}"
+
+    async def _bot_username(self) -> str:
+        cached = getattr(self, "_bot_username_cache", None)
+        if cached is not None:
+            return cached
+        tid = current_tenant()
+        username = settings.bot_username
+        if isinstance(tid, int) and tid != PLATFORM_TENANT_ID:
+            row = await self.session.scalar(
+                select(Tenant.bot_username).where(Tenant.id == tid)
+            )
+            username = row or settings.bot_username
+        self._bot_username_cache = username
+        return username
 
     async def check_status(self, code: str) -> MediaStatus:
         """Non-mutating status check (does not claim a download slot)."""

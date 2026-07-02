@@ -195,7 +195,7 @@ async def _finalize_album(bot, session_maker, group) -> None:
             auto_delete_seconds=(await setting.effective_autodelete()) or None,
             status=status,
         )
-        link = service.deep_link(media)
+        link = await service.deep_link(media)
         code, count = media.code, len(files)
 
     log.info("album_finalized", chat_id=chat_id, count=count, status=status)

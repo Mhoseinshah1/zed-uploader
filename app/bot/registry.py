@@ -97,7 +97,9 @@ class BotRegistry:
                 url=tenant_webhook_url(tenant.bot_id),
                 secret_token=secret,
                 drop_pending_updates=False,
-                allowed_updates=["message", "callback_query"],
+                # pre_checkout_query is required for Telegram Stars to work on a
+                # tenant bot (message covers successful_payment).
+                allowed_updates=["message", "callback_query", "pre_checkout_query"],
             )
         except Exception as exc:
             log.warning("tenant_bot_register_failed", tenant_id=tenant.id, error=str(exc))

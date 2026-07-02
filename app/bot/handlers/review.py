@@ -110,7 +110,7 @@ async def review_approve(
         callback.bot,
         service,
         media,
-        messages.upload_approved_notify(service.deep_link(media), media.code),
+        messages.upload_approved_notify(await service.deep_link(media), media.code),
     )
     if isinstance(callback.message, Message):
         text, markup = await _render_queue(session, callback_data.page)

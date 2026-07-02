@@ -77,7 +77,7 @@ async def cmd_myfiles(
     if not items:
         await message.answer(messages.NO_FILES)
         return
-    lines = [f"• {media.code}\n{service.deep_link(media)}" for media in items]
+    lines = [f"• {media.code}\n{await service.deep_link(media)}" for media in items]
     await message.answer(messages.MY_FILES_HEADER + "\n\n" + "\n".join(lines))
 
 

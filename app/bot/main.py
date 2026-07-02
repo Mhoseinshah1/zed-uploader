@@ -60,7 +60,10 @@ async def run_webhook() -> None:
         url=settings.webhook_url,
         secret_token=settings.webhook_secret,
         drop_pending_updates=True,
-        allowed_updates=["message", "callback_query"],
+        # pre_checkout_query is REQUIRED for Telegram Stars — without it the
+        # invoice's pre-checkout never arrives and the payment silently stalls.
+        # message covers successful_payment.
+        allowed_updates=["message", "callback_query", "pre_checkout_query"],
     )
     log.info("webhook_set", url=settings.webhook_url)
     try:

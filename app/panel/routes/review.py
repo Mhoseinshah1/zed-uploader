@@ -46,7 +46,7 @@ async def review_approve(
     if media is not None:
         owner_tg = await service.owner_telegram_id(media.owner_user_id)
         await notify_user(
-            owner_tg, messages.upload_approved_notify(service.deep_link(media), media.code)
+            owner_tg, messages.upload_approved_notify(await service.deep_link(media), media.code)
         )
         await audit(session, request, "media_approve", target=str(media_id))
     return RedirectResponse(url=f"{settings.panel_path}/review", status_code=302)

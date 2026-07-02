@@ -186,7 +186,7 @@ async def admin_upload(
         )
     except Exception:
         pass
-    await message.answer(messages.upload_success(service.deep_link(media), media.code))
+    await message.answer(messages.upload_success(await service.deep_link(media), media.code))
 
 
 @router.message(MEDIA_FILTER)
@@ -232,7 +232,7 @@ async def non_admin_upload(
     )
     log.info("user_media_created", media_id=media.id, code=media.code, status=status)
     if status == "approved":
-        await message.answer(messages.upload_success(service.deep_link(media), media.code))
+        await message.answer(messages.upload_success(await service.deep_link(media), media.code))
     else:
         from app.services.text_service import get_text
 
