@@ -16,6 +16,7 @@ from aiogram.types import Message
 from app.bot.handlers.upload import MEDIA_FILTER, extract_file
 from app.core.logging import get_logger
 from app.core.redis_client import get_redis
+from app.core.tenant_context import require_tenant
 from app.services.album_buffer import AlbumBuffer
 
 router = Router(name="albums")
@@ -30,9 +31,11 @@ async def album_part(message: Message) -> None:
     if extracted is None:
         return  # unsupported part: just skip it
     file_data, caption = extracted
-    gk = AlbumBuffer.group_key(message.chat.id, str(message.media_group_id))
+    tenant_id = require_tenant()  # persist the tenant so the worker finalizes it right
+    gk = AlbumBuffer.group_key(tenant_id, message.chat.id, str(message.media_group_id))
     await AlbumBuffer(get_redis()).add(
         gk,
+        tenant_id=tenant_id,
         chat_id=message.chat.id,
         telegram_id=message.from_user.id,
         part={"file": file_data, "caption": caption},

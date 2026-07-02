@@ -99,6 +99,13 @@ class _FakeBot:
         return SimpleNamespace(status=value)
 
 
+class _BotProvider:  # Fix-2: wrap a fake bot as a TenantBotProvider
+    def __init__(self, bot):
+        self._bot = bot
+    async def get(self, session, tenant_id):
+        return self._bot
+
+
 async def test_unjoined_channels_filters_and_fails_open(sqlite_maker):
     async with sqlite_maker() as s:
         svc = ChannelService(s)
@@ -172,8 +179,8 @@ async def test_broadcast_worker_marks_blocked_and_advances(sqlite_maker):
 
     bot = _BroadcastBot(blocked_telegram_id=7002)
     # drain the job to completion (page -> finalize -> idle)
-    assert await worker.process_broadcast_once(bot, sqlite_maker) is True
-    while await worker.process_broadcast_once(bot, sqlite_maker):
+    assert await worker.process_broadcast_once(_BotProvider(bot), sqlite_maker) is True
+    while await worker.process_broadcast_once(_BotProvider(bot), sqlite_maker):
         pass
 
     async with sqlite_maker() as s:
@@ -196,5 +203,5 @@ async def test_broadcast_worker_marks_blocked_and_advances(sqlite_maker):
 
     # exactly-once: another pass must not re-send anything
     before = list(bot.copied)
-    await worker.process_broadcast_once(bot, sqlite_maker)
+    await worker.process_broadcast_once(_BotProvider(bot), sqlite_maker)
     assert bot.copied == before

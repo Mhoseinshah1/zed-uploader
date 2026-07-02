@@ -54,8 +54,15 @@ async def _seed_users(maker, telegram_ids) -> dict[int, int]:
     return mapping
 
 
+class _BotProvider:  # Fix-2: wrap a fake bot as a TenantBotProvider
+    def __init__(self, bot):
+        self._bot = bot
+    async def get(self, session, tenant_id):
+        return self._bot
+
+
 async def _drain(bot, maker) -> None:
-    while await worker.process_broadcast_once(bot, maker):
+    while await worker.process_broadcast_once(_BotProvider(bot), maker):
         pass
 
 

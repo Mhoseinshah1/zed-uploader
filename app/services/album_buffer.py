@@ -28,13 +28,15 @@ class AlbumBuffer:
         self.redis = redis
 
     @staticmethod
-    def group_key(chat_id: int, media_group_id: str) -> str:
-        return f"{chat_id}:{media_group_id}"
+    def group_key(tenant_id: int, chat_id: int, media_group_id: str) -> str:
+        # key by tenant too, so two tenants' albums never merge.
+        return f"{tenant_id}:{chat_id}:{media_group_id}"
 
     async def add(
         self,
         group_key: str,
         *,
+        tenant_id: int,
         chat_id: int,
         telegram_id: int,
         part: dict,
@@ -47,7 +49,12 @@ class AlbumBuffer:
         await self.redis.rpush(data_key, json.dumps(part))
         await self.redis.expire(data_key, ttl)
         await self.redis.hset(
-            meta_key, mapping={"chat_id": str(chat_id), "telegram_id": str(telegram_id)}
+            meta_key,
+            mapping={
+                "tenant_id": str(tenant_id),
+                "chat_id": str(chat_id),
+                "telegram_id": str(telegram_id),
+            },
         )
         await self.redis.expire(meta_key, ttl)
         # ZADD overwrites the score -> every new part pushes the finalize time out
@@ -74,6 +81,7 @@ class AlbumBuffer:
             out.append(
                 {
                     "group_key": gk,
+                    "tenant_id": int(meta.get("tenant_id", 0)),
                     "chat_id": int(meta.get("chat_id", 0)),
                     "telegram_id": int(meta.get("telegram_id", 0)),
                     "parts": [json.loads(p) for p in raw_parts],

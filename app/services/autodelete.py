@@ -19,14 +19,17 @@ class AutoDeleteQueue:
         self.redis = redis
 
     async def schedule(
-        self, chat_id: int, message_ids: list[int], seconds: int
+        self, chat_id: int, message_ids: list[int], seconds: int,
+        tenant_id: int | None = None,
     ) -> None:
         if seconds <= 0 or not message_ids:
             return
         due = time.time() + seconds
+        # persist the tenant so the worker deletes with THAT tenant's bot, never
+        # the platform bot on another tenant's behalf.
         await self.redis.zadd(
             QUEUE_KEY,
-            {json.dumps({"c": chat_id, "m": m}): due for m in message_ids},
+            {json.dumps({"c": chat_id, "m": m, "t": tenant_id}): due for m in message_ids},
         )
 
     async def pop_due(self, limit: int = 100) -> list[str]:

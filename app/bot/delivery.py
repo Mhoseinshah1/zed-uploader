@@ -145,9 +145,13 @@ async def deliver_by_code(
     )
 
     if media.auto_delete_seconds and media.auto_delete_seconds > 0:
+        from app.core.tenant_context import current_tenant
+
         await notify_auto_delete(bot, chat_id, media.auto_delete_seconds)
+        tid = current_tenant()
         await AutoDeleteQueue(get_redis()).schedule(
-            chat_id, sent_ids, media.auto_delete_seconds
+            chat_id, sent_ids, media.auto_delete_seconds,
+            tenant_id=tid if isinstance(tid, int) else None,
         )
 
     # best-effort ad after the file
