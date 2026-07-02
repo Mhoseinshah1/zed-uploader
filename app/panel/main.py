@@ -16,6 +16,7 @@ from app.panel.routes import (
     auth,
     backups,
     broadcast,
+    commands,
     dashboard,
     folders,
     license as license_routes,
@@ -50,6 +51,7 @@ for _module in (
     backups,
     reports,
     texts,
+    commands,
     license_routes,
     broadcast,
 ):

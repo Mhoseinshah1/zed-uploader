@@ -84,6 +84,16 @@ class AdminService:
         ids.update(rows.all())
         return list(ids)
 
+    @staticmethod
+    async def admin_telegram_ids(session: AsyncSession) -> list[int]:
+        """Env owners + ALL active admins (deduped) — the chat-scoped menu set."""
+        ids = set(settings.admin_id_list)
+        rows = await session.scalars(
+            select(Admin.telegram_id).where(Admin.is_active.is_(True))
+        )
+        ids.update(rows.all())
+        return sorted(ids)
+
     # ------------------------------------------------------------------
     # CRUD (owners-only surface, guarded at handler level)
     # ------------------------------------------------------------------

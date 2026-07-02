@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>منوی دستورات ربات</h1>
+<p>فهرست دکمهٔ «منو»ی تلگرام برای هر گروه مخاطب. هر تغییر بلافاصله به تلگرام ارسال می‌شود؛ نمایش در کلاینت‌ها ممکن است تا چند دقیقه طول بکشد.</p>
+{% if error %}
+<p class="error">ورودی نامعتبر: نام دستور باید حروف کوچک انگلیسی/عدد/زیرخط و حداکثر ۳۲ کاراکتر باشد و توضیح نباید خالی باشد.</p>
+{% endif %}
+
+{% for sc in scopes %}
+<section class="panel-box">
+  <h2>{{ "کاربران عادی" if sc.scope == "user" else "ادمین‌ها" }}</h2>
+  {% if sc.scope == "admin" %}
+  <p><small>این فهرست برای چتِ هر ادمین جداگانه تنظیم می‌شود (تلگرام scope ادمین ندارد) و با حذف ادمین پاک می‌شود.</small></p>
+  {% endif %}
+
+  {% if sc.rows %}
+  {% for r in sc.rows %}
+  <form method="post" action="{{ panel_path }}/commands/{{ r.id }}/save">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <code dir="ltr">/{{ r.command }}</code>
+    <input type="text" name="description" value="{{ r.description }}" maxlength="256" required>
+    <label>ترتیب <input type="number" name="sort_order" value="{{ r.sort_order }}" min="-9999" max="9999"></label>
+    <label><input type="checkbox" name="is_active" {% if r.is_active %}checked{% endif %}> فعال</label>
+    <button type="submit">ذخیره</button>
+  </form>
+  <form method="post" action="{{ panel_path }}/commands/{{ r.id }}/delete">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">حذف /{{ r.command }}</button>
+  </form>
+  {% endfor %}
+  <form method="post" action="{{ panel_path }}/commands/{{ sc.scope }}/reset">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">بازگشت به پیش‌فرض‌ها (حذف همهٔ ردیف‌ها)</button>
+  </form>
+  {% else %}
+  <p>در حال استفاده از فهرست پیش‌فرض:</p>
+  <ul>
+    {% for c, d in sc.defaults %}
+    <li><code dir="ltr">/{{ c }}</code> — {{ d }}</li>
+    {% endfor %}
+  </ul>
+  <form method="post" action="{{ panel_path }}/commands/{{ sc.scope }}/seed">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">سفارشی‌سازی (تبدیل پیش‌فرض‌ها به ردیف‌های قابل ویرایش)</button>
+  </form>
+  {% endif %}
+
+  <h3>افزودن دستور</h3>
+  <form method="post" action="{{ panel_path }}/commands/{{ sc.scope }}/add">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>نام دستور <input type="text" name="command" dir="ltr" placeholder="مثلاً help" required></label>
+    <label>توضیح <input type="text" name="description" maxlength="256" required></label>
+    <label>ترتیب <input type="number" name="sort_order" value="0" min="-9999" max="9999"></label>
+    <button type="submit">افزودن</button>
+  </form>
+</section>
+{% endfor %}
+{% endblock %}
