@@ -213,7 +213,7 @@ async def _panel_client():
     app.state.bot = AsyncMock()
 
     async with maker() as s:
-        panel_user = PanelUser(username="cmds", password_hash=hash_password("pw"))
+        panel_user = PanelUser(username="cmds", password_hash=hash_password("pw"), tenant_id=1)
         s.add(panel_user)
         await s.commit()
         uid = panel_user.id

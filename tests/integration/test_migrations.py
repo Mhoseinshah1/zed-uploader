@@ -50,7 +50,7 @@ def test_single_linear_head():
     assert result.returncode == 0, result.stderr
     heads = [ln for ln in result.stdout.splitlines() if "(head)" in ln]
     assert len(heads) == 1, f"expected one head, got: {result.stdout}"
-    assert "0020_bot_plans" in heads[0]
+    assert "0021_panel_tenant" in heads[0]
 
 
 async def test_clean_upgrade_and_no_drift():

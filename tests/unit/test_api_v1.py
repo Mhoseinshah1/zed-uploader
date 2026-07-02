@@ -36,7 +36,7 @@ async def harness():
     app.dependency_overrides[get_session] = _override
 
     async with Session() as s:
-        s.add(PanelUser(username="boss", password_hash=security.hash_password("pw12345")))
+        s.add(PanelUser(username="boss", password_hash=security.hash_password("pw12345"), tenant_id=1))
         await s.commit()
 
     client = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")

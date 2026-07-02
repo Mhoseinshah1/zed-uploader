@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 from aiogram import Bot
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -51,6 +52,8 @@ class BotCreationResult:
     bot_username: str | None = None
     expires_at: datetime | None = None
     price: int = 0
+    panel_username: str | None = None
+    panel_password: str | None = None  # shown once to the buyer, never stored plain
 
 
 async def validate_bot_token(token: str) -> tuple[int, str | None]:
@@ -152,10 +155,14 @@ class BotCreationService:
                     pass
 
         await self._seed_defaults(tenant_id, owner_telegram_id)
+        panel_username, panel_password = await self._provision_panel_login(
+            tenant_id, bot_id
+        )
         await self._register(tenant_id)
         return BotCreationResult(
             BotCreationStatus.OK, tenant_id=tenant_id, bot_username=bot_username,
             expires_at=expires, price=price,
+            panel_username=panel_username, panel_password=panel_password,
         )
 
     async def renew_from_wallet(
@@ -215,6 +222,39 @@ class BotCreationService:
                     await s.commit()
         except Exception as exc:
             log.warning("bot_seed_defaults_failed", tenant_id=tenant_id, error=str(exc))
+
+    async def _provision_panel_login(
+        self, tenant_id: int, bot_id: int
+    ) -> tuple[str | None, str | None]:
+        """Create the customer's tenant-scoped panel login (F4). Returns
+        (username, one-time password) to show the buyer; only the bcrypt hash is
+        stored. Best-effort — a failure never rolls back the created bot."""
+        import secrets
+
+        from app.models.panel import PanelUser
+        from app.panel.security import hash_password
+
+        username = f"bot{bot_id}"
+        password = secrets.token_urlsafe(9)
+        try:
+            with all_tenants():  # panel_users is global; set tenant_id explicitly
+                async with self.session_maker() as s:
+                    existing = await s.scalar(
+                        select(PanelUser).where(PanelUser.username == username)
+                    )
+                    if existing is not None:
+                        return username, None  # login already provisioned
+                    s.add(
+                        PanelUser(
+                            username=username, password_hash=hash_password(password),
+                            tenant_id=tenant_id, is_active=True,
+                        )
+                    )
+                    await s.commit()
+            return username, password
+        except Exception as exc:
+            log.warning("bot_panel_login_failed", tenant_id=tenant_id, error=str(exc))
+            return None, None
 
     async def _register(self, tenant_id: int) -> None:
         if self.registry is None:

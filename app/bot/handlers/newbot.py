@@ -143,7 +143,10 @@ async def newbot_receive_token(
 def _result_text(result) -> str:
     if result.status == BotCreationStatus.OK:
         panel_url = f"{settings.domain.rstrip('/')}{settings.panel_path}"
-        return messages.newbot_success(result.bot_username, panel_url, result.expires_at)
+        return messages.newbot_success(
+            result.bot_username, panel_url, result.expires_at,
+            result.panel_username, result.panel_password,
+        )
     return {
         BotCreationStatus.ALREADY_REGISTERED: messages.NEWBOT_ALREADY,
         BotCreationStatus.DUPLICATE: messages.NEWBOT_ALREADY,
