@@ -603,3 +603,39 @@ def provider_title(key: str) -> str:
 def gateway_description(order_id: int) -> str:
     """Shown on the gateway's payment page (Zarinpal/Zibal)."""
     return f"شارژ کیف پول — سفارش {order_id}"
+
+
+# ===========================================================================
+# Phase C2: ads
+# ===========================================================================
+def ad_view(title: str, text: str) -> str:
+    return f"📣 {title}\n\n{text}"
+
+
+BTN_ADS = "📣 تبلیغات"
+ADS_EMPTY = "تبلیغی تعریف نشده. با دکمهٔ زیر یکی بسازید."
+ADS_HEADER = "📣 تبلیغات (نمایش/کلیک) — مدیریت کامل در پنل وب."
+LBL_NEW_AD = "➕ تبلیغ جدید"
+ASK_AD_TITLE = "عنوان تبلیغ را بفرست:"
+ASK_AD_TEXT = "متن تبلیغ را بفرست:"
+ASK_AD_PLACEMENT = "جایگاه نمایش را انتخاب کن:"
+AD_CREATED = "تبلیغ ساخته شد. ✅ (دکمه/پلن هدف/سقف نمایش را از پنل تنظیم کنید)"
+AD_DELETED = "تبلیغ حذف شد."
+AD_TOGGLED = "وضعیت تبلیغ تغییر کرد. ✅"
+AD_GONE = "این تبلیغ دیگر وجود ندارد."
+
+_PLACEMENT_TITLES = {
+    "before_file": "قبل از فایل",
+    "after_file": "بعد از فایل",
+    "start_message": "پیام شروع",
+}
+
+
+def placement_title(key: str) -> str:
+    return _PLACEMENT_TITLES.get(key, key)
+
+
+def ad_row_label(ad_id: int, title: str, placement: str, active: bool,
+                 impressions: int, clicks: int) -> str:
+    state = "✅" if active else "⛔️"
+    return f"{state} {title} · {placement_title(placement)} · 👁 {impressions} · 👆 {clicks}"

@@ -50,6 +50,13 @@ async def _send_welcome(message: Message, session: AsyncSession) -> None:
         await message.answer(messages.WELCOME, reply_markup=build_admin_menu(is_owner))
     else:
         await message.answer(messages.WELCOME, reply_markup=build_user_menu())
+    # best-effort start_message ad (never blocks the welcome)
+    from app.bot.delivery import send_placement_ads
+
+    await send_placement_ads(
+        message.bot, session, message.chat.id,
+        user.id if user else message.chat.id, "start_message",
+    )
 
 
 async def _reply_delivery(

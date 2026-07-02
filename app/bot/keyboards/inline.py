@@ -364,6 +364,13 @@ def build_share(url: str) -> InlineKeyboardMarkup:
     return b.as_markup()
 
 
+def build_url_button(text: str, url: str) -> InlineKeyboardMarkup:
+    """A single URL button (used by ads for their tracked click link)."""
+    b = InlineKeyboardBuilder()
+    b.row(InlineKeyboardButton(text=text, url=url))
+    return b.as_markup()
+
+
 # --- Phase 2 keyboards -------------------------------------------------------
 def _channel_url(channel: RequiredChannel) -> str | None:
     if channel.invite_link:

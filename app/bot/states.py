@@ -29,6 +29,12 @@ class Search(StatesGroup):
     active = State()  # data: query — holds the last query for paginated browsing
 
 
+class AdCreate(StatesGroup):
+    waiting_title = State()
+    waiting_text = State()      # data: title
+    waiting_placement = State()  # data: title, text — picked via inline buttons
+
+
 class SettingsEdit(StatesGroup):
     waiting_default_autodelete = State()
 

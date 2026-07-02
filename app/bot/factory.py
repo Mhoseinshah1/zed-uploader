@@ -10,6 +10,7 @@ from aiogram.fsm.storage.redis import RedisStorage
 
 from app.bot.handlers import (
     admins,
+    ads,
     albums,
     batch,
     billing,
@@ -64,6 +65,7 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.include_router(start.router)
     dispatcher.include_router(menu.router)
     dispatcher.include_router(review.router)
+    dispatcher.include_router(ads.router)
     dispatcher.include_router(folders.router)
     dispatcher.include_router(channels.router)
     dispatcher.include_router(admins.router)

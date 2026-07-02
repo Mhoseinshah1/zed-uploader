@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.panel.deps import PanelAuthRequired
 from app.panel.routes import (
     admins,
+    ads,
     auth,
     broadcast,
     dashboard,
@@ -33,6 +34,7 @@ for _module in (
     users,
     media,
     review,
+    ads,
     folders,
     payments,
     plans,

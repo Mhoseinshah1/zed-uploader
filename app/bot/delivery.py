@@ -13,18 +13,44 @@ from aiogram import Bot
 from aiogram.types import User as TgUser
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot.keyboards.inline import build_share
+from app.bot.keyboards.inline import build_share, build_url_button
 from app.bot.sender import notify_auto_delete, send_media_file
+from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.redis_client import get_redis
 from app.models.channel import RequiredChannel
 from app.models.media import Media
+from app.services.ad_service import AdService
 from app.services.autodelete import AutoDeleteQueue
 from app.services.media_service import MediaService, MediaStatus
 from app.services.membership import unjoined_channels
 from app.services.user_service import UserService
 
 log = get_logger("delivery")
+
+
+async def send_placement_ads(
+    bot: Bot, session: AsyncSession, chat_id: int, telegram_id: int, placement: str
+) -> None:
+    """Best-effort ads for a placement — any failure here must NEVER affect
+    delivery, so the whole thing is wrapped and errors are only logged."""
+    try:
+        from app.bot import messages
+
+        db_user = await UserService(session).get_by_telegram_id(telegram_id)
+        plan = db_user.effective_plan if db_user else "free"
+        service = AdService(session)
+        for ad in await service.pick_for_placement(placement, plan):
+            markup = None
+            if ad.button_text and ad.button_url:
+                click_url = f"{settings.domain.rstrip('/')}/ad/{ad.id}/click"
+                markup = build_url_button(ad.button_text, click_url)
+            await bot.send_message(
+                chat_id, messages.ad_view(ad.title, ad.text), reply_markup=markup
+            )
+            await service.record_impression(ad.id)
+    except Exception as exc:  # ads are never allowed to break delivery
+        log.warning("ad_send_failed", placement=placement, error=str(exc))
 
 
 class DeliveryStatus(str, Enum):
@@ -84,6 +110,9 @@ async def deliver_by_code(
     if claim_status is not MediaStatus.OK or media is None:
         return DeliveryResult(_FROM_MEDIA_STATUS.get(claim_status, DeliveryStatus.FAILED))
 
+    # best-effort ad before the file (never blocks/fails the delivery)
+    await send_placement_ads(bot, session, chat_id, user_id, "before_file")
+
     # send every file; caption + share button on the first only
     share_markup = build_share(service.deep_link(media))
     sent_ids: list[int] = []
@@ -120,5 +149,8 @@ async def deliver_by_code(
         await AutoDeleteQueue(get_redis()).schedule(
             chat_id, sent_ids, media.auto_delete_seconds
         )
+
+    # best-effort ad after the file
+    await send_placement_ads(bot, session, chat_id, user_id, "after_file")
 
     return DeliveryResult(DeliveryStatus.DELIVERED, media=media, sent_ids=sent_ids)

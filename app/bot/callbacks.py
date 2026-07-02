@@ -135,6 +135,18 @@ class SellCb(CallbackData, prefix="sell"):
 
 
 # --- Phase 5 (CentralPay) --------------------------------------------------
+class AdCb(CallbackData, prefix="ad"):
+    """Owner ad management. action ∈ {toggle, del, new, place}.
+
+    For ``place`` (placement pick during creation) ``value`` carries the
+    placement key.
+    """
+
+    action: str
+    id: int = 0
+    value: str = ""
+
+
 class GateCb(CallbackData, prefix="gate"):
     """Online-gateway provider choice (when several providers are enabled).
 
