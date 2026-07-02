@@ -644,6 +644,24 @@ def ad_row_label(ad_id: int, title: str, placement: str, active: bool,
 # ===========================================================================
 # Phase C4: Telegram Stars
 # ===========================================================================
+# --- D2: media abuse reports -------------------------------------------------
+REPORT_BUTTON = "🚩 گزارش"
+ASK_REPORT_REASON = "دلیل گزارش این فایل را انتخاب کنید:"
+REPORT_THANKS = "گزارش شما ثبت شد؛ تیم مدیریت بررسی می‌کند. 🙏"
+REPORT_DUPLICATE = "شما قبلاً این فایل را گزارش کرده‌اید."
+
+_REPORT_REASON_TITLES = {
+    "copyright": "نقض کپی‌رایت",
+    "inappropriate": "محتوای نامناسب",
+    "spam": "اسپم/کلاه‌برداری",
+    "other": "موارد دیگر",
+}
+
+
+def report_reason_title(key: str) -> str:
+    return _REPORT_REASON_TITLES.get(key, key)
+
+
 BTN_PAY_STARS = "⭐ پرداخت با استارز"
 STARS_INVALID = "این پرداخت معتبر نیست یا پلن در دسترس نیست."
 STARS_ALREADY = "این پرداخت قبلاً اعمال شده است. ✅"

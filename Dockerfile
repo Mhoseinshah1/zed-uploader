@@ -9,7 +9,7 @@ WORKDIR /app
 
 # System deps kept minimal; psycopg not needed (asyncpg is pure-ish + wheels).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

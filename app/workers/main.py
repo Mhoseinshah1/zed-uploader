@@ -172,11 +172,13 @@ async def _finalize_album(bot, session_maker, group) -> None:
         setting = BotSettingService(session)
         user = await UserService(session).get_by_telegram_id(telegram_id)
 
+        from app.services.text_service import get_text
+
         if is_admin:
             status = "approved"
         else:
             if not await setting.user_upload_enabled():
-                await _notify(bot, chat_id, messages.NOT_ADMIN_UPLOAD)
+                await _notify(bot, chat_id, await get_text(session, "upload_disabled"))
                 return
             status = "pending" if await setting.user_upload_requires_review() else "approved"
             if user is not None and not await within_file_limit(session, user, telegram_id):
@@ -200,7 +202,9 @@ async def _finalize_album(bot, session_maker, group) -> None:
     if status == "approved":
         await _notify(bot, chat_id, messages.batch_done(link, code, count))
     else:
-        await _notify(bot, chat_id, messages.UPLOAD_PENDING_REVIEW)
+        async with session_maker() as session:
+            pending_text = await get_text(session, "upload_pending_review")
+        await _notify(bot, chat_id, pending_text)
 
 
 async def _notify(bot, chat_id: int, text: str) -> None:
@@ -208,6 +212,36 @@ async def _notify(bot, chat_id: int, text: str) -> None:
         await bot.send_message(chat_id, text)
     except Exception as exc:
         log.warning("album_notify_failed", chat_id=chat_id, error=str(exc))
+
+
+async def process_backups_once(session_maker) -> int:
+    """Create a due scheduled backup, then run ONE pending job (if any).
+
+    Prunes old success backups after each successful run (keep-N from settings).
+    """
+    from app.services.backup_service import (
+        DEFAULT_BACKUP_KEEP,
+        KEY_BACKUP_KEEP,
+        KEY_BACKUP_SCHEDULE,
+        BackupService,
+    )
+    from app.services.bot_setting_service import BotSettingService
+
+    async with session_maker() as session:
+        svc = BackupService(session)
+        setting = BotSettingService(session)
+        schedule = (await setting.get_raw(KEY_BACKUP_SCHEDULE)) or "off"
+        if await svc.due_scheduled(schedule):
+            await svc.create_job(type_="scheduled")
+            log.info("backup_scheduled")
+        job = await svc.next_pending()
+        if job is None:
+            return 0
+        await svc.run_job(job)
+        if job.status == "success":
+            keep = await setting.get_int(KEY_BACKUP_KEEP, DEFAULT_BACKUP_KEEP)
+            await svc.prune(keep)
+        return 1
 
 
 async def process_expiry_sweep(session_maker) -> int:
@@ -272,6 +306,10 @@ async def main() -> None:
                         log.info("plans_expired", count=expired)
                 except Exception as exc:
                     log.warning("expiry_sweep_error", error=str(exc))
+                try:
+                    await process_backups_once(async_session_maker)
+                except Exception as exc:
+                    log.warning("backup_loop_error", error=str(exc))
             await asyncio.sleep(POLL_INTERVAL)
     finally:
         await bot.session.close()

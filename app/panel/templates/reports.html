@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>گزارش‌های تخلف</h1>
+
+<form class="search" method="get" action="{{ panel_path }}/reports">
+  <select name="status">
+    {% for s in statuses %}
+    <option value="{{ s }}" {{ "selected" if status == s else "" }}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">فیلتر</button>
+</form>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>فایل</th><th>دلیل</th><th>کاربر</th><th>وضعیت</th><th>زمان</th><th>اقدام</th></tr>
+  </thead>
+  <tbody>
+  {% for r in reports %}
+    {% set m = media_map.get(r.media_id) %}
+    <tr>
+      <td>{{ r.id }}</td>
+      <td>
+        {% if m %}<a href="{{ panel_path }}/media/{{ m.id }}" dir="ltr">{{ m.code }}</a>
+        {{ "· غیرفعال" if not m.is_active else "" }}{% else %}—{% endif %}
+      </td>
+      <td>{{ r.reason }}</td>
+      <td>#{{ r.user_id }}</td>
+      <td>{{ r.status }}</td>
+      <td dir="ltr">{{ r.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+      <td>
+        {% if r.status == "pending" %}
+        <form method="post" action="{{ panel_path }}/reports/{{ r.id }}/deactivate" style="display:inline"
+              onsubmit="return confirm('فایل غیرفعال شود؟ از دسترس کاربران خارج می‌شود.')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="danger">غیرفعال‌سازی فایل</button>
+        </form>
+        <form method="post" action="{{ panel_path }}/reports/{{ r.id }}/dismiss" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">رد گزارش</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7">گزارشی با این وضعیت نیست.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

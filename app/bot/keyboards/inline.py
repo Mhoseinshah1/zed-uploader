@@ -20,6 +20,7 @@ from app.bot.callbacks import (
     MediaCb,
     PayCb,
     PayCheckCb,
+    ReportCb,
     ReviewCb,
     SearchCb,
     SellCb,
@@ -362,6 +363,33 @@ def build_settings(protect: bool, seconds: int) -> InlineKeyboardMarkup:
 def build_share(url: str) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(InlineKeyboardButton(text=messages.SHARE_BUTTON, url=url))
+    return b.as_markup()
+
+
+def build_delivered_actions(share_url: str, media_id: int) -> InlineKeyboardMarkup:
+    """Under a delivered file: share link + a 🚩 report button."""
+    b = InlineKeyboardBuilder()
+    b.row(InlineKeyboardButton(text=messages.SHARE_BUTTON, url=share_url))
+    b.row(
+        InlineKeyboardButton(
+            text=messages.REPORT_BUTTON,
+            callback_data=ReportCb(action="start", id=media_id).pack(),
+        )
+    )
+    return b.as_markup()
+
+
+def build_report_reasons(media_id: int) -> InlineKeyboardMarkup:
+    from app.models.media_report import REPORT_REASONS
+
+    b = InlineKeyboardBuilder()
+    for key in REPORT_REASONS:
+        b.row(
+            InlineKeyboardButton(
+                text=messages.report_reason_title(key),
+                callback_data=ReportCb(action="reason", id=media_id, value=key).pack(),
+            )
+        )
     return b.as_markup()
 
 

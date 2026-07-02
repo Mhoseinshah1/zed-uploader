@@ -14,6 +14,7 @@ from app.panel.routes import (
     admins,
     ads,
     auth,
+    backups,
     broadcast,
     dashboard,
     folders,
@@ -21,9 +22,11 @@ from app.panel.routes import (
     payments,
     plans,
     providers,
+    reports,
     review,
     settings as settings_routes,
     stats,
+    texts,
     users,
 )
 
@@ -43,6 +46,9 @@ for _module in (
     admins,
     settings_routes,
     stats,
+    backups,
+    reports,
+    texts,
     broadcast,
 ):
     router.include_router(_module.router)

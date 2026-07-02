@@ -31,6 +31,8 @@ services:
     # inject X-Forwarded-For, so external clients cannot spoof the client IP.
     command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
     env_file: .env
+    volumes:
+      - backups:/backups
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -57,6 +59,8 @@ services:
     restart: unless-stopped
     command: python -m app.workers.main
     env_file: .env
+    volumes:
+      - backups:/backups
     depends_on:
       db:
         condition: service_healthy
@@ -65,3 +69,4 @@ services:
 
 volumes:
   pgdata:
+  backups:

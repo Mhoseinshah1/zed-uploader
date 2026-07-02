@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>متن‌های ربات</h1>
+<p>متن دلخواه را بنویسید و ذخیره کنید؛ خالی‌گذاشتن یعنی استفاده از متن پیش‌فرض (تا ~۱ دقیقه بعد اعمال می‌شود).</p>
+
+{% for r in rows %}
+<section class="panel-box">
+  <h2 dir="ltr">{{ r.key }}</h2>
+  <p><small>پیش‌فرض: {{ r.default }}</small></p>
+  <form method="post" action="{{ panel_path }}/texts/{{ r.key }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <textarea name="value" rows="3" placeholder="{{ r.default }}">{{ r.override }}</textarea>
+    <button type="submit">ذخیره</button>
+  </form>
+</section>
+{% endfor %}
+{% endblock %}
