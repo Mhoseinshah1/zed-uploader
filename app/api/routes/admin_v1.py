@@ -55,39 +55,50 @@ def _page(limit: int, offset: int) -> tuple[int, int]:
 # ---------------------------------------------------------------------------
 # auth
 # ---------------------------------------------------------------------------
-async def require_admin_api(
-    request: Request, session: AsyncSession = Depends(get_session)
-) -> int:
-    """Admin identity for the v1 API: Bearer JWT, else the panel session.
-
-    Returns the panel-user id. 401 otherwise. (The panel has a single
-    owner-grade privilege level; any authenticated panel user is an owner.)
-    """
+async def _resolve_api_user(request: Request, session: AsyncSession) -> PanelUser | None:
+    """Bearer JWT else panel session -> the authenticated PanelUser (or None)."""
     auth = request.headers.get("authorization", "")
     if auth.lower().startswith("bearer "):
         payload = jwt_utils.decode(auth[7:].strip())
         if payload and payload.get("sub"):
-            user = await session.scalar(
+            return await session.scalar(
                 select(PanelUser).where(
                     PanelUser.id == int(payload["sub"]),
                     PanelUser.is_active.is_(True),
                 )
             )
-            if user is not None:
-                return user.id
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid token")
-
+        return None
     sid = panel_security.unsign(request.cookies.get(COOKIE_NAME))
     data = await SessionStore(get_redis()).get(sid) if sid else None
     if data and data.get("uid"):
-        user = await session.scalar(
+        return await session.scalar(
             select(PanelUser).where(
                 PanelUser.id == data["uid"], PanelUser.is_active.is_(True)
             )
         )
-        if user is not None:
-            return user.id
-    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "authentication required")
+    return None
+
+
+async def require_admin_api(
+    request: Request, session: AsyncSession = Depends(get_session)
+):
+    """Admin identity for the v1 API: Bearer JWT, else the panel session.
+
+    Generator dependency (Fix-3): after authenticating, it BINDS the tenant
+    context from ``PanelUser.tenant_id`` for the whole request, so every /api/v1
+    query is automatically scoped to the caller's tenant by the F1 layer — a
+    request can never read another tenant's data. Yields the panel-user id.
+    """
+    user = await _resolve_api_user(request, session)
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "authentication required")
+    from app.core.tenant_context import reset_tenant, set_tenant
+
+    token = set_tenant(user.tenant_id)
+    try:
+        yield user.id
+    finally:
+        reset_tenant(token)
 
 
 AdminId = Depends(require_admin_api)

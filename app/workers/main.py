@@ -19,8 +19,14 @@ from sqlalchemy import select, update
 
 from app.bot import messages
 from app.bot.factory import create_bot
+from app.bot.tenant_bots import TenantBotProvider
 from app.core.logging import get_logger, setup_logging
 from app.core.redis_client import get_redis
+from app.core.tenant_context import (
+    PLATFORM_TENANT_ID,
+    all_tenants,
+    tenant_scope,
+)
 from app.db.session import async_session_maker
 from app.models.subscription import Subscription
 from app.models.user import User
@@ -32,73 +38,100 @@ POLL_INTERVAL = 2
 EXPIRY_SWEEP_INTERVAL = 60
 
 
-async def process_once(bot, queue) -> int:
+async def process_once(provider, session_maker, queue) -> int:
+    """Delete each due message with ITS tenant's bot (never the platform bot on
+    another tenant's behalf). A gone/suspended tenant bot is dropped gracefully."""
     members = await queue.pop_due()
     if not members:
         return 0
-    for raw in members:
-        try:
-            d = json.loads(raw)
-            await bot.delete_message(chat_id=d["c"], message_id=d["m"])
-        except TelegramBadRequest:
-            pass
-        except Exception as exc:
-            log.warning("delete_failed", error=str(exc))
+    async with session_maker() as session:
+        for raw in members:
+            try:
+                d = json.loads(raw)
+                tid = d.get("t")
+                if not isinstance(tid, int):
+                    tid = PLATFORM_TENANT_ID  # legacy items predate tenant tagging
+                with tenant_scope(tid):
+                    bot = await provider.get(session, tid)
+                    if bot is None:
+                        continue  # tenant gone/suspended -> drop gracefully
+                    await bot.delete_message(chat_id=d["c"], message_id=d["m"])
+            except TelegramBadRequest:
+                pass
+            except Exception as exc:
+                log.warning("delete_failed", error=str(exc))
     await queue.ack(members)
     return len(members)
 
 
-async def process_broadcast_once(bot, session_maker) -> bool:
-    """Process ONE page of the oldest unfinished broadcast job.
+async def process_broadcast_once(provider, session_maker) -> bool:
+    """Process ONE page of the oldest unfinished broadcast job UNDER ITS TENANT.
 
-    Exactly-once & resumable: recipients live in a DB ledger. Each row moves off
-    ``pending`` the moment it is attempted, so a crash/restart re-reads only the
-    rows still ``pending`` and never re-sends a delivered one. Returns True while
-    there is broadcast work (so the caller can keep draining), False when idle.
+    Finds the oldest job across all tenants, then runs it scoped to that tenant
+    and sends with that tenant's bot from the provider — a job for tenant A never
+    sends via tenant B's bot. Exactly-once & resumable: recipients live in a DB
+    ledger, each moved off ``pending`` the moment it is attempted. Returns True
+    while there is broadcast work, False when idle.
     """
     async with session_maker() as session:
-        job = await bcast.claim_next_job(session)
-        if job is None:
-            return False
-        job_id = job.id
-        from_chat_id, message_id, text, created_by = (
-            job.from_chat_id, job.message_id, job.text, job.created_by,
-        )
+        with all_tenants():
+            tid = await bcast.next_job_tenant(session)
+    if tid is None:
+        return False
 
-        recipients = await bcast.next_pending_page(session, job_id, bcast.PAGE_SIZE)
-        if not recipients:
-            sent, failed, blocked = await bcast.finalize_job(session, job_id)
-            log.info("broadcast_done", job_id=job_id, sent=sent, failed=failed, blocked=blocked)
-            if created_by:
-                try:
-                    await bot.send_message(
-                        created_by, messages.broadcast_summary(sent, failed, blocked)
-                    )
-                except Exception as exc:
-                    log.warning("broadcast_summary_failed", error=str(exc))
-            return True
-
-        now = datetime.now(timezone.utc)
-        for recipient in recipients:
-            outcome, error = await _send_one(
-                bot, from_chat_id, message_id, text, recipient.telegram_id
+    with tenant_scope(tid):
+        async with session_maker() as session:
+            job = await bcast.claim_next_job(session)
+            if job is None:
+                return True
+            job_id = job.id
+            from_chat_id, message_id, text, created_by = (
+                job.from_chat_id, job.message_id, job.text, job.created_by,
             )
-            recipient.status = outcome
-            recipient.error_message = error
-            if outcome == "sent":
-                recipient.sent_at = now
-            elif outcome == "blocked":
-                await session.execute(
-                    update(User)
-                    .where(User.id == recipient.user_id)
-                    .values(is_blocked=True)
+            bot = await provider.get(session, tid)
+            if bot is None:  # tenant bot gone/suspended -> fail the job, advance
+                job.status = "failed"
+                await session.commit()
+                log.warning("broadcast_no_bot", tenant_id=tid, job_id=job_id)
+                return True
+
+            recipients = await bcast.next_pending_page(session, job_id, bcast.PAGE_SIZE)
+            if not recipients:
+                sent, failed, blocked = await bcast.finalize_job(session, job_id)
+                log.info(
+                    "broadcast_done", tenant_id=tid, job_id=job_id,
+                    sent=sent, failed=failed, blocked=blocked,
                 )
-            # Commit each recipient's outcome before the next send, so a crash
-            # re-sends at most the one in-flight message (never a whole page).
+                if created_by:
+                    try:
+                        await bot.send_message(
+                            created_by, messages.broadcast_summary(sent, failed, blocked)
+                        )
+                    except Exception as exc:
+                        log.warning("broadcast_summary_failed", error=str(exc))
+                return True
+
+            now = datetime.now(timezone.utc)
+            for recipient in recipients:
+                outcome, error = await _send_one(
+                    bot, from_chat_id, message_id, text, recipient.telegram_id
+                )
+                recipient.status = outcome
+                recipient.error_message = error
+                if outcome == "sent":
+                    recipient.sent_at = now
+                elif outcome == "blocked":
+                    await session.execute(
+                        update(User)
+                        .where(User.id == recipient.user_id)
+                        .values(is_blocked=True)
+                    )
+                # Commit each recipient's outcome before the next send, so a crash
+                # re-sends at most the one in-flight message (never a whole page).
+                await session.commit()
+                await asyncio.sleep(bcast.SEND_DELAY)
+            await bcast.refresh_job_counts(session, job_id)
             await session.commit()
-            await asyncio.sleep(bcast.SEND_DELAY)
-        await bcast.refresh_job_counts(session, job_id)
-        await session.commit()
     return True
 
 
@@ -138,20 +171,28 @@ async def _send_one(bot, from_chat_id, message_id, text, telegram_id) -> tuple[s
         return "failed", str(exc)[:255]
 
 
-async def process_albums_once(bot, redis, session_maker) -> int:
-    """Finalize any albums whose debounce elapsed. Returns how many finalized."""
+async def process_albums_once(provider, redis, session_maker) -> int:
+    """Finalize any albums whose debounce elapsed, each UNDER ITS TENANT."""
     from app.services.album_buffer import AlbumBuffer
 
     groups = await AlbumBuffer(redis).pop_due(time.time())
     for group in groups:
+        tid = group.get("tenant_id") or PLATFORM_TENANT_ID
         try:
-            await _finalize_album(bot, session_maker, group)
+            with tenant_scope(tid):
+                async with session_maker() as session:
+                    bot = await provider.get(session, tid)
+                if bot is None:
+                    log.warning("album_no_bot", tenant_id=tid)
+                    continue  # tenant gone/suspended -> drop gracefully
+                await _finalize_album(bot, session_maker, group)
         except Exception as exc:
             log.warning("album_finalize_failed", gk=group.get("group_key"), error=str(exc))
     return len(groups)
 
 
 async def _finalize_album(bot, session_maker, group) -> None:
+    """Runs inside the group's tenant context (set by process_albums_once)."""
     from app.bot.gating import within_file_limit
     from app.services.admin_service import AdminService
     from app.services.bot_setting_service import BotSettingService
@@ -195,7 +236,7 @@ async def _finalize_album(bot, session_maker, group) -> None:
             auto_delete_seconds=(await setting.effective_autodelete()) or None,
             status=status,
         )
-        link = service.deep_link(media)
+        link = await service.deep_link(media)
         code, count = media.code, len(files)
 
     log.info("album_finalized", chat_id=chat_id, count=count, status=status)
@@ -257,31 +298,36 @@ async def process_backups_once(session_maker, bot=None) -> int:
 
 
 async def process_expiry_sweep(session_maker) -> int:
-    """Downgrade users whose paid plan has expired; deactivate their subs."""
-    async with session_maker() as session:
-        now = datetime.now(timezone.utc)
-        users = list(
-            await session.scalars(
-                select(User).where(
-                    User.plan != "free",
-                    User.plan_expires_at.is_not(None),
-                    User.plan_expires_at < now,
+    """Downgrade users whose paid plan has expired; deactivate their subs.
+
+    Runs across ALL tenants (each user is downgraded within its own tenant) —
+    under platform-only context it would silently ignore every customer bot.
+    """
+    with all_tenants():
+        async with session_maker() as session:
+            now = datetime.now(timezone.utc)
+            users = list(
+                await session.scalars(
+                    select(User).where(
+                        User.plan != "free",
+                        User.plan_expires_at.is_not(None),
+                        User.plan_expires_at < now,
+                    )
                 )
             )
-        )
-        if not users:
-            return 0
-        ids = [u.id for u in users]
-        for u in users:
-            u.plan = "free"
-            log.info("plan_expired", user_id=u.id)
-        await session.execute(
-            update(Subscription)
-            .where(Subscription.user_id.in_(ids), Subscription.is_active.is_(True))
-            .values(is_active=False)
-        )
-        await session.commit()
-        return len(users)
+            if not users:
+                return 0
+            ids = [u.id for u in users]
+            for u in users:
+                u.plan = "free"
+                log.info("plan_expired", user_id=u.id)
+            await session.execute(
+                update(Subscription)
+                .where(Subscription.user_id.in_(ids), Subscription.is_active.is_(True))
+                .values(is_active=False)
+            )
+            await session.commit()
+            return len(users)
 
 
 async def process_tenant_expiry(session_maker) -> int:
@@ -318,13 +364,15 @@ async def process_tenant_expiry(session_maker) -> int:
 
 async def main() -> None:
     setup_logging()
-    # F1: the worker services the single platform tenant. Set the tenant context
-    # for the whole loop so every session it opens is scoped (and fails closed
-    # otherwise). F2 makes the worker iterate tenants.
-    from app.core.tenant_context import PLATFORM_TENANT_ID, set_tenant
+    # Default context = platform: it covers platform-only jobs (whole-DB backup,
+    # license recheck, version sync). The multi-tenant jobs (autodelete,
+    # broadcast, albums) each override to their own tenant and act with that
+    # tenant's bot from the provider; the expiry sweep runs across all tenants.
+    from app.core.tenant_context import set_tenant
 
     set_tenant(PLATFORM_TENANT_ID)
-    bot = create_bot()
+    bot = create_bot()  # the platform bot (env token) — used only for platform jobs
+    provider = TenantBotProvider()  # per-tenant bots for multi-tenant jobs
     redis = get_redis()
     queue = AutoDeleteQueue(redis)
     last_sweep = 0.0
@@ -339,17 +387,17 @@ async def main() -> None:
     try:
         while True:
             try:
-                n = await process_once(bot, queue)
+                n = await process_once(provider, async_session_maker, queue)
                 if n:
                     log.info("auto_deleted", count=n)
             except Exception as exc:
                 log.warning("worker_loop_error", error=str(exc))
             try:
-                await process_broadcast_once(bot, async_session_maker)
+                await process_broadcast_once(provider, async_session_maker)
             except Exception as exc:
                 log.warning("broadcast_loop_error", error=str(exc))
             try:
-                n = await process_albums_once(bot, redis, async_session_maker)
+                n = await process_albums_once(provider, redis, async_session_maker)
                 if n:
                     log.info("albums_finalized", count=n)
             except Exception as exc:
@@ -381,6 +429,7 @@ async def main() -> None:
                     log.warning("license_check_error", error=str(exc))
             await asyncio.sleep(POLL_INTERVAL)
     finally:
+        await provider.close()
         await bot.session.close()
 
 

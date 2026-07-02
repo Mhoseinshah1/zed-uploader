@@ -114,7 +114,7 @@ async def deliver_by_code(
     await send_placement_ads(bot, session, chat_id, user_id, "before_file")
 
     # send every file; caption + share button on the first only
-    share_markup = build_delivered_actions(service.deep_link(media), media.id)
+    share_markup = build_delivered_actions(await service.deep_link(media), media.id)
     sent_ids: list[int] = []
     for index, media_file in enumerate(media.files):
         caption = media.caption if index == 0 else None
@@ -145,9 +145,13 @@ async def deliver_by_code(
     )
 
     if media.auto_delete_seconds and media.auto_delete_seconds > 0:
+        from app.core.tenant_context import current_tenant
+
         await notify_auto_delete(bot, chat_id, media.auto_delete_seconds)
+        tid = current_tenant()
         await AutoDeleteQueue(get_redis()).schedule(
-            chat_id, sent_ids, media.auto_delete_seconds
+            chat_id, sent_ids, media.auto_delete_seconds,
+            tenant_id=tid if isinstance(tid, int) else None,
         )
 
     # best-effort ad after the file

@@ -127,7 +127,7 @@ async def batch_finish(
     log.info("batch_created", media_id=media.id, code=media.code, count=len(files))
     if isinstance(callback.message, Message):
         await callback.message.answer(
-            messages.batch_done(service.deep_link(media), media.code, len(files))
+            messages.batch_done(await service.deep_link(media), media.code, len(files))
         )
     await callback.answer()
 

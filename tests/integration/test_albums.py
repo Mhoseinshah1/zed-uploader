@@ -19,6 +19,13 @@ from tests.integration.conftest import requires_pg
 
 pytestmark = requires_pg
 
+
+class _BotProvider:  # Fix-2: wrap a fake bot as a TenantBotProvider
+    def __init__(self, bot):
+        self._bot = bot
+    async def get(self, session, tenant_id):
+        return self._bot
+
 ENV_ADMIN = 111  # conftest sets ADMIN_IDS="111,222"
 
 
@@ -29,7 +36,7 @@ def _part(fid, caption=None):
 async def _seed(redis, gk, chat_id, telegram_id, parts):
     buf = AlbumBuffer(redis)
     for p in parts:
-        await buf.add(gk, chat_id=chat_id, telegram_id=telegram_id, part=p, now=0)
+        await buf.add(gk, tenant_id=1, chat_id=chat_id, telegram_id=telegram_id, part=p, now=0)
 
 
 async def _media(maker):
@@ -40,12 +47,12 @@ async def _media(maker):
 # three parts -> one Media, three files in order, first caption -------------
 async def test_three_parts_one_media(pg_sessionmaker):
     redis = fakeredis.FakeRedis(decode_responses=True)
-    gk = AlbumBuffer.group_key(500, "G1")
+    gk = AlbumBuffer.group_key(1, 500, "G1")
     await _seed(
         redis, gk, 500, ENV_ADMIN,
         [_part("A", "first cap"), _part("B"), _part("C")],
     )
-    n = await worker.process_albums_once(AsyncMock(), redis, pg_sessionmaker)
+    n = await worker.process_albums_once(_BotProvider(AsyncMock()), redis, pg_sessionmaker)
     assert n == 1
 
     media = await _media(pg_sessionmaker)
@@ -59,15 +66,15 @@ async def test_three_parts_one_media(pg_sessionmaker):
 # two interleaved albums do not mix -----------------------------------------
 async def test_two_albums_do_not_mix(pg_sessionmaker):
     redis = fakeredis.FakeRedis(decode_responses=True)
-    g1 = AlbumBuffer.group_key(500, "G1")
-    g2 = AlbumBuffer.group_key(500, "G2")
+    g1 = AlbumBuffer.group_key(1, 500, "G1")
+    g2 = AlbumBuffer.group_key(1, 500, "G2")
     buf = AlbumBuffer(redis)
-    await buf.add(g1, chat_id=500, telegram_id=ENV_ADMIN, part=_part("A"), now=0)
-    await buf.add(g2, chat_id=500, telegram_id=ENV_ADMIN, part=_part("X"), now=0)
-    await buf.add(g1, chat_id=500, telegram_id=ENV_ADMIN, part=_part("B"), now=0)
-    await buf.add(g2, chat_id=500, telegram_id=ENV_ADMIN, part=_part("Y"), now=0)
+    await buf.add(g1, tenant_id=1, chat_id=500, telegram_id=ENV_ADMIN, part=_part("A"), now=0)
+    await buf.add(g2, tenant_id=1, chat_id=500, telegram_id=ENV_ADMIN, part=_part("X"), now=0)
+    await buf.add(g1, tenant_id=1, chat_id=500, telegram_id=ENV_ADMIN, part=_part("B"), now=0)
+    await buf.add(g2, tenant_id=1, chat_id=500, telegram_id=ENV_ADMIN, part=_part("Y"), now=0)
 
-    n = await worker.process_albums_once(AsyncMock(), redis, pg_sessionmaker)
+    n = await worker.process_albums_once(_BotProvider(AsyncMock()), redis, pg_sessionmaker)
     assert n == 2
 
     media = await _media(pg_sessionmaker)
@@ -87,10 +94,10 @@ async def test_user_album_goes_to_review(pg_sessionmaker):
         await s.commit()
 
     redis = fakeredis.FakeRedis(decode_responses=True)
-    gk = AlbumBuffer.group_key(600, "GU")
+    gk = AlbumBuffer.group_key(1, 600, "GU")
     await _seed(redis, gk, 600, 5001, [_part("U1", "hi"), _part("U2")])
 
-    n = await worker.process_albums_once(AsyncMock(), redis, pg_sessionmaker)
+    n = await worker.process_albums_once(_BotProvider(AsyncMock()), redis, pg_sessionmaker)
     assert n == 1
 
     media = await _media(pg_sessionmaker)
@@ -109,8 +116,8 @@ async def test_user_album_blocked_when_uploads_off(pg_sessionmaker):
         s.add(User(telegram_id=5002))
         await s.commit()
     redis = fakeredis.FakeRedis(decode_responses=True)
-    gk = AlbumBuffer.group_key(700, "GX")
+    gk = AlbumBuffer.group_key(1, 700, "GX")
     await _seed(redis, gk, 700, 5002, [_part("Z1"), _part("Z2")])
 
-    await worker.process_albums_once(AsyncMock(), redis, pg_sessionmaker)
+    await worker.process_albums_once(_BotProvider(AsyncMock()), redis, pg_sessionmaker)
     assert await _media(pg_sessionmaker) == []  # nothing created

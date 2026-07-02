@@ -274,7 +274,7 @@ async def cb_media(
 
     elif action == "link":
         await callback.answer()
-        await callback.message.answer(messages.share_link(service.deep_link(media)))
+        await callback.message.answer(messages.share_link(await service.deep_link(media)))
 
     elif action == "stats":
         await callback.answer()

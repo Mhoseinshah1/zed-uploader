@@ -16,3 +16,4 @@
 12. [مرجع کامل متغیرهای محیطی](env-reference.md)
 13. [رفع اشکال](troubleshooting.md)
 14. [نقشهٔ راه نسخه‌ها](roadmap.md)
+15. [چند-مستأجری (میزبانی چند ربات)](multitenant.md)

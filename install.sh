@@ -135,9 +135,10 @@ if [ "$IN_BOT_MODE" = "webhook" ]; then
 fi
 
 echo
-log "Web panel login (used at <domain>/panel):"
-ask_required "Panel admin username" "" IN_PANEL_USER
-ask_password "Panel admin password" IN_PANEL_PASS
+log "Platform super-admin panel login (used at <domain>/panel — manages the"
+log "platform bot AND all customer tenants):"
+ask_required "Super-admin username" "" IN_PANEL_USER
+ask_password "Super-admin password" IN_PANEL_PASS
 
 echo
 log "CentralPay online gateway (optional — leave BOTH blank to disable it;"
@@ -164,6 +165,17 @@ ensure_secret WEBHOOK_SECRET
 ensure_secret API_KEY
 ensure_secret JWT_SECRET
 ensure_secret SESSION_SECRET
+
+# TENANT_TOKEN_KEY: a Fernet key that encrypts hosted-bot tokens at rest.
+# Must be url-safe base64 of 32 bytes; NEVER overwrite an existing one (that
+# would make every stored tenant token undecryptable).
+CUR_TENANT_KEY="$(get_env TENANT_TOKEN_KEY)"
+if [ -z "$CUR_TENANT_KEY" ]; then
+    set_env TENANT_TOKEN_KEY "$(openssl rand 32 | openssl base64 -A | tr '+/' '-_')"
+    log "Generated TENANT_TOKEN_KEY (Fernet)"
+else
+    log "TENANT_TOKEN_KEY already set — keeping"
+fi
 
 # CentralPay keys are optional; only overwrite when the operator entered a value.
 [ -n "${IN_CP_GETLINK:-}" ] && set_env CENTRALPAY_GETLINK_KEY "$IN_CP_GETLINK"
@@ -214,9 +226,13 @@ done
 log "Running database migrations..."
 docker compose run --rm api alembic upgrade head
 
-log "Creating the web panel user..."
+# The platform operator's panel account is a SUPER-ADMIN (tenant 1): it manages
+# the platform's own bot AND the cross-tenant super-admin surface (list/suspend
+# tenants, bot-sale pricing).
+log "Creating the platform super-admin panel user..."
 docker compose run --rm api python -m app.panel.create_user \
-    --username "$IN_PANEL_USER" --password "$IN_PANEL_PASS"
+    --username "$IN_PANEL_USER" --password "$IN_PANEL_PASS" \
+    --tenant-id 1 --superadmin
 
 log "Starting all services..."
 docker compose up -d

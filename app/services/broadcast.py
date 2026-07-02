@@ -81,6 +81,21 @@ async def create_job(
 # ---------------------------------------------------------------------------
 # worker-side helpers (DB is the source of truth)
 # ---------------------------------------------------------------------------
+async def next_job_tenant(session: AsyncSession) -> int | None:
+    """Tenant id of the oldest unfinished broadcast job across ALL tenants.
+
+    Called under the all_tenants context so the multi-tenant worker can then
+    ``set_tenant`` and process that job with the right bot. Returns None when
+    no job is pending anywhere.
+    """
+    return await session.scalar(
+        select(BroadcastJob.tenant_id)
+        .where(BroadcastJob.status.in_(("pending", "running")))
+        .order_by(BroadcastJob.id)
+        .limit(1)
+    )
+
+
 async def claim_next_job(session: AsyncSession) -> BroadcastJob | None:
     """Return the oldest unfinished job, marking it ``running``.
 
