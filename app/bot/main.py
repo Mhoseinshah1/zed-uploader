@@ -24,10 +24,22 @@ async def _seed_admins() -> None:
         await AdminService(session).ensure_seed_admins(settings.admin_id_list)
 
 
+async def _sync_commands(bot) -> None:
+    """(Re)apply the command menu (default + per-admin); never blocks startup."""
+    try:
+        from app.bot.commands_menu import sync_all
+
+        async with async_session_maker() as session:
+            await sync_all(bot, session)
+    except Exception as exc:
+        log.warning("commands_sync_failed", error=str(exc))
+
+
 async def run_polling() -> None:
     bot = create_bot()
     dispatcher = create_dispatcher()
     await _seed_admins()
+    await _sync_commands(bot)
     await bot.delete_webhook(drop_pending_updates=True)
     log.info("bot_polling_start", username=settings.bot_username)
     try:
@@ -39,6 +51,7 @@ async def run_polling() -> None:
 async def run_webhook() -> None:
     bot = create_bot()
     await _seed_admins()
+    await _sync_commands(bot)
     await bot.set_webhook(
         url=settings.webhook_url,
         secret_token=settings.webhook_secret,

@@ -54,6 +54,10 @@ async def _send_welcome(message: Message, session: AsyncSession) -> None:
     if user is not None and await AdminService.is_admin(session, user.id):
         is_owner = await AdminService.is_owner(session, user.id)
         await message.answer(welcome, reply_markup=build_admin_menu(is_owner))
+        # keep this admin's chat-scoped command menu fresh (best-effort)
+        from app.bot.commands_menu import push_admin_commands
+
+        await push_admin_commands(message.bot, session, user.id)
     else:
         await message.answer(welcome, reply_markup=build_user_menu())
     # best-effort start_message ad (never blocks the welcome)
@@ -143,7 +147,9 @@ async def cb_join_recheck(
             pass
 
 
-@router.message(StateFilter(Delivery.waiting_password), F.text)
+# ~startswith("/"): a tapped menu command must reach its own handler instead
+# of being counted as a wrong password (3 taps would lock the file 5 minutes).
+@router.message(StateFilter(Delivery.waiting_password), F.text, ~F.text.startswith("/"))
 async def input_delivery_password(
     message: Message, state: FSMContext, session: AsyncSession, db_user: User | None
 ) -> None:

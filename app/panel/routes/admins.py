@@ -36,6 +36,12 @@ async def admin_add(
     if tid.isdigit():
         await AdminService(session).add_admin(int(tid), role="admin")
         await audit(session, request, "admin_add", target=tid)
+        bot = getattr(request.app.state, "bot", None)
+        if bot is not None:
+            # give the new admin the chat-scoped command menu (best-effort)
+            from app.bot.commands_menu import push_admin_commands
+
+            await push_admin_commands(bot, session, int(tid))
     return RedirectResponse(url=f"{settings.panel_path}/admins", status_code=302)
 
 
@@ -52,6 +58,13 @@ async def admin_remove(
     admin = await service.get(admin_id)
     # cannot remove env owners (they'd be re-seeded anyway)
     if admin is not None and not AdminService.is_env_owner(admin.telegram_id):
+        removed_tid = admin.telegram_id
         await service.remove(admin_id)
-        await audit(session, request, "admin_remove", target=str(admin.telegram_id))
+        await audit(session, request, "admin_remove", target=str(removed_tid))
+        bot = getattr(request.app.state, "bot", None)
+        if bot is not None:
+            # removed admin falls back to the default (user) command menu
+            from app.bot.commands_menu import clear_admin_commands
+
+            await clear_admin_commands(bot, removed_tid)
     return RedirectResponse(url=f"{settings.panel_path}/admins", status_code=302)

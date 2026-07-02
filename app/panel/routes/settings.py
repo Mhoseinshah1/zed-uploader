@@ -111,6 +111,16 @@ async def settings_search(
     setting = BotSettingService(session)
     await setting.set(KEY_PUBLIC_SEARCH_ENABLED, public_search_enabled == "on")
     await audit(session, request, "settings_search")
+    # the user command menu advertises /search only while search is enabled —
+    # refresh the resolved list and re-push the default scope (best-effort)
+    from app.services.bot_command_service import bust_cache
+
+    await bust_cache("user")
+    bot = getattr(request.app.state, "bot", None)
+    if bot is not None:
+        from app.bot.commands_menu import push_default_commands
+
+        await push_default_commands(bot, session)
     return RedirectResponse(url=_p("/settings"), status_code=302)
 
 

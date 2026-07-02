@@ -59,8 +59,16 @@ async def admin_toggle(
     service = AdminService(session)
     admin = await service.get(callback_data.id)
     if admin is not None:
-        await service.set_active(admin.id, not admin.is_active)
-        log.info("admin_toggled", telegram_id=admin.telegram_id, active=not admin.is_active)
+        now_active = not admin.is_active
+        await service.set_active(admin.id, now_active)
+        log.info("admin_toggled", telegram_id=admin.telegram_id, active=now_active)
+        # chat-scoped command menu follows the admin's active state
+        from app.bot.commands_menu import clear_admin_commands, push_admin_commands
+
+        if now_active:
+            await push_admin_commands(callback.bot, session, admin.telegram_id)
+        else:
+            await clear_admin_commands(callback.bot, admin.telegram_id)
     if isinstance(callback.message, Message):
         admins = await service.list_all()
         try:
@@ -81,8 +89,13 @@ async def admin_remove(
     service = AdminService(session)
     admin = await service.get(callback_data.id)
     if admin is not None:
-        log.info("admin_removed", telegram_id=admin.telegram_id)
+        removed_tid = admin.telegram_id
+        log.info("admin_removed", telegram_id=removed_tid)
         await service.remove(admin.id)
+        # removed admin falls back to the default (user) command menu
+        from app.bot.commands_menu import clear_admin_commands
+
+        await clear_admin_commands(callback.bot, removed_tid)
     if isinstance(callback.message, Message):
         admins = await service.list_all()
         try:
@@ -122,5 +135,9 @@ async def admin_add_input(
     await AdminService(session).add_admin(telegram_id, role="admin")
     await state.clear()
     log.info("admin_added", telegram_id=telegram_id)
+    # give the new admin the chat-scoped admin command menu right away
+    from app.bot.commands_menu import push_admin_commands
+
+    await push_admin_commands(message.bot, session, telegram_id)
     await message.answer(messages.ADMIN_ADDED)
     await _show_admins(message, session)

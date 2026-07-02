@@ -17,6 +17,7 @@ from app.bot.handlers import (
     billing_owner,
     broadcast,
     channels,
+    commands,
     common,
     folders,
     menu,
@@ -65,6 +66,9 @@ def create_dispatcher() -> Dispatcher:
     # Order matters. `batch` must precede `upload` so its StateFilter(collecting)
     # media handler wins while batching; the catch-all `common` MUST stay last.
     dispatcher.include_router(start.router)
+    # Slash-command aliases before the button routers, so a command typed
+    # mid-FSM-flow preempts the state-bound text handlers (and cancels it).
+    dispatcher.include_router(commands.router)
     dispatcher.include_router(menu.router)
     dispatcher.include_router(review.router)
     dispatcher.include_router(ads.router)

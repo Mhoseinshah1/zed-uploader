@@ -126,6 +126,11 @@ async def cmd_panel(
         session, message.from_user.id
     )
     await message.answer(messages.ADMIN_PANEL, reply_markup=build_admin_menu(is_owner))
+    if message.from_user is not None:
+        # keep this admin's chat-scoped command menu fresh (best-effort)
+        from app.bot.commands_menu import push_admin_commands
+
+        await push_admin_commands(message.bot, session, message.from_user.id)
 
 
 @router.message(IsAdmin(), F.text == messages.BTN_UPLOAD)
