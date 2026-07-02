@@ -21,6 +21,7 @@ from app.bot.handlers import (
     common,
     folders,
     menu,
+    newbot,
     reports,
     review,
     search,
@@ -61,6 +62,9 @@ def create_dispatcher() -> Dispatcher:
     # from_url builds the client lazily (no connection at construction).
     storage = RedisStorage.from_url(settings.redis_url)
     dispatcher = Dispatcher(storage=storage)
+    # F2/F3: the multi-bot registry is injected here by the API lifespan; default
+    # None so the create-bot handler can always receive it (None in polling/dev).
+    dispatcher["registry"] = None
 
     # Registered on `update` (not just `message`) so session/db_user are injected
     # for every update type — callback_query included. Order: tenant context
@@ -85,6 +89,7 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.include_router(admins.router)
     dispatcher.include_router(broadcast.router)
     dispatcher.include_router(billing.router)
+    dispatcher.include_router(newbot.router)
     dispatcher.include_router(stars.router)
     dispatcher.include_router(billing_owner.router)
     dispatcher.include_router(batch.router)

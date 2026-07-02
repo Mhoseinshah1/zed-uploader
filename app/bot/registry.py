@@ -31,6 +31,23 @@ def tenant_webhook_url(bot_id: int) -> str:
     return f"{settings.domain.rstrip('/')}/tenant/{bot_id}/webhook"
 
 
+async def stop_tenant_bot(tenant) -> None:
+    """Delete a tenant bot's webhook via a throwaway Bot — for processes that
+    don't hold the registry (the worker suspending an expired rental). Stops the
+    bot serving without touching its data. Best-effort; never raises/logs token.
+    """
+    if not tenant.bot_token:
+        return
+    try:
+        bot = Bot(token=TenantService.decrypt_token(tenant))
+        try:
+            await bot.delete_webhook(drop_pending_updates=False)
+        finally:
+            await bot.session.close()
+    except Exception as exc:
+        log.warning("tenant_bot_stop_failed", tenant_id=tenant.id, error=str(exc))
+
+
 @dataclass
 class RegisteredBot:
     tenant_id: int

@@ -51,15 +51,20 @@ async def _send_welcome(message: Message, session: AsyncSession) -> None:
     """Welcome; admins also get the persistent reply keyboard (owners: +extra)."""
     user = message.from_user
     welcome = await get_text(session, "welcome")
+    from app.core.tenant_context import PLATFORM_TENANT_ID, current_tenant
+
+    is_platform = current_tenant() == PLATFORM_TENANT_ID
     if user is not None and await AdminService.is_admin(session, user.id):
         is_owner = await AdminService.is_owner(session, user.id)
-        await message.answer(welcome, reply_markup=build_admin_menu(is_owner))
+        await message.answer(
+            welcome, reply_markup=build_admin_menu(is_owner, is_platform)
+        )
         # keep this admin's chat-scoped command menu fresh (best-effort)
         from app.bot.commands_menu import push_admin_commands
 
         await push_admin_commands(message.bot, session, user.id)
     else:
-        await message.answer(welcome, reply_markup=build_user_menu())
+        await message.answer(welcome, reply_markup=build_user_menu(is_platform))
     # best-effort start_message ad (never blocks the welcome)
     from app.bot.delivery import send_placement_ads
 

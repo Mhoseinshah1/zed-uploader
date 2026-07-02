@@ -664,6 +664,43 @@ REPORT_HELP = (
 # --- command menu ------------------------------------------------------------
 BACKUP_POINTER = "🗄 پشتیبان‌گیری و بازیابی از پنل وب مدیریت انجام می‌شود (بخش «پشتیبان»)."
 
+# --- F3: buy-a-bot factory ---------------------------------------------------
+BTN_CREATE_BOT = "🤖 ساخت ربات"
+NEWBOT_NO_PLANS = "در حال حاضر پلن فعالی برای ساخت ربات وجود ندارد."
+NEWBOT_ASK_TOKEN = (
+    "🤖 توکن ربات خود را از @BotFather بگیرید و همین‌جا ارسال کنید.\n"
+    "توکن شما محرمانه ذخیره می‌شود و هرگز نمایش داده نمی‌شود."
+)
+NEWBOT_INVALID_TOKEN = "❌ توکن نامعتبر است. لطفاً توکن صحیح ربات را از @BotFather ارسال کنید."
+NEWBOT_ALREADY = "این ربات قبلاً در سیستم ثبت شده است."
+NEWBOT_INSUFFICIENT = "موجودی کیف پول شما کافی نیست. ابتدا کیف پول را شارژ کنید."
+NEWBOT_FAILED = "خطا در ساخت ربات؛ مبلغی کسر نشد. لطفاً بعداً دوباره تلاش کنید."
+NEWBOT_ONLY_PLATFORM = "این قابلیت فقط در ربات اصلی در دسترس است."
+
+
+def newbot_plans_view(balance: int) -> str:
+    return (
+        f"🤖 ساخت ربات اختصاصی\n\nموجودی کیف پول شما: {balance:,} تومان\n\n"
+        "یک پلن را انتخاب کنید:"
+    )
+
+
+def newbot_plan_label(title: str, price: int, duration_days: int) -> str:
+    period = "دائمی" if duration_days == 0 else f"{duration_days} روزه"
+    return f"{title} — {price:,} تومان ({period})"
+
+
+def newbot_success(username: str | None, panel_url: str, expires_at) -> str:
+    handle = f"@{username}" if username else "ربات شما"
+    lines = [
+        f"✅ ربات {handle} فعال شد!",
+        "شما مالک این ربات هستید؛ با دستور /panel آن را مدیریت کنید.",
+        f"پنل وب: {panel_url}",
+    ]
+    if expires_at is not None:
+        lines.append(f"اعتبار تا: {expires_at:%Y-%m-%d}")
+    return "\n".join(lines)
+
 _REPORT_REASON_TITLES = {
     "copyright": "نقض کپی‌رایت",
     "inappropriate": "محتوای نامناسب",

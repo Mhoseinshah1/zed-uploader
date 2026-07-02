@@ -272,6 +272,38 @@ async def process_expiry_sweep(session_maker) -> int:
         return len(users)
 
 
+async def process_tenant_expiry(session_maker) -> int:
+    """Suspend expired rental tenants (stop the bot, KEEP data). F3.
+
+    Tenant is a global table, so this reads every expired active tenant across
+    the platform (not just the worker's platform context). Renewal reactivates
+    them via BotCreationService.renew_from_wallet.
+    """
+    from app.bot.registry import stop_tenant_bot
+    from app.models.tenant import Tenant
+
+    async with session_maker() as session:
+        now = datetime.now(timezone.utc)
+        tenants = list(
+            await session.scalars(
+                select(Tenant).where(
+                    Tenant.status == "active",
+                    Tenant.expires_at.is_not(None),
+                    Tenant.expires_at < now,
+                )
+            )
+        )
+        if not tenants:
+            return 0
+        for tenant in tenants:
+            tenant.status = "suspended"
+            log.info("tenant_expired", tenant_id=tenant.id)
+        await session.commit()
+        for tenant in tenants:
+            await stop_tenant_bot(tenant)  # remove webhook -> stops serving
+        return len(tenants)
+
+
 async def main() -> None:
     setup_logging()
     # F1: the worker services the single platform tenant. Set the tenant context
@@ -319,6 +351,12 @@ async def main() -> None:
                         log.info("plans_expired", count=expired)
                 except Exception as exc:
                     log.warning("expiry_sweep_error", error=str(exc))
+                try:
+                    suspended = await process_tenant_expiry(async_session_maker)
+                    if suspended:
+                        log.info("tenants_suspended", count=suspended)
+                except Exception as exc:
+                    log.warning("tenant_expiry_error", error=str(exc))
                 try:
                     await process_backups_once(async_session_maker)
                 except Exception as exc:

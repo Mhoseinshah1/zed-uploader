@@ -68,3 +68,8 @@ class SellEdit(StatesGroup):
     waiting_holder = State()
     waiting_price = State()      # data: plan key
     waiting_duration = State()   # data: plan key
+
+
+# --- Phase F3: buy-a-bot ----------------------------------------------------
+class NewBot(StatesGroup):
+    waiting_token = State()  # data: plan_key — customer submitting a BotFather token

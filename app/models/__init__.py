@@ -6,6 +6,7 @@ from app.models.ad import Ad
 from app.models.admin import Admin
 from app.models.backup_job import BackupJob
 from app.models.bot_command import BotCommandEntry
+from app.models.bot_plan import BotPlan
 from app.models.broadcast import BroadcastJob, BroadcastRecipient
 from app.models.channel import RequiredChannel
 from app.models.download_log import DownloadLog
@@ -49,5 +50,6 @@ __all__ = [
     "MediaReport",
     "LicenseInfo",
     "BotCommandEntry",
+    "BotPlan",
     "Tenant",
 ]
