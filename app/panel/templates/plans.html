@@ -14,6 +14,9 @@
   <label>سقف فایل (خالی = نامحدود)
     <input type="number" name="max_files" value="{{ p.max_files if p.max_files is not none else '' }}" min="0">
   </label>
+  <label>قیمت استارز ⭐ (خالی = غیرفعال)
+    <input type="number" name="stars_price" value="{{ p.stars_price if p.stars_price is not none else '' }}" min="1">
+  </label>
   <label class="checkbox">
     <input type="checkbox" name="is_active" {{ "checked" if p.is_active else "" }}> فعال
   </label>

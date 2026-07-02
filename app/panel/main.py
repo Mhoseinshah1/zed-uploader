@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.panel.deps import PanelAuthRequired
 from app.panel.routes import (
     admins,
+    ads,
     auth,
     broadcast,
     dashboard,
@@ -22,6 +23,7 @@ from app.panel.routes import (
     providers,
     review,
     settings as settings_routes,
+    stats,
     users,
 )
 
@@ -33,12 +35,14 @@ for _module in (
     users,
     media,
     review,
+    ads,
     folders,
     payments,
     plans,
     providers,
     admins,
     settings_routes,
+    stats,
     broadcast,
 ):
     router.include_router(_module.router)

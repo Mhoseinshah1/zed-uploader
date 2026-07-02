@@ -50,7 +50,7 @@ def test_single_linear_head():
     assert result.returncode == 0, result.stderr
     heads = [ln for ln in result.stdout.splitlines() if "(head)" in ln]
     assert len(heads) == 1, f"expected one head, got: {result.stdout}"
-    assert "0011_provider_config" in heads[0]
+    assert "0014_telegram_stars" in heads[0]
 
 
 async def test_clean_upgrade_and_no_drift():

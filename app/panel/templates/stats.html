@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>آمار پیشرفته</h1>
+
+<form class="search" method="get" action="{{ panel_path }}/stats">
+  <label>از <input type="date" name="start" value="{{ rng_start }}"></label>
+  <label>تا <input type="date" name="end" value="{{ rng_end }}"></label>
+  <label>بازه
+    <select name="period">
+      <option value="day" {{ "selected" if period == "day" else "" }}>روزانه</option>
+      <option value="week" {{ "selected" if period == "week" else "" }}>هفتگی</option>
+      <option value="month" {{ "selected" if period == "month" else "" }}>ماهانه</option>
+    </select>
+  </label>
+  <button type="submit">اعمال</button>
+</form>
+
+<section class="panel-box">
+  <h2>دانلودها ({{ "روزانه" if period == "day" else ("هفتگی" if period == "week" else "ماهانه") }})
+    <a class="csv" href="{{ panel_path }}/stats/export/downloads.csv?start={{ rng_start }}&end={{ rng_end }}&period={{ period }}">CSV ⬇</a></h2>
+  {% if downloads %}
+  <div class="chart" dir="ltr">
+    {% for d, n in downloads %}
+    <div class="bar" title="{{ d }} — {{ n }}"
+         style="height:{{ (n / downloads_max * 100) | round(1) if downloads_max else 2 }}%"></div>
+    {% endfor %}
+  </div>
+  <details><summary>جدول داده</summary>
+    <table><thead><tr><th>تاریخ</th><th>دانلود</th></tr></thead><tbody>
+    {% for d, n in downloads %}<tr><td dir="ltr">{{ d }}</td><td>{{ n }}</td></tr>{% endfor %}
+    </tbody></table>
+  </details>
+  {% else %}<p>داده‌ای در این بازه نیست.</p>{% endif %}
+</section>
+
+<section class="panel-box">
+  <h2>کاربران جدید (روزانه)
+    <a class="csv" href="{{ panel_path }}/stats/export/users.csv?start={{ rng_start }}&end={{ rng_end }}">CSV ⬇</a></h2>
+  {% if users %}
+  <div class="chart" dir="ltr">
+    {% for d, n in users %}
+    <div class="bar" title="{{ d }} — {{ n }}"
+         style="height:{{ (n / users_max * 100) | round(1) if users_max else 2 }}%"></div>
+    {% endfor %}
+  </div>
+  <details><summary>جدول داده</summary>
+    <table><thead><tr><th>تاریخ</th><th>کاربر جدید</th></tr></thead><tbody>
+    {% for d, n in users %}<tr><td dir="ltr">{{ d }}</td><td>{{ n }}</td></tr>{% endfor %}
+    </tbody></table>
+  </details>
+  {% else %}<p>داده‌ای در این بازه نیست.</p>{% endif %}
+</section>
+
+<section class="panel-box">
+  <h2>درآمد به تفکیک روش پرداخت
+    <a class="csv" href="{{ panel_path }}/stats/export/revenue.csv?start={{ rng_start }}&end={{ rng_end }}">CSV ⬇</a></h2>
+  {% for method, n, rev in revenue %}
+  <div class="hbar-row">
+    <span class="hbar-label">{{ method }} ({{ n }})</span>
+    <div class="hbar-track"><div class="hbar" title="{{ '{:,}'.format(rev) }} تومان"
+      style="width:{{ (rev / revenue_max * 100) | round(1) if revenue_max else 2 }}%"></div></div>
+    <span class="hbar-value">{{ "{:,}".format(rev) }}</span>
+  </div>
+  {% else %}<p>پرداخت تأییدشده‌ای در این بازه نیست.</p>{% endfor %}
+</section>
+
+<div class="grid-2">
+<section class="panel-box">
+  <h2>پرفروش‌ترین پلن‌ها
+    <a class="csv" href="{{ panel_path }}/stats/export/plans.csv?start={{ rng_start }}&end={{ rng_end }}">CSV ⬇</a></h2>
+  <table><thead><tr><th>پلن</th><th>فروش</th><th>درآمد</th></tr></thead><tbody>
+  {% for plan, n, rev in plans %}
+    <tr><td>{{ plan }}</td><td>{{ n }}</td><td>{{ "{:,}".format(rev) }}</td></tr>
+  {% else %}<tr><td colspan="3">فروشی در این بازه نیست.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+
+<section class="panel-box">
+  <h2>پردانلودترین فایل‌ها
+    <a class="csv" href="{{ panel_path }}/stats/export/files.csv?start={{ rng_start }}&end={{ rng_end }}">CSV ⬇</a></h2>
+  <table><thead><tr><th>کد</th><th>عنوان</th><th>دانلود</th></tr></thead><tbody>
+  {% for code, title, n in files %}
+    <tr><td dir="ltr">{{ code }}</td><td>{{ title or "—" }}</td><td>{{ n }}</td></tr>
+  {% else %}<tr><td colspan="3">دانلودی در این بازه نیست.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+</div>
+
+<section class="panel-box">
+  <h2>فایل‌ها به تفکیک وضعیت بازبینی
+    <a class="csv" href="{{ panel_path }}/stats/export/media_status.csv">CSV ⬇</a></h2>
+  <table><thead><tr><th>وضعیت</th><th>تعداد</th></tr></thead><tbody>
+  {% for status, n in media_status %}
+    <tr><td>{{ status }}</td><td>{{ n }}</td></tr>
+  {% else %}<tr><td colspan="2">فایلی نیست.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+{% endblock %}

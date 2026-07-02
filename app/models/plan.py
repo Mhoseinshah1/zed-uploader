@@ -22,6 +22,8 @@ class Plan(Base):
         Integer, default=0, server_default=text("0"), nullable=False
     )
     max_files: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # C4: price in Telegram Stars (XTR); NULL = plan not sold via Stars
+    stars_price: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default=text("true"), nullable=False
     )

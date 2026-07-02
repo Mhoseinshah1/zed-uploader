@@ -10,6 +10,7 @@ from aiogram.fsm.storage.redis import RedisStorage
 
 from app.bot.handlers import (
     admins,
+    ads,
     albums,
     batch,
     billing,
@@ -22,6 +23,7 @@ from app.bot.handlers import (
     review,
     search,
     start,
+    stars,
     upload,
 )
 from app.bot.middlewares import DbSessionMiddleware, UserContextMiddleware
@@ -64,11 +66,13 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.include_router(start.router)
     dispatcher.include_router(menu.router)
     dispatcher.include_router(review.router)
+    dispatcher.include_router(ads.router)
     dispatcher.include_router(folders.router)
     dispatcher.include_router(channels.router)
     dispatcher.include_router(admins.router)
     dispatcher.include_router(broadcast.router)
     dispatcher.include_router(billing.router)
+    dispatcher.include_router(stars.router)
     dispatcher.include_router(billing_owner.router)
     dispatcher.include_router(batch.router)
     # `albums` after batch (so batch-collecting still grabs parts) and before

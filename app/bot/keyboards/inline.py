@@ -24,6 +24,7 @@ from app.bot.callbacks import (
     SearchCb,
     SellCb,
     SetCb,
+    StarsBuyCb,
     SubCb,
     WalletCb,
 )
@@ -364,6 +365,13 @@ def build_share(url: str) -> InlineKeyboardMarkup:
     return b.as_markup()
 
 
+def build_url_button(text: str, url: str) -> InlineKeyboardMarkup:
+    """A single URL button (used by ads for their tracked click link)."""
+    b = InlineKeyboardBuilder()
+    b.row(InlineKeyboardButton(text=text, url=url))
+    return b.as_markup()
+
+
 # --- Phase 2 keyboards -------------------------------------------------------
 def _channel_url(channel: RequiredChannel) -> str | None:
     if channel.invite_link:
@@ -553,7 +561,9 @@ def build_sell(card_number: str | None, card_holder: str | None, plans: list[Pla
     return b.as_markup()
 
 
-def build_buy_confirm(plan_key: str, centralpay: bool = False) -> InlineKeyboardMarkup:
+def build_buy_confirm(
+    plan_key: str, centralpay: bool = False, stars: bool = False
+) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
     b.row(
         InlineKeyboardButton(
@@ -566,6 +576,13 @@ def build_buy_confirm(plan_key: str, centralpay: bool = False) -> InlineKeyboard
             InlineKeyboardButton(
                 text=messages.BTN_PAY_ONLINE,
                 callback_data=BuyOnlineCb(plan=plan_key).pack(),
+            )
+        )
+    if stars:
+        b.row(
+            InlineKeyboardButton(
+                text=messages.BTN_PAY_STARS,
+                callback_data=StarsBuyCb(plan=plan_key).pack(),
             )
         )
     return b.as_markup()

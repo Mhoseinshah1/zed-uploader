@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from app.db.base import Base
+from app.models.ad import Ad
 from app.models.admin import Admin
 from app.models.broadcast import BroadcastJob, BroadcastRecipient
 from app.models.channel import RequiredChannel
@@ -38,4 +39,5 @@ __all__ = [
     "BroadcastRecipient",
     "Folder",
     "PaymentProviderConfig",
+    "Ad",
 ]

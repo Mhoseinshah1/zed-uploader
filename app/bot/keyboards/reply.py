@@ -56,4 +56,5 @@ def build_admin_menu(is_owner: bool = False) -> ReplyKeyboardMarkup:
                 KeyboardButton(text=messages.BTN_SELL),
             ]
         )
+        keyboard.append([KeyboardButton(text=messages.BTN_ADS)])
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)

@@ -3,7 +3,16 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, String, Text, func, text
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -11,6 +20,17 @@ from app.db.base import Base
 
 class Payment(Base):
     __tablename__ = "payments"
+    # C4: one payment per Telegram Stars charge id — the DB enforces the
+    # idempotency key even under concurrent duplicate updates.
+    __table_args__ = (
+        Index(
+            "uq_payments_stars_charge",
+            "provider_ref",
+            unique=True,
+            postgresql_where=text("method = 'telegram_stars'"),
+            sqlite_where=text("method = 'telegram_stars'"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(

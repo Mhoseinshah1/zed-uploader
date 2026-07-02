@@ -20,8 +20,10 @@ class DownloadLog(Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     telegram_id: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
+    # indexed for the stats date-range aggregates (C3) — downloads is the
+    # largest table and downloads-per-day scans it by created_at
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.now(), index=True, nullable=False
     )
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
