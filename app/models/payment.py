@@ -16,15 +16,18 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 
-class Payment(Base):
+class Payment(TenantScoped, Base):
     __tablename__ = "payments"
     # C4: one payment per Telegram Stars charge id — the DB enforces the
-    # idempotency key even under concurrent duplicate updates.
+    # idempotency key even under concurrent duplicate updates. F1: scoped per
+    # tenant so two bots can independently see the same charge id.
     __table_args__ = (
         Index(
             "uq_payments_stars_charge",
+            "tenant_id",
             "provider_ref",
             unique=True,
             postgresql_where=text("method = 'telegram_stars'"),

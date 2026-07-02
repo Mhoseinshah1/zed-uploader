@@ -84,6 +84,12 @@ docker compose up -d --force-recreate api bot worker
 | `LICENSE_GRACE_DAYS` | خیر | `7` | مهلت آفلاین: اگر سرور فعال‌سازی در دسترس نباشد، نصبِ قبلاً تأییدشده تا این تعداد روز از آخرین تأیید موفق به کار ادامه می‌دهد. |
 | `LICENSE_FILE` | خیر | `license.json` | مسیر فایل آینه (write-only) از وضعیت لایسنس؛ مرجع اصلی، دیتابیس است. |
 
+## چند-مستأجری (Phase F)
+
+| متغیر | الزامی؟ | پیش‌فرض | توضیح |
+|---|---|---|---|
+| `TENANT_TOKEN_KEY` | برای میزبانی چند-بات **بله** | خالی | کلید Fernet برای رمزنگاری توکن ربات مشتری‌ها هنگام ذخیره در دیتابیس. با `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` بسازید. محرمانه؛ هرگز commit نکنید. |
+
 ## سرور فعال‌سازی مستقل (فروشنده)
 
 فقط برای فروشنده؛ روی سرور مشتری لازم نیست. ببینید `activation_server/README.md`.

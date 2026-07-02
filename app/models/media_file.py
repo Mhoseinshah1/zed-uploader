@@ -17,12 +17,13 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 if TYPE_CHECKING:
     from app.models.media import Media
 
 
-class MediaFile(Base):
+class MediaFile(TenantScoped, Base):
     __tablename__ = "media_files"
 
     id: Mapped[int] = mapped_column(primary_key=True)

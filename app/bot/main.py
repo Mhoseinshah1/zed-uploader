@@ -13,6 +13,7 @@ import asyncio
 from app.bot.factory import create_bot, create_dispatcher
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
+from app.core.tenant_context import PLATFORM_TENANT_ID, tenant_scope
 from app.db.session import async_session_maker
 from app.services.admin_service import AdminService
 
@@ -20,8 +21,10 @@ log = get_logger("bot")
 
 
 async def _seed_admins() -> None:
-    async with async_session_maker() as session:
-        await AdminService(session).ensure_seed_admins(settings.admin_id_list)
+    # F1: the single bot's admins belong to the platform tenant.
+    with tenant_scope(PLATFORM_TENANT_ID):
+        async with async_session_maker() as session:
+            await AdminService(session).ensure_seed_admins(settings.admin_id_list)
 
 
 async def _sync_commands(bot) -> None:
@@ -29,8 +32,9 @@ async def _sync_commands(bot) -> None:
     try:
         from app.bot.commands_menu import sync_all
 
-        async with async_session_maker() as session:
-            await sync_all(bot, session)
+        with tenant_scope(PLATFORM_TENANT_ID):
+            async with async_session_maker() as session:
+                await sync_all(bot, session)
     except Exception as exc:
         log.warning("commands_sync_failed", error=str(exc))
 

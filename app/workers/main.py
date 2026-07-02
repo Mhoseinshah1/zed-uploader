@@ -274,6 +274,12 @@ async def process_expiry_sweep(session_maker) -> int:
 
 async def main() -> None:
     setup_logging()
+    # F1: the worker services the single platform tenant. Set the tenant context
+    # for the whole loop so every session it opens is scoped (and fails closed
+    # otherwise). F2 makes the worker iterate tenants.
+    from app.core.tenant_context import PLATFORM_TENANT_ID, set_tenant
+
+    set_tenant(PLATFORM_TENANT_ID)
     bot = create_bot()
     redis = get_redis()
     queue = AutoDeleteQueue(redis)

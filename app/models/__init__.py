@@ -20,6 +20,7 @@ from app.models.payment_provider import PaymentProviderConfig
 from app.models.plan import Plan
 from app.models.settings import BotSetting, FeatureFlag
 from app.models.subscription import Subscription
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.wallet import WalletTransaction
 
@@ -48,4 +49,5 @@ __all__ = [
     "MediaReport",
     "LicenseInfo",
     "BotCommandEntry",
+    "Tenant",
 ]

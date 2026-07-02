@@ -3,19 +3,22 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, Boolean, DateTime, String, func, text
+from sqlalchemy import BigInteger, Boolean, DateTime, Index, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 
-class User(Base):
+class User(TenantScoped, Base):
     __tablename__ = "users"
+    # telegram id is unique PER TENANT (the same person may use many bots).
+    __table_args__ = (
+        Index("uq_users_tenant_telegram", "tenant_id", "telegram_id", unique=True),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    telegram_id: Mapped[int] = mapped_column(
-        BigInteger, unique=True, index=True, nullable=False
-    )
+    telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     username: Mapped[str | None] = mapped_column(String(255), nullable=True)
     first_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(255), nullable=True)

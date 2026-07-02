@@ -3,17 +3,31 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, func, text
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    Index,
+    Integer,
+    String,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 
-class Plan(Base):
+class Plan(TenantScoped, Base):
     __tablename__ = "plans"
+    # each tenant defines its own plan keys.
+    __table_args__ = (
+        Index("uq_plans_tenant_key", "tenant_id", "key", unique=True),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    key: Mapped[str] = mapped_column(String(16), unique=True, index=True, nullable=False)
+    key: Mapped[str] = mapped_column(String(16), nullable=False)
     title: Mapped[str] = mapped_column(String(64), nullable=False)
     price: Mapped[int] = mapped_column(
         BigInteger, default=0, server_default=text("0"), nullable=False

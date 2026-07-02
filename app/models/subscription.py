@@ -7,9 +7,10 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 
-class Subscription(Base):
+class Subscription(TenantScoped, Base):
     __tablename__ = "subscriptions"
 
     id: Mapped[int] = mapped_column(primary_key=True)

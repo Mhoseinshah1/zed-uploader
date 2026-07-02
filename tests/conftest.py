@@ -23,6 +23,12 @@ os.environ.setdefault("WEBHOOK_PATH", "/telegram/webhook")
 os.environ.setdefault("DOMAIN", "https://example.com")
 os.environ.setdefault("SESSION_SECRET", "test_session_secret")
 
+# A per-run Fernet key so the tenant token-crypto helpers work offline (F1).
+# Generated fresh each run — never a committed secret.
+from cryptography.fernet import Fernet as _Fernet  # noqa: E402
+
+os.environ.setdefault("TENANT_TOKEN_KEY", _Fernet.generate_key().decode())
+
 # Use fakeredis for the whole suite so Redis-backed features (rate limiting,
 # panel sessions, panel login lockout) behave deterministically offline.
 import fakeredis.aioredis as _fakeredis  # noqa: E402
@@ -55,6 +61,23 @@ def _fresh_fakeredis():
     """
     _redis_client._client = _fakeredis.FakeRedis(decode_responses=True)
     yield
+
+
+@pytest.fixture(autouse=True)
+def _tenant_context():
+    """Default every test to the platform tenant (F1).
+
+    The DB guard fails closed without a tenant context, so the whole existing
+    suite runs as tenant 1 (which the schema seeds). Isolation tests override
+    this by entering their own ``tenant_scope`` / ``all_tenants``. Sync fixture
+    on purpose: the ContextVar is set in the outer context so the value
+    propagates into pytest-asyncio's per-test task.
+    """
+    from app.core.tenant_context import PLATFORM_TENANT_ID, reset_tenant, set_tenant
+
+    token = set_tenant(PLATFORM_TENANT_ID)
+    yield
+    reset_tenant(token)
 
 
 @pytest.fixture()

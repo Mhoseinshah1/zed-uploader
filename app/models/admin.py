@@ -3,19 +3,22 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, String, func, text
+from sqlalchemy import BigInteger, Boolean, DateTime, Index, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 
-class Admin(Base):
+class Admin(TenantScoped, Base):
     __tablename__ = "admins"
+    # an admin is an admin of ONE tenant's bot — unique per tenant.
+    __table_args__ = (
+        Index("uq_admins_tenant_telegram", "tenant_id", "telegram_id", unique=True),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    telegram_id: Mapped[int] = mapped_column(
-        BigInteger, unique=True, index=True, nullable=False
-    )
+    telegram_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     role: Mapped[str] = mapped_column(
         String(32), default="owner", server_default=text("'owner'"), nullable=False
     )

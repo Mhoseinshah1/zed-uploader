@@ -25,9 +25,10 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 
-class BroadcastJob(Base):
+class BroadcastJob(TenantScoped, Base):
     __tablename__ = "broadcast_jobs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -66,7 +67,7 @@ class BroadcastJob(Base):
         return f"<BroadcastJob id={self.id} status={self.status!r}>"
 
 
-class BroadcastRecipient(Base):
+class BroadcastRecipient(TenantScoped, Base):
     __tablename__ = "broadcast_recipients"
     __table_args__ = (
         UniqueConstraint("broadcast_id", "user_id", name="uq_broadcast_recipient"),

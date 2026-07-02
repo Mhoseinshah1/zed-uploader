@@ -11,9 +11,10 @@ from sqlalchemy import BigInteger, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 
-class WalletTransaction(Base):
+class WalletTransaction(TenantScoped, Base):
     __tablename__ = "wallet_transactions"
 
     id: Mapped[int] = mapped_column(primary_key=True)

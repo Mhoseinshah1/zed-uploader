@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     license_disabled: bool = True
     license_file: str = "license.json"
 
+    # --- multi-tenant (Phase F) ------------------------------------------
+    # Fernet key used to encrypt tenant bot tokens at rest. Empty in dev/tests
+    # (the token-crypto helper raises if asked to encrypt without a key).
+    tenant_token_key: str = ""
+
     # --- media defaults --------------------------------------------------
     default_protect_content: bool = False
     default_auto_delete_seconds: int = 0

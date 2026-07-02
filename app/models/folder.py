@@ -21,9 +21,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 
-class Folder(Base):
+class Folder(TenantScoped, Base):
     __tablename__ = "folders"
 
     id: Mapped[int] = mapped_column(primary_key=True)
