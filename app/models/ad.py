@@ -13,11 +13,12 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 PLACEMENTS = ("before_file", "after_file", "start_message")
 
 
-class Ad(Base):
+class Ad(TenantScoped, Base):
     __tablename__ = "ads"
 
     id: Mapped[int] = mapped_column(primary_key=True)

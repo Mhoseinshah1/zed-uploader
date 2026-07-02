@@ -20,11 +20,12 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 REPORT_REASONS = ("copyright", "inappropriate", "spam", "other")
 
 
-class MediaReport(Base):
+class MediaReport(TenantScoped, Base):
     __tablename__ = "media_reports"
     __table_args__ = (
         UniqueConstraint("media_id", "user_id", name="uq_media_report_once"),

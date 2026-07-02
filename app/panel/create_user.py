@@ -9,28 +9,32 @@ import asyncio
 
 from sqlalchemy import select
 
+from app.core.tenant_context import all_tenants
 from app.db.session import async_session_maker
 from app.models.panel import PanelUser
 from app.panel.security import hash_password
 
 
 async def upsert(username: str, password: str) -> None:
-    async with async_session_maker() as session:
-        user = await session.scalar(
-            select(PanelUser).where(PanelUser.username == username)
-        )
-        if user is None:
-            session.add(
-                PanelUser(
-                    username=username,
-                    password_hash=hash_password(password),
-                    is_active=True,
-                )
+    # panel_users is a global (platform) table; the DB guard still requires a
+    # context, so run this maintenance script in the cross-tenant/global mode.
+    with all_tenants():
+        async with async_session_maker() as session:
+            user = await session.scalar(
+                select(PanelUser).where(PanelUser.username == username)
             )
-        else:
-            user.password_hash = hash_password(password)
-            user.is_active = True
-        await session.commit()
+            if user is None:
+                session.add(
+                    PanelUser(
+                        username=username,
+                        password_hash=hash_password(password),
+                        is_active=True,
+                    )
+                )
+            else:
+                user.password_hash = hash_password(password)
+                user.is_active = True
+            await session.commit()
     print(f"panel user '{username}' is ready.")
 
 

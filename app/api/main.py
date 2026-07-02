@@ -28,11 +28,13 @@ async def lifespan(app: FastAPI):
     app.state.bot = bot
     app.state.dp = dispatcher
     try:  # record the installed version; never block startup (e.g. no DB in tests)
+        from app.core.tenant_context import PLATFORM_TENANT_ID, tenant_scope
         from app.core.version import sync_version
         from app.db.session import async_session_maker
 
-        async with async_session_maker() as session:
-            await sync_version(session)
+        with tenant_scope(PLATFORM_TENANT_ID):
+            async with async_session_maker() as session:
+                await sync_version(session)
     except Exception:
         pass
     log.info("api_started", project=settings.project_name)

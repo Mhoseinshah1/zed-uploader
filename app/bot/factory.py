@@ -28,7 +28,11 @@ from app.bot.handlers import (
     stars,
     upload,
 )
-from app.bot.middlewares import DbSessionMiddleware, UserContextMiddleware
+from app.bot.middlewares import (
+    DbSessionMiddleware,
+    TenantContextMiddleware,
+    UserContextMiddleware,
+)
 from app.core.config import settings
 from app.db.session import async_session_maker
 
@@ -59,7 +63,10 @@ def create_dispatcher() -> Dispatcher:
     dispatcher = Dispatcher(storage=storage)
 
     # Registered on `update` (not just `message`) so session/db_user are injected
-    # for every update type — callback_query included. Order: session then user.
+    # for every update type — callback_query included. Order: tenant context
+    # first (outermost, so every query is scoped and fails closed otherwise),
+    # then session, then user upsert. F1: the single bot is the platform tenant.
+    dispatcher.update.middleware(TenantContextMiddleware())
     dispatcher.update.middleware(DbSessionMiddleware(async_session_maker))
     dispatcher.update.middleware(UserContextMiddleware())
 

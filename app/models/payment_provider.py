@@ -9,18 +9,23 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, Index, String, Text, func
 from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 
-class PaymentProviderConfig(Base):
+class PaymentProviderConfig(TenantScoped, Base):
     __tablename__ = "payment_providers"
+    # each tenant configures its own gateways.
+    __table_args__ = (
+        Index("uq_payment_providers_tenant_key", "tenant_id", "key", unique=True),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    key: Mapped[str] = mapped_column(String(32), unique=True, index=True, nullable=False)
+    key: Mapped[str] = mapped_column(String(32), nullable=False)
     is_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=sql_text("false"), nullable=False
     )

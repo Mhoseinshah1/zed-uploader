@@ -13,12 +13,16 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 
-class BotCommandEntry(Base):
+class BotCommandEntry(TenantScoped, Base):
     __tablename__ = "bot_commands"
     __table_args__ = (
-        UniqueConstraint("scope", "command", name="uq_bot_commands_scope_command"),
+        UniqueConstraint(
+            "tenant_id", "scope", "command",
+            name="uq_bot_commands_tenant_scope_command",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

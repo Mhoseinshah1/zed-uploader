@@ -7,9 +7,10 @@ from sqlalchemy import Boolean, DateTime, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 
-class RequiredChannel(Base):
+class RequiredChannel(TenantScoped, Base):
     __tablename__ = "required_channels"
 
     id: Mapped[int] = mapped_column(primary_key=True)

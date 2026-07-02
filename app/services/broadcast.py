@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.tenant_context import require_tenant
 from app.models.broadcast import BroadcastJob, BroadcastRecipient
 from app.models.user import User
 
@@ -48,11 +49,21 @@ async def create_job(
     await session.flush()  # assign job.id before snapshotting recipients
 
     total = 0
+    # Core bulk insert bypasses the ORM before_flush tenant stamp, so set
+    # tenant_id explicitly (the recipients belong to the current tenant, same as
+    # the users just selected under this tenant context).
+    tenant_id = require_tenant()
     rows = (await session.execute(select(User.id, User.telegram_id).order_by(User.id))).all()
     batch: list[dict] = []
     for uid, tg in rows:
         batch.append(
-            {"broadcast_id": job.id, "user_id": uid, "telegram_id": tg, "status": "pending"}
+            {
+                "tenant_id": tenant_id,
+                "broadcast_id": job.id,
+                "user_id": uid,
+                "telegram_id": tg,
+                "status": "pending",
+            }
         )
         if len(batch) >= _SNAPSHOT_CHUNK:
             await session.execute(insert(BroadcastRecipient), batch)

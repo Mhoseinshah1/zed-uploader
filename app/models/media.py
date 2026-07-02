@@ -22,16 +22,19 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.mixins import TenantScoped
 
 if TYPE_CHECKING:
     from app.models.media_file import MediaFile
 
 
-class Media(Base):
+class Media(TenantScoped, Base):
     __tablename__ = "media"
     # B3: trigram GIN indexes make substring ILIKE search on the free-text
-    # fields fast. code already has its unique btree from the initial migration.
+    # fields fast. F1: the short code is unique PER TENANT (two bots may hand
+    # out the same code without colliding).
     __table_args__ = (
+        Index("uq_media_tenant_code", "tenant_id", "code", unique=True),
         Index(
             "ix_media_title_trgm", "title",
             postgresql_using="gin", postgresql_ops={"title": "gin_trgm_ops"},
@@ -43,7 +46,7 @@ class Media(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    code: Mapped[str] = mapped_column(String(32), unique=True, index=True, nullable=False)
+    code: Mapped[str] = mapped_column(String(32), nullable=False)
     owner_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
