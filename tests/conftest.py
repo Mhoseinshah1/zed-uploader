@@ -34,6 +34,15 @@ _redis_client._client = _fakeredis.FakeRedis(decode_responses=True)
 import pytest
 from fastapi.testclient import TestClient
 
+# Importing app.api.main flips the global event-loop policy to uvloop as a
+# side effect, which breaks pytest-asyncio's per-test loop creation for the
+# first test that triggers the import. Import it once up front and pin the
+# default policy for the whole suite.
+import app.api.main  # noqa: E402,F401
+import asyncio  # noqa: E402
+
+asyncio.set_event_loop_policy(None)
+
 
 @pytest.fixture(autouse=True)
 def _fresh_fakeredis():
