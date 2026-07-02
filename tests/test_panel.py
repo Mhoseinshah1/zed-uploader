@@ -81,7 +81,7 @@ async def _csrf() -> None:
     app, engine, Session, client = await _make_client()
     try:
         async with Session() as s:
-            pu = PanelUser(username="admin", password_hash=hash_password("pw"))
+            pu = PanelUser(username="admin", password_hash=hash_password("pw"), tenant_id=1)
             s.add(pu)
             await s.commit()
             uid = pu.id
@@ -147,7 +147,7 @@ async def _payment_idempotent() -> None:
     app.state.bot = _FakeBot()
     try:
         async with Session() as s:
-            pu = PanelUser(username="admin2", password_hash=hash_password("pw"))
+            pu = PanelUser(username="admin2", password_hash=hash_password("pw"), tenant_id=1)
             user = User(telegram_id=5000)
             s.add_all([pu, user])
             await s.commit()

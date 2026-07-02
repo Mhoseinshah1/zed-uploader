@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_session
-from app.panel.deps import audit, render, require_panel_user, verify_csrf
+from app.panel.deps import audit, render, require_superadmin, verify_csrf
 from app.services.bot_plan_service import BotPlanService
 
 router = APIRouter()
@@ -20,7 +20,7 @@ def _p(suffix: str = "") -> str:
 @router.get("/bot-plans")
 async def bot_plans_list(
     request: Request,
-    _=Depends(require_panel_user),
+    _=Depends(require_superadmin),
     session: AsyncSession = Depends(get_session),
 ):
     plans = await BotPlanService(session).list_all()
@@ -36,7 +36,7 @@ async def bot_plan_save(
     duration_days: int = Form(0),
     is_active: str = Form(""),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_superadmin),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -55,7 +55,7 @@ async def bot_plan_delete(
     request: Request,
     key: str,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_superadmin),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)

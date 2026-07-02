@@ -173,7 +173,7 @@ async def test_restore_requires_exact_filename(monkeypatch, tmp_path):
 
     try:
         async with Session() as s:
-            s.add(PanelUser(username="own", password_hash=security.hash_password("x")))
+            s.add(PanelUser(username="own", password_hash=security.hash_password("x"), tenant_id=1))
             await s.commit()
             uid = (await s.scalar(
                 __import__("sqlalchemy").select(PanelUser.id)

@@ -20,6 +20,7 @@ from app.panel.routes import (
     commands,
     dashboard,
     folders,
+    superadmin,
     license as license_routes,
     media,
     payments,
@@ -54,6 +55,7 @@ for _module in (
     texts,
     commands,
     bot_plans,
+    superadmin,
     license_routes,
     broadcast,
 ):

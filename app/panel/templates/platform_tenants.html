@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>ربات‌های مشتریان</h1>
+<form method="get" action="{{ panel_path }}/platform/tenants">
+  <input type="text" name="q" value="{{ q }}" placeholder="جستجوی یوزرنیم ربات">
+  <button type="submit">جستجو</button>
+</form>
+
+{% for t in tenants %}
+<section class="panel-box">
+  <h2 dir="ltr">{{ "@" ~ t.bot_username if t.bot_username else t.id }}</h2>
+  <p>وضعیت: <strong>{{ t.status }}</strong>
+     {% if t.plan %}· پلن: {{ t.plan }}{% endif %}
+     {% if t.expires_at %}· اعتبار تا: {{ "%s"|format(t.expires_at.date()) }}{% else %}· دائمی{% endif %}
+  </p>
+  <div class="actions">
+    {% if t.status == "active" %}
+    <form method="post" action="{{ panel_path }}/platform/tenants/{{ t.id }}/suspend">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">تعلیق</button>
+    </form>
+    {% else %}
+    <form method="post" action="{{ panel_path }}/platform/tenants/{{ t.id }}/reactivate">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">فعال‌سازی</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{{ panel_path }}/platform/tenants/{{ t.id }}/extend">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="number" name="days" value="30" min="1"> روز
+      <button type="submit">تمدید</button>
+    </form>
+  </div>
+</section>
+{% else %}
+<p>هنوز رباتی فروخته نشده است.</p>
+{% endfor %}
+{% endblock %}

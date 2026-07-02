@@ -26,11 +26,14 @@
       <a href="{{ panel_path }}/settings">تنظیمات</a>
       <a href="{{ panel_path }}/texts">متن‌ها</a>
       <a href="{{ panel_path }}/commands">منوی دستورات</a>
-      <a href="{{ panel_path }}/bot-plans">فروش ربات</a>
       <a href="{{ panel_path }}/stats">آمار</a>
       <a href="{{ panel_path }}/backups">پشتیبان</a>
       <a href="{{ panel_path }}/license">لایسنس</a>
       <a href="{{ panel_path }}/broadcast">پیام همگانی</a>
+      {% if current_user.is_superadmin %}
+      <a href="{{ panel_path }}/platform">پلتفرم</a>
+      <a href="{{ panel_path }}/bot-plans">فروش ربات</a>
+      {% endif %}
     </nav>
     <form class="logout" method="post" action="{{ panel_path }}/logout">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

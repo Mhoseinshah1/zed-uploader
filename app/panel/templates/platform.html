@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>پلتفرم (سوپر ادمین)</h1>
+<section class="panel-box">
+  <p>تعداد ربات‌های فروخته‌شده: <strong>{{ total_tenants }}</strong></p>
+  <p>ربات‌های فعال: <strong>{{ active_tenants }}</strong></p>
+  <p>درآمد فروش/تمدید ربات: <strong>{{ "{:,}".format(revenue) }}</strong> تومان</p>
+  <p><a href="{{ panel_path }}/platform/tenants">مدیریت ربات‌ها</a> ·
+     <a href="{{ panel_path }}/bot-plans">قیمت‌گذاری فروش ربات</a></p>
+</section>
+{% endblock %}

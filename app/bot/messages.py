@@ -690,13 +690,21 @@ def newbot_plan_label(title: str, price: int, duration_days: int) -> str:
     return f"{title} — {price:,} تومان ({period})"
 
 
-def newbot_success(username: str | None, panel_url: str, expires_at) -> str:
+def newbot_success(
+    username: str | None, panel_url: str, expires_at,
+    panel_username: str | None = None, panel_password: str | None = None,
+) -> str:
     handle = f"@{username}" if username else "ربات شما"
     lines = [
         f"✅ ربات {handle} فعال شد!",
         "شما مالک این ربات هستید؛ با دستور /panel آن را مدیریت کنید.",
         f"پنل وب: {panel_url}",
     ]
+    if panel_username and panel_password:
+        lines.append(
+            f"\nورود به پنل:\nنام کاربری: {panel_username}\nرمز عبور: {panel_password}\n"
+            "(لطفاً پس از ورود، رمز عبور را تغییر دهید.)"
+        )
     if expires_at is not None:
         lines.append(f"اعتبار تا: {expires_at:%Y-%m-%d}")
     return "\n".join(lines)

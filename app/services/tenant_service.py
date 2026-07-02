@@ -36,6 +36,27 @@ class TenantService:
         )
         return list(rows.all())
 
+    async def list_all(self, query: str | None = None) -> list[Tenant]:
+        """Every tenant (super-admin only). Optional search on bot username."""
+        stmt = select(Tenant).where(Tenant.id != PLATFORM_TENANT_ID)
+        if query:
+            stmt = stmt.where(Tenant.bot_username.ilike(f"%{query.strip()}%"))
+        rows = await self.session.scalars(stmt.order_by(Tenant.id))
+        return list(rows.all())
+
+    async def extend(self, tenant_id: int, days: int) -> bool:
+        """Push a rental's expiry out by ``days`` (super-admin grant, no charge)."""
+        from datetime import datetime, timedelta, timezone
+
+        tenant = await self.get(tenant_id)
+        if tenant is None:
+            return False
+        now = datetime.now(timezone.utc)
+        base = tenant.expires_at if (tenant.expires_at and tenant.expires_at > now) else now
+        tenant.expires_at = base + timedelta(days=max(1, days))
+        await self.session.commit()
+        return True
+
     async def create(
         self,
         *,
