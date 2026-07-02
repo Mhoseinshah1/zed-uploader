@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>گروه لاگ تلگرام</h1>
+<p>یک سوپرگروه با «موضوعات» (Topics) بسازید، ربات را با دسترسی «مدیریت موضوعات» ادمین کنید،
+و شناسهٔ عددی گروه را وارد کنید. ربات موضوع‌های پرداخت‌ها/آپلودها/خطاها/کاربران جدید/بکاپ را
+به‌صورت خودکار می‌سازد و رویدادها را (به‌صورت ویرایش‌شده و امن) به آن‌ها می‌فرستد.</p>
+
+<section class="panel-box">
+  <form method="post" action="{{ panel_path }}/logs">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>شناسهٔ گروه لاگ (مثلاً <span dir="ltr">-1001234567890</span>)
+      <input type="text" name="log_group_id" dir="ltr"
+             value="{{ settings.log_group_id if settings and settings.log_group_id else '' }}">
+    </label>
+    <button type="submit">ذخیره</button>
+  </form>
+  {% if settings and settings.log_group_id %}
+  <p><small>گروه متصل است. موضوع‌ها با اولین رویداد ساخته می‌شوند.
+    برای بازسازی موضوع‌ها، شناسه را دوباره ذخیره کنید.</small></p>
+  {% endif %}
+</section>
+{% endblock %}

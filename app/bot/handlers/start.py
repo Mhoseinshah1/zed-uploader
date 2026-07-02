@@ -47,9 +47,23 @@ async def _status_text(session: AsyncSession, status: DeliveryStatus) -> str:
     return await get_text(session, _STATUS_TEXT_KEYS.get(status, "not_found"))
 
 
-async def _send_welcome(message: Message, session: AsyncSession) -> None:
+async def _send_welcome(
+    message: Message, session: AsyncSession, db_user: User | None = None
+) -> None:
     """Welcome; admins also get the persistent reply keyboard (owners: +extra)."""
     user = message.from_user
+    # best-effort: log a first-time user to this tenant's log group (G1)
+    if db_user is not None and getattr(db_user, "just_created", False):
+        try:
+            from app.services.tenant_logger import TenantLogger
+
+            await TenantLogger(session).log_new_user(
+                user.id if user else 0,
+                (user.first_name or user.username) if user else None,
+                bot=message.bot,
+            )
+        except Exception:
+            pass
     welcome = await get_text(session, "welcome")
     from app.core.tenant_context import PLATFORM_TENANT_ID, current_tenant
 
@@ -101,7 +115,7 @@ async def start_with_code(
 ) -> None:
     code = (command.args or "").strip()
     if not code:
-        await _send_welcome(message, session)
+        await _send_welcome(message, session, db_user)
         return
 
     result = await deliver_by_code(
@@ -209,4 +223,4 @@ async def input_delivery_password(
 async def start_plain(
     message: Message, session: AsyncSession, db_user: User | None
 ) -> None:
-    await _send_welcome(message, session)
+    await _send_welcome(message, session, db_user)
