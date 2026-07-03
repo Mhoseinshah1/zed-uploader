@@ -129,6 +129,38 @@ async def require_superadmin(
         reset_tenant(token)
 
 
+def has_role(user: PanelUser | None, *roles: str) -> bool:
+    """True if the login may use a role-gated control (super-admin always may).
+
+    Registered as a Jinja global so templates can hide controls the current
+    panel user isn't allowed to use.
+    """
+    if user is None:
+        return False
+    if getattr(user, "is_superadmin", False):
+        return True
+    return getattr(user, "role", None) in roles
+
+
+templates.env.globals["has_role"] = has_role
+
+
+def require_role(*roles: str):
+    """Panel dependency factory (I2): require the login's role be in ``roles``.
+
+    Builds on ``require_panel_user`` (so the tenant context is bound + reset the
+    same way). The platform super-admin bypasses tenant roles entirely. A login
+    whose role is not allowed gets 403.
+    """
+
+    async def _dep(user: PanelUser = Depends(require_panel_user)) -> PanelUser:
+        if user.is_superadmin or getattr(user, "role", None) in roles:
+            return user
+        raise HTTPException(status_code=403, detail="forbidden")
+
+    return _dep
+
+
 async def verify_csrf(request: Request) -> None:
     data = getattr(request.state, "panel_session", None)
     session_token = data.get("csrf") if data else None

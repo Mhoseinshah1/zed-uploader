@@ -621,13 +621,14 @@ def build_buy_confirm(
     return b.as_markup()
 
 
-def build_topup_methods(centralpay: bool) -> InlineKeyboardMarkup:
+def build_topup_methods(centralpay: bool, card: bool = True) -> InlineKeyboardMarkup:
     b = InlineKeyboardBuilder()
-    b.row(
-        InlineKeyboardButton(
-            text=messages.BTN_PAY_CARD, callback_data=WalletCb(action="card").pack()
+    if card:  # I6: hidden when card top-up is disabled
+        b.row(
+            InlineKeyboardButton(
+                text=messages.BTN_PAY_CARD, callback_data=WalletCb(action="card").pack()
+            )
         )
-    )
     if centralpay:
         b.row(
             InlineKeyboardButton(

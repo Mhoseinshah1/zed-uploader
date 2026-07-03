@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}قابلیت‌ها — پنل مدیریت{% endblock %}
+{% block content %}
+<div class="page-h">
+  <div><h1>قابلیت‌ها (Feature Flags)</h1><p>روشن/خاموش‌کردن قابلیت‌ها و حداقل پلن موردنیاز</p></div>
+</div>
+
+{% for it in items %}
+<section class="card">
+  <form method="post" action="{{ panel_path }}/features/{{ it.key }}" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <h3><code dir="ltr">{{ it.key }}</code></h3>
+    <label class="checkbox"><input type="checkbox" name="is_enabled" {{ "checked" if it.flag and it.flag.is_enabled else "" }}> فعال</label>
+    <label>حداقل پلن
+      <select name="plan">
+        <option value="">free (پیش‌فرض)</option>
+        {% for p in plans %}
+        <option value="{{ p.key }}" {{ "selected" if it.flag and it.flag.plan == p.key else "" }}>{{ p.key }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">ذخیره</button>
+  </form>
+</section>
+{% else %}
+<div class="empty">قابلیتی نیست.</div>
+{% endfor %}
+{% endblock %}

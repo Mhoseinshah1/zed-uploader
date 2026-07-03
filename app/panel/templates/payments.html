@@ -5,9 +5,21 @@
   <div><h1>پرداخت‌ها</h1><p>تأیید کارت‌به‌کارت و پیگیری تراکنش‌ها</p></div>
   <div class="chips">
     <a href="{{ panel_path }}/payments?status=pending" class="chip {{ 'on' if status == 'pending' else '' }}">در انتظار</a>
+    <a href="{{ panel_path }}/payments?status=approved" class="chip {{ 'on' if status == 'approved' else '' }}">تأییدشده</a>
+    <a href="{{ panel_path }}/payments?status=rejected" class="chip {{ 'on' if status == 'rejected' else '' }}">ردشده</a>
     <a href="{{ panel_path }}/payments?status=all" class="chip {{ 'on' if status == 'all' else '' }}">همه</a>
   </div>
 </div>
+
+<form class="search-bar" method="get" action="{{ panel_path }}/payments">
+  <input type="hidden" name="status" value="{{ status }}">
+  <select name="method">
+    <option value="">— همهٔ روش‌ها —</option>
+    {% for m in methods %}<option value="{{ m }}" {{ "selected" if method == m else "" }}>{{ m }}</option>{% endfor %}
+  </select>
+  <input type="text" name="user_id" value="{{ user_id }}" placeholder="آیدی کاربر (عددی)">
+  <button type="submit">فیلتر</button>
+</form>
 
 <div class="card tbl-wrap">
   <table>
@@ -15,7 +27,7 @@
     <tbody>
     {% for p in payments %}
       <tr>
-        <td>{{ p.id }}</td>
+        <td><a href="{{ panel_path }}/payments/{{ p.id }}">{{ p.id }}</a></td>
         <td><div class="u"><div class="ua g{{ p.user_id % 8 }}">{{ p.user_id }}</div></div></td>
         <td class="money">{{ "{:,}".format(p.amount) }}</td>
         <td>{{ p.method }}</td>

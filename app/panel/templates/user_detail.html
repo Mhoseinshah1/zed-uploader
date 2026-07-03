@@ -8,6 +8,25 @@
 
 {% if msg == "adjusted" %}<p class="flash ok">موجودی تغییر کرد.</p>{% endif %}
 {% if msg == "insufficient" %}<p class="flash error">موجودی برای کسر کافی نیست.</p>{% endif %}
+{% if msg == "invalid" %}<p class="flash error">ورودی نامعتبر (مبلغ مثبت و علت الزامی است).</p>{% endif %}
+{% if msg == "sub_updated" %}<p class="flash ok">اشتراک کاربر به‌روزرسانی شد.</p>{% endif %}
+
+{% if pending %}
+<div class="card">
+  <h2>تأیید عملیات بزرگ</h2>
+  <p>{{ "شارژ" if pending.direction == "credit" else "کسر" }} مبلغ
+     <strong class="money">{{ "{:,}".format(pending.amount) }}</strong> تومان — بابت: {{ pending.reason }}</p>
+  <form method="post" action="{{ panel_path }}/users/{{ user.id }}/wallet" class="actions">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="direction" value="{{ pending.direction }}">
+    <input type="hidden" name="amount" value="{{ pending.amount }}">
+    <input type="hidden" name="reason" value="{{ pending.reason }}">
+    <input type="hidden" name="confirm" value="1">
+    <button type="submit">بله، انجام بده</button>
+    <a class="btn ghost" href="{{ panel_path }}/users/{{ user.id }}">انصراف</a>
+  </form>
+</div>
+{% endif %}
 
 <div class="grid grid-2">
   <div class="card">
@@ -23,20 +42,64 @@
   </div>
 
   <div class="card">
-    <h2>عملیات کیف پول</h2>
+    <h2>عملیات</h2>
+    {% if has_role(current_user, "owner", "admin") %}
     <div class="actions">
       <form method="post" action="{{ panel_path }}/users/{{ user.id }}/block">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button type="submit" class="{{ 'ghost' if user.is_blocked else 'danger' }}">{{ "رفع مسدودی" if user.is_blocked else "مسدودسازی" }}</button>
       </form>
     </div>
-    <form method="post" action="{{ panel_path }}/users/{{ user.id }}/adjust" class="actions">
+    {% endif %}
+    {% if has_role(current_user, "owner", "finance") %}
+    <h3>کیف پول</h3>
+    <form method="post" action="{{ panel_path }}/users/{{ user.id }}/wallet">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <input type="number" name="amount" placeholder="مبلغ (منفی = کسر)" required>
-      <button type="submit">تعدیل موجودی</button>
+      <label>مبلغ (تومان) <input type="number" name="amount" min="1" required></label>
+      <label>علت <input type="text" name="reason" placeholder="علت شارژ/کسر" required></label>
+      <div class="actions">
+        <button type="submit" name="direction" value="credit">➕ شارژ دستی</button>
+        <button type="submit" name="direction" value="debit" class="ghost">➖ کسر دستی</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if has_role(current_user, "owner", "admin") %}
+<div class="card">
+  <h2>اشتراک کاربر</h2>
+  <form method="post" action="{{ panel_path }}/users/{{ user.id }}/subscription" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>تغییر پلن
+      <select name="plan">
+        {% for p in plans %}<option value="{{ p.key }}">{{ p.title }} ({{ p.key }})</option>{% endfor %}
+      </select>
+    </label>
+    <button type="submit" name="action" value="change">اعمال پلن</button>
+  </form>
+  <form method="post" action="{{ panel_path }}/users/{{ user.id }}/subscription" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>افزودن روز <input type="number" name="days" min="1" value="30"></label>
+    <button type="submit" name="action" value="extend">تمدید</button>
+  </form>
+  <form method="post" action="{{ panel_path }}/users/{{ user.id }}/subscription" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>تعیین انقضا <input type="date" name="date"></label>
+    <button type="submit" name="action" value="expiry">ثبت انقضا</button>
+  </form>
+  <div class="actions">
+    <form method="post" action="{{ panel_path }}/users/{{ user.id }}/subscription">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" name="action" value="lifetime" class="ghost">دائمی کردن</button>
+    </form>
+    <form method="post" action="{{ panel_path }}/users/{{ user.id }}/subscription">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" name="action" value="cancel" class="danger">لغو اشتراک</button>
     </form>
   </div>
 </div>
+{% endif %}
 
 <div class="card tbl-wrap">
   <h2>اشتراک‌ها</h2>

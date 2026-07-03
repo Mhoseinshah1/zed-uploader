@@ -138,21 +138,27 @@ async def topup_start(
     if not isinstance(callback.message, Message):
         await callback.answer()
         return
+    card_ok = await _card_available(session)
     if await enabled_providers(session):
         await callback.message.answer(
             messages.CHOOSE_TOPUP_METHOD,
-            reply_markup=build_topup_methods(True),
+            reply_markup=build_topup_methods(True, card=card_ok),
         )
     else:
         await _ask_card_amount(callback.message, state, session)
     await callback.answer()
 
 
+async def _card_available(session: AsyncSession) -> bool:
+    """I6: card top-up requires BOTH a card number AND the card toggle on."""
+    setting = BotSettingService(session)
+    return bool(await setting.get_raw(KEY_CARD_NUMBER)) and await setting.card_enabled()
+
+
 async def _ask_card_amount(
     message: Message, state: FSMContext, session: AsyncSession
 ) -> None:
-    card = await BotSettingService(session).get_raw(KEY_CARD_NUMBER)
-    if not card:
+    if not await _card_available(session):
         await message.answer(messages.PAYMENT_DISABLED)
         return
     minimum = await BotSettingService(session).get_int(KEY_TOPUP_MIN, DEFAULT_TOPUP_MIN)
@@ -209,12 +215,12 @@ async def topup_amount(
         return
 
     # card path
-    card = await setting.get_raw(KEY_CARD_NUMBER)
-    holder = await setting.get_raw(KEY_CARD_HOLDER) or "-"
-    if not card:
+    if not await _card_available(session):
         await state.clear()
         await message.answer(messages.PAYMENT_DISABLED)
         return
+    card = await setting.get_raw(KEY_CARD_NUMBER)
+    holder = await setting.get_raw(KEY_CARD_HOLDER) or "-"
     await state.update_data(amount=amount)
     await state.set_state(Topup.waiting_receipt)
     await message.answer(messages.topup_instructions(card, holder, amount))
@@ -287,13 +293,16 @@ async def buy_prompt(
     if plan is None or not plan.is_active:
         await callback.answer(messages.PLAN_NOT_AVAILABLE, show_alert=True)
         return
+    from app.services.bot_setting_service import BotSettingService
+
+    stars_on = plan.stars_price is not None and await BotSettingService(session).stars_enabled()
     if isinstance(callback.message, Message):
         await callback.message.answer(
             messages.buy_confirm(plan.title, plan.price),
             reply_markup=build_buy_confirm(
                 plan.key,
                 bool(await enabled_providers(session)),
-                stars=plan.stars_price is not None,
+                stars=stars_on,
             ),
         )
     await callback.answer()

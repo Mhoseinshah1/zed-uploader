@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import func, insert, select, update
+from sqlalchemy import func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.tenant_context import require_tenant
@@ -20,12 +20,23 @@ PAGE_SIZE = 100
 SEND_DELAY = 0.05  # ~20 messages/sec, safely under Telegram limits
 _SNAPSHOT_CHUNK = 1000
 
+# I6: panel broadcast audience filters (blocked users are ALWAYS excluded, I1)
+AUDIENCE_FILTERS = ("all", "free", "premium")
 
-async def audience_count(session: AsyncSession) -> int:
-    # I1: blocked users are never counted or messaged
+
+def _audience_conditions(plan_filter: str | None) -> list:
+    conds = [User.is_blocked.is_(False)]  # I1: never message blocked users
+    if plan_filter == "free":
+        conds.append(or_(User.plan == "free", User.plan.is_(None)))
+    elif plan_filter == "premium":
+        conds.append(User.plan.in_(("plus", "max")))
+    return conds
+
+
+async def audience_count(session: AsyncSession, plan_filter: str | None = None) -> int:
     return int(
         await session.scalar(
-            select(func.count(User.id)).where(User.is_blocked.is_(False))
+            select(func.count(User.id)).where(*_audience_conditions(plan_filter))
         )
         or 0
     )
@@ -38,6 +49,7 @@ async def create_job(
     message_id: int | None = None,
     text: str | None = None,
     created_by: int | None = None,
+    plan_filter: str | None = None,
 ) -> BroadcastJob:
     """Create a job and snapshot ALL current users as ``pending`` recipients.
 
@@ -59,11 +71,11 @@ async def create_job(
     # tenant_id explicitly (the recipients belong to the current tenant, same as
     # the users just selected under this tenant context).
     tenant_id = require_tenant()
-    # I1: exclude blocked users from the recipient snapshot entirely
+    # I1: exclude blocked users; I6: optional plan filter (free / premium)
     rows = (
         await session.execute(
             select(User.id, User.telegram_id)
-            .where(User.is_blocked.is_(False))
+            .where(*_audience_conditions(plan_filter))
             .order_by(User.id)
         )
     ).all()

@@ -11,7 +11,7 @@ from app.core.config import settings
 from app.db.session import get_session
 from app.models.payment import Payment
 from app.models.user import User
-from app.panel.deps import audit, render, require_panel_user, verify_csrf
+from app.panel.deps import audit, render, require_role, verify_csrf
 from app.services.payment_service import PaymentService
 
 router = APIRouter()
@@ -29,18 +29,69 @@ async def _notify(request: Request, session: AsyncSession, user_id: int, text: s
             pass
 
 
+_METHODS = ("card", "zarinpal", "zibal", "centralpay", "telegram_stars")
+_FIN = ("owner", "finance")
+
+
 @router.get("/payments")
 async def payments_list(
     request: Request,
     status: str = "pending",
-    _=Depends(require_panel_user),
+    method: str = "",
+    user_id: str = "",
+    _=Depends(require_role(*_FIN)),
     session: AsyncSession = Depends(get_session),
 ):
     stmt = select(Payment).order_by(Payment.id.desc())
-    if status == "pending":
-        stmt = stmt.where(Payment.status == "pending")
+    if status in ("pending", "approved", "rejected"):
+        stmt = stmt.where(Payment.status == status)
+    method = method.strip()
+    if method in _METHODS:
+        stmt = stmt.where(Payment.method == method)
+    uid = int(user_id) if user_id.strip().isdigit() else None
+    if uid is not None:
+        stmt = stmt.where(Payment.user_id == uid)
     rows = list(await session.scalars(stmt.limit(100)))
-    return render(request, "payments.html", payments=rows, status=status)
+    return render(
+        request, "payments.html", payments=rows, status=status,
+        method=method, user_id=user_id, methods=_METHODS,
+    )
+
+
+@router.get("/payments/{payment_id}")
+async def payment_detail(
+    request: Request,
+    payment_id: int,
+    _=Depends(require_role(*_FIN)),
+    session: AsyncSession = Depends(get_session),
+):
+    payment = await PaymentService(session).get(payment_id)
+    if payment is None:
+        return RedirectResponse(url=f"{settings.panel_path}/payments", status_code=302)
+    return render(
+        request, "payment_detail.html", payment=payment,
+        is_gateway=payment.method != "card",
+    )
+
+
+@router.post("/payments/{payment_id}/recheck")
+async def payment_recheck(
+    request: Request,
+    payment_id: int,
+    csrf_token: str = Form(""),
+    _=Depends(require_role(*_FIN)),
+    session: AsyncSession = Depends(get_session),
+):
+    """I6: re-verify a GATEWAY payment via the existing idempotent verify. A card
+    payment resolves to no provider -> 'failed' (this never manually credits)."""
+    await verify_csrf(request)
+    from app.services.providers import verify_order
+
+    result = await verify_order(session, payment_id)  # idempotent
+    await audit(session, request, "payment_recheck", target=f"{payment_id}:{result}")
+    return RedirectResponse(
+        url=f"{settings.panel_path}/payments/{payment_id}?msg={result}", status_code=302
+    )
 
 
 @router.post("/payments/{payment_id}/approve")
@@ -48,7 +99,7 @@ async def payment_approve(
     request: Request,
     payment_id: int,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "finance")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -79,7 +130,7 @@ async def payment_reject(
     request: Request,
     payment_id: int,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "finance")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)

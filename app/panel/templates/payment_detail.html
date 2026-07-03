@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}پرداخت #{{ payment.id }} — پنل مدیریت{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ panel_path }}/payments">◀ بازگشت به پرداخت‌ها</a>
+<div class="page-h">
+  <div><h1>پرداخت #{{ payment.id }}</h1><p>جزئیات و پیگیری تراکنش</p></div>
+  <div>
+    {% if payment.status == "approved" %}<span class="pill p-green">{{ payment.status }}</span>
+    {% elif payment.status == "pending" %}<span class="pill p-amber">{{ payment.status }}</span>
+    {% elif payment.status == "rejected" %}<span class="pill p-red">{{ payment.status }}</span>
+    {% else %}<span class="pill p-gray">{{ payment.status }}</span>{% endif %}
+  </div>
+</div>
+
+{% if request.query_params.get("msg") %}<p class="flash ok">نتیجهٔ بازبینی: {{ request.query_params.get("msg") }}</p>{% endif %}
+
+<div class="card">
+  <table class="kv">
+    <tr><th>کاربر</th><td><a href="{{ panel_path }}/users/{{ payment.user_id }}">#{{ payment.user_id }}</a></td></tr>
+    <tr><th>مبلغ</th><td class="money">{{ "{:,}".format(payment.amount) }} تومان</td></tr>
+    <tr><th>روش</th><td>{{ payment.method }}</td></tr>
+    <tr><th>هدف</th><td>{{ payment.intent or "—" }}</td></tr>
+    <tr><th>کد مرجع</th><td dir="ltr">{{ payment.provider_ref or "—" }}</td></tr>
+    <tr><th>Authority</th><td dir="ltr">{{ payment.authority or "—" }}</td></tr>
+    <tr><th>رسید</th><td>{{ payment.receipt or "—" }}</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>اقدام</h2>
+  <div class="actions">
+    {% if payment.status == "pending" and payment.method == "card" %}
+    <form method="post" action="{{ panel_path }}/payments/{{ payment.id }}/approve">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">تأیید (کارت‌به‌کارت)</button>
+    </form>
+    <form method="post" action="{{ panel_path }}/payments/{{ payment.id }}/reject">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="danger">رد</button>
+    </form>
+    {% endif %}
+    {% if is_gateway %}
+    <form method="post" action="{{ panel_path }}/payments/{{ payment.id }}/recheck">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="ghost">بازبینی درگاه (idempotent)</button>
+    </form>
+    {% endif %}
+  </div>
+  {% if is_gateway %}<p class="muted"><small>تأیید دستی فقط برای کارت‌به‌کارت است؛ پرداخت درگاهی تنها با «بازبینی درگاه» تأیید می‌شود.</small></p>{% endif %}
+</div>
+{% endblock %}

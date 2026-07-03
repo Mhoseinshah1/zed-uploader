@@ -15,6 +15,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
+# I2: per-tenant panel roles (orthogonal to the platform is_superadmin flag).
+PANEL_ROLES = ("owner", "admin", "support", "finance", "content")
+
 
 class PanelUser(Base):
     __tablename__ = "panel_users"
@@ -31,6 +34,10 @@ class PanelUser(Base):
     # F5: cross-tenant super-admin surface (platform operators only).
     is_superadmin: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=text("false"), nullable=False
+    )
+    # I2: role within the tenant panel (see PANEL_ROLES). Existing rows -> owner.
+    role: Mapped[str] = mapped_column(
+        String(16), default="owner", server_default=text("'owner'"), nullable=False
     )
     is_active: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default=text("true"), nullable=False

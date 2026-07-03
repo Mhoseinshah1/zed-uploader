@@ -272,15 +272,18 @@ if [ "$IN_BOT_MODE" = "webhook" ]; then
         curl -sS "https://api.telegram.org/bot${IN_BOT_TOKEN}/setWebhook" \
             --data-urlencode "url=${WEBHOOK_URL}" \
             --data-urlencode "secret_token=${WEBHOOK_SECRET}" \
-            --data-urlencode 'allowed_updates=["message","callback_query"]' \
+            --data-urlencode 'allowed_updates=["message","callback_query","pre_checkout_query"]' \
             && echo || warn "setWebhook request failed — retry it after fixing connectivity."
     else
         warn "Skipped setWebhook because TLS isn't ready. After fixing DNS/firewall, run:"
         warn "  sudo certbot --nginx -d ${HOST}"
         warn "  curl -sS \"https://api.telegram.org/bot<BOT_TOKEN>/setWebhook\" \\"
         warn "       --data-urlencode \"url=${WEBHOOK_URL}\" \\"
-        warn "       --data-urlencode \"secret_token=<WEBHOOK_SECRET from .env>\""
+        warn "       --data-urlencode \"secret_token=<WEBHOOK_SECRET from .env>\" \\"
+        warn "       --data-urlencode 'allowed_updates=[\"message\",\"callback_query\",\"pre_checkout_query\"]'"
     fi
+    # NOTE: pre_checkout_query MUST be in allowed_updates or Telegram Stars
+    # payments never reach pre-checkout and silently fail.
 fi
 
 # ===========================================================================

@@ -61,10 +61,12 @@
     <div class="navsec">سیستم</div>
     {{ nav_item("/stats", "📊", "آمار") }}
     {{ nav_item("/settings", "⚙️", "تنظیمات") }}
+    {% if has_role(current_user, "owner") %}{{ nav_item("/features", "🧩", "قابلیت‌ها") }}{% endif %}
     {{ nav_item("/texts", "📝", "متن‌های ربات") }}
     {{ nav_item("/commands", "⌨️", "منوی دستورات") }}
     {{ nav_item("/logs", "🧾", "گروه لاگ") }}
     {{ nav_item("/admins", "🛡️", "ادمین‌ها") }}
+    {% if has_role(current_user, "owner") %}{{ nav_item("/team", "👤", "کاربران پنل") }}{% endif %}
 
     {% if current_user.is_superadmin %}
     <div class="navsec platform">حالت پلتفرم</div>

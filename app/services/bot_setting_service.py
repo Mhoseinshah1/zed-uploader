@@ -28,6 +28,14 @@ DEFAULT_USER_UPLOAD_REVIEW = True
 KEY_PUBLIC_SEARCH_ENABLED = "public_search_enabled"
 DEFAULT_PUBLIC_SEARCH_ENABLED = False
 
+# I4 — Telegram Stars global toggle (per tenant); on by default (back-compat)
+KEY_STARS_ENABLED = "telegram_stars_enabled"
+DEFAULT_STARS_ENABLED = True
+
+# I6 — card top-up toggle (independent of the card number being set)
+KEY_CARD_ENABLED = "card_enabled"
+DEFAULT_CARD_ENABLED = True
+
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
@@ -79,6 +87,12 @@ class BotSettingService:
 
     async def user_upload_requires_review(self) -> bool:
         return await self.get_bool(KEY_USER_UPLOAD_REVIEW, DEFAULT_USER_UPLOAD_REVIEW)
+
+    async def stars_enabled(self) -> bool:
+        return await self.get_bool(KEY_STARS_ENABLED, DEFAULT_STARS_ENABLED)
+
+    async def card_enabled(self) -> bool:
+        return await self.get_bool(KEY_CARD_ENABLED, DEFAULT_CARD_ENABLED)
 
     async def public_search_enabled(self) -> bool:
         return await self.get_bool(

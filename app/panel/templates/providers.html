@@ -19,6 +19,19 @@
 {%- endmacro %}
 
 <section class="card">
+  <h2>تلگرام استارز —
+    {% if stars_enabled %}<span class="pill p-green">آماده ✅</span>
+    {% else %}<span class="pill p-gray">غیرفعال</span>{% endif %}
+  </h2>
+  <p class="muted">کلید فروش استارز برای هر پلن در صفحهٔ «پلن‌ها» تنظیم می‌شود. این کلید کلی، پرداخت استارز را برای کل ربات روشن/خاموش می‌کند.</p>
+  <form method="post" action="{{ panel_path }}/providers/stars">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="checkbox"><input type="checkbox" name="enabled" {{ "checked" if stars_enabled else "" }}> فعال</label>
+    <button type="submit">ذخیره</button>
+  </form>
+</section>
+
+<section class="card">
   <h2>سنترال‌پی — {{ badge(providers.centralpay.status) }}</h2>
   <form method="post" action="{{ panel_path }}/providers/centralpay">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
