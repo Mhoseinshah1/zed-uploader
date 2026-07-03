@@ -14,6 +14,8 @@ from app.services.bot_setting_service import (
     KEY_CAPTION_SIGNATURE,
     KEY_CAPTION_STRIP_LINKS,
     KEY_FREE_DAILY_QUOTA,
+    KEY_MAINTENANCE_MESSAGE,
+    KEY_MAINTENANCE_MODE,
     KEY_PREVIEW_CHANNEL_ID,
     KEY_PREVIEW_ENABLED,
     KEY_CARD_ENABLED,
@@ -58,6 +60,8 @@ async def settings_page(
         "caption_signature": await setting.get_raw(KEY_CAPTION_SIGNATURE) or "",
         "preview_enabled": await setting.get_bool(KEY_PREVIEW_ENABLED, False),
         "preview_channel_id": await setting.get_raw(KEY_PREVIEW_CHANNEL_ID) or "",
+        "maintenance_mode": await setting.get_bool(KEY_MAINTENANCE_MODE, False),
+        "maintenance_message": await setting.get_raw(KEY_MAINTENANCE_MESSAGE) or "",
         "channels": channels,
     }
     return render(request, "settings.html", **ctx)
@@ -78,6 +82,25 @@ async def settings_preview(
     await setting.set(KEY_PREVIEW_ENABLED, preview_enabled == "on")
     await setting.set(KEY_PREVIEW_CHANNEL_ID, preview_channel_id.strip())
     await audit(session, request, "settings_preview")
+    return RedirectResponse(url=_p("/settings"), status_code=302)
+
+
+@router.post("/settings/maintenance")
+async def settings_maintenance(
+    request: Request,
+    maintenance_mode: str = Form(""),
+    maintenance_message: str = Form(""),
+    csrf_token: str = Form(""),
+    _=Depends(require_role("owner")),
+    session: AsyncSession = Depends(get_session),
+):
+    """J7: per-tenant maintenance mode toggle + editable message (audited)."""
+    await verify_csrf(request)
+    setting = BotSettingService(session)
+    on = maintenance_mode == "on"
+    await setting.set(KEY_MAINTENANCE_MODE, on)
+    await setting.set(KEY_MAINTENANCE_MESSAGE, maintenance_message.strip())
+    await audit(session, request, "settings_maintenance", target="on" if on else "off")
     return RedirectResponse(url=_p("/settings"), status_code=302)
 
 
