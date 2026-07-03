@@ -21,6 +21,7 @@ from app.models.payment_provider import PaymentProviderConfig
 from app.models.plan import Plan
 from app.models.settings import BotSetting, FeatureFlag
 from app.models.subscription import Subscription
+from app.models.support import SupportTicket, TicketMessage
 from app.models.tenant import Tenant
 from app.models.tenant_log import TenantLogSettings
 from app.models.user import User
@@ -54,4 +55,6 @@ __all__ = [
     "BotPlan",
     "Tenant",
     "TenantLogSettings",
+    "SupportTicket",
+    "TicketMessage",
 ]

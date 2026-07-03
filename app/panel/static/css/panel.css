@@ -344,6 +344,17 @@ small { color: inherit; }
 }
 .card.platform { border-color: var(--brand-2); box-shadow: inset 0 0 0 1px rgba(124, 91, 250, .25); }
 
+/* ---- Support ticket thread --------------------------------------------- */
+.ticket-msg {
+  border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 10px 0;
+  background: var(--surface-2);
+}
+.ticket-msg.from-admin { border-inline-start: 3px solid var(--brand); }
+.ticket-msg.from-user { border-inline-start: 3px solid var(--green); }
+.ticket-msg .who { font-size: 12px; font-weight: 700; margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
+.ticket-msg .who .muted { font-weight: 400; }
+.ticket-msg .body { font-size: 14px; white-space: pre-wrap; word-break: break-word; }
+
 /* ---- Login -------------------------------------------------------------- */
 body.login-body { display: flex; align-items: center; justify-content: center; }
 .login-card {

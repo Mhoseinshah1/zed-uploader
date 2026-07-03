@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}صندوق پشتیبانی پلتفرم — پنل مدیریت{% endblock %}
+{% block content %}
+<div class="plat-ribbon">🛰️ حالت پلتفرم <span class="tag">تیکت‌های مشتریان به پلتفرم</span></div>
+<div class="page-h">
+  <div><h1>صندوق پشتیبانی پلتفرم</h1><p>تیکت‌های ارسالی رِسِلرها به تیم پلتفرم</p></div>
+  <div class="chips">
+    {% for s in statuses %}
+    <a href="{{ panel_path }}/platform/support?status={{ s }}" class="chip {{ 'on' if status == s else '' }}">
+      {% if s == "open" %}باز{% elif s == "answered" %}پاسخ‌داده‌شده{% elif s == "closed" %}بسته{% else %}همه{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card platform tbl-wrap">
+  <table>
+    <thead><tr><th>#</th><th>تنانت</th><th>موضوع</th><th>کاربر</th><th>وضعیت</th><th>بروزرسانی</th></tr></thead>
+    <tbody>
+    {% for t in tickets %}
+      <tr>
+        <td>{{ t.id }}</td>
+        <td>#{{ t.tenant_id }}</td>
+        <td><a href="{{ panel_path }}/platform/support/{{ t.id }}">{{ t.subject }}</a></td>
+        <td>#{{ t.opener_user_id }}</td>
+        <td>
+          {% if t.status == "open" %}<span class="pill p-amber">باز</span>
+          {% elif t.status == "answered" %}<span class="pill p-green">پاسخ‌داده‌شده</span>
+          {% else %}<span class="pill p-gray">بسته</span>{% endif %}
+        </td>
+        <td dir="ltr">{{ t.updated_at.strftime("%Y-%m-%d %H:%M") if t.updated_at else "—" }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6"><div class="empty">تیکتی نیست.</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

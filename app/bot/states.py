@@ -78,3 +78,9 @@ class NewBot(StatesGroup):
 # --- Phase G3: in-bot admin extras ------------------------------------------
 class LogSetup(StatesGroup):
     waiting_group = State()  # owner entering the log group id in-chat
+
+
+# --- Phase H2: in-bot support / ticketing -----------------------------------
+class Support(StatesGroup):
+    waiting_subject = State()  # data: target — opener typing a new ticket subject
+    waiting_message = State()  # data: target, subject | ticket_id — the message body

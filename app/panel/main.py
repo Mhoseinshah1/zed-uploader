@@ -32,6 +32,7 @@ from app.panel.routes import (
     settings as settings_routes,
     stats,
     texts,
+    tickets,
     users,
 )
 
@@ -60,6 +61,7 @@ for _module in (
     superadmin,
     license_routes,
     broadcast,
+    tickets,
 ):
     router.include_router(_module.router)
 

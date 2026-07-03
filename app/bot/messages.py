@@ -763,3 +763,52 @@ def stars_invoice_title(plan_title: str) -> str:
 def stars_invoice_description(plan_title: str, days: int) -> str:
     period = f"{days}‌روزه" if days else "دائمی"
     return f"اشتراک {period} پلن {plan_title}"
+
+
+# --- Phase H2: in-bot support / ticketing -----------------------------------
+BTN_SUPPORT = "🎧 پشتیبانی"
+
+SUPPORT_INTRO_USER = (
+    "🎧 پشتیبانی\n"
+    "برای ثبت درخواست، یک موضوع کوتاه بفرست تا تیکت باز شود."
+)
+SUPPORT_INTRO_PLATFORM = (
+    "🎧 پشتیبانی پلتفرم\n"
+    "درخواستت به تیم پلتفرم ارسال می‌شود. یک موضوع کوتاه بفرست."
+)
+SUPPORT_ASK_SUBJECT = "موضوع تیکت را در یک خط بفرست:"
+SUPPORT_ASK_MESSAGE = "متن پیام خود را بفرست:"
+SUPPORT_CREATED = "✅ تیکت شما ثبت شد. پاسخ از همین‌جا اطلاع‌رسانی می‌شود."
+SUPPORT_REPLY_SENT = "✅ پیام شما ثبت شد."
+SUPPORT_CLOSED = "✅ تیکت بسته شد."
+SUPPORT_EMPTY_BODY = "متن پیام نمی‌تواند خالی باشد."
+
+SUPPORT_BTN_NEW_MSG = "➕ پیام جدید"
+SUPPORT_BTN_CLOSE = "✅ بستن تیکت"
+
+_SUPPORT_STATUS_FA = {"open": "باز", "answered": "پاسخ‌داده‌شده", "closed": "بسته"}
+
+
+def support_status_fa(status: str) -> str:
+    return _SUPPORT_STATUS_FA.get(status, status)
+
+
+def support_ticket_view(subject: str, status: str, lines: list[str]) -> str:
+    body = "\n".join(lines) if lines else "—"
+    return (
+        f"🎫 {subject}\n"
+        f"وضعیت: {support_status_fa(status)}\n"
+        f"— — —\n{body}"
+    )
+
+
+def support_admin_notify(subject: str) -> str:
+    return (
+        "🎧 پیام پشتیبانی جدید از یک کاربر.\n"
+        f"موضوع: {subject}\n"
+        "برای پاسخ به پنل مدیریت مراجعه کنید."
+    )
+
+
+def support_user_reply_notify(subject: str, body: str) -> str:
+    return f"🎧 پاسخ پشتیبانی برای «{subject}»:\n\n{body}"

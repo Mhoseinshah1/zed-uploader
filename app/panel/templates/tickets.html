@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}تیکت‌های پشتیبانی — پنل مدیریت{% endblock %}
+{% block content %}
+<div class="page-h">
+  <div><h1>تیکت‌های پشتیبانی</h1><p>پاسخ به درخواست‌های کاربران ربات شما</p></div>
+  <div class="chips">
+    {% for s in statuses %}
+    <a href="{{ panel_path }}/tickets?status={{ s }}" class="chip {{ 'on' if status == s else '' }}">
+      {% if s == "open" %}باز{% elif s == "answered" %}پاسخ‌داده‌شده{% elif s == "closed" %}بسته{% else %}همه{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card tbl-wrap">
+  <table>
+    <thead><tr><th>#</th><th>موضوع</th><th>کاربر</th><th>وضعیت</th><th>بروزرسانی</th></tr></thead>
+    <tbody>
+    {% for t in tickets %}
+      <tr>
+        <td>{{ t.id }}</td>
+        <td><a href="{{ panel_path }}/tickets/{{ t.id }}">{{ t.subject }}</a></td>
+        <td>#{{ t.opener_user_id }}</td>
+        <td>
+          {% if t.status == "open" %}<span class="pill p-amber">باز</span>
+          {% elif t.status == "answered" %}<span class="pill p-green">پاسخ‌داده‌شده</span>
+          {% else %}<span class="pill p-gray">بسته</span>{% endif %}
+        </td>
+        <td dir="ltr">{{ t.updated_at.strftime("%Y-%m-%d %H:%M") if t.updated_at else "—" }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5"><div class="empty">تیکتی نیست.</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
