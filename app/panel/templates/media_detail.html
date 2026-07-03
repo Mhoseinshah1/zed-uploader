@@ -18,15 +18,44 @@
 
 <div class="card">
   <table class="kv">
-    <tr><th>عنوان</th><td>{{ media.title or "—" }}</td></tr>
+    <tr><th>لینک عمیق</th><td><code dir="ltr">{{ deep_link }}</code></td></tr>
+    <tr><th>مالک</th><td>{% if owner %}<a href="{{ panel_path }}/users/{{ owner.id }}">#{{ owner.id }} — {{ owner.username or owner.telegram_id }}</a>{% else %}—{% endif %}</td></tr>
     <tr><th>دانلود</th><td>{{ media.download_count }}{% if media.download_limit %} / {{ media.download_limit }}{% endif %}</td></tr>
-    <tr><th>وضعیت</th><td>{% if media.is_active %}<span class="pill p-green">فعال</span>{% else %}<span class="pill p-gray">غیرفعال</span>{% endif %}</td></tr>
+    <tr><th>فعال</th><td>{% if media.is_active %}<span class="pill p-green">فعال</span>{% else %}<span class="pill p-gray">غیرفعال</span>{% endif %}</td></tr>
     <tr><th>بازبینی</th><td>{{ media.status }}</td></tr>
-    <tr><th>پوشه</th><td>{{ media.folder_id or "بدون پوشه" }}</td></tr>
     <tr><th>محافظت محتوا</th><td>{{ "روشن" if media.protect_content else "خاموش" }}</td></tr>
     <tr><th>گذرواژه</th><td>{{ "🔒 دارد" if media.password_hash else "🔓 ندارد" }}</td></tr>
-    <tr><th>حذف خودکار</th><td>{{ media.auto_delete_seconds or "خاموش" }}</td></tr>
+    <tr><th>حذف خودکار</th><td>{{ media.auto_delete_seconds or "خاموش" }} ثانیه</td></tr>
   </table>
+</div>
+
+<div class="card">
+  <h2>ویرایش فایل</h2>
+  <form method="post" action="{{ panel_path }}/media/{{ media.id }}/edit">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>عنوان <input type="text" name="title" value="{{ media.title or '' }}"></label>
+    <label>کپشن <textarea name="caption" rows="2">{{ media.caption or '' }}</textarea></label>
+    <div class="form-grid">
+      <label>سقف دانلود (خالی = نامحدود) <input type="number" name="download_limit" min="0" value="{{ media.download_limit if media.download_limit is not none else '' }}"></label>
+      <label>حذف خودکار (ثانیه؛ خالی = خاموش) <input type="number" name="auto_delete_seconds" min="0" value="{{ media.auto_delete_seconds if media.auto_delete_seconds is not none else '' }}"></label>
+      <label>وضعیت بازبینی
+        <select name="status">
+          {% for s in statuses %}<option value="{{ s }}" {{ "selected" if media.status == s else "" }}>{{ s }}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+    <button type="submit">ذخیره</button>
+  </form>
+  <div class="actions">
+    <form method="post" action="{{ panel_path }}/media/{{ media.id }}/protect">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="ghost">{{ "خاموش‌کردن محافظت" if media.protect_content else "روشن‌کردن محافظت" }}</button>
+    </form>
+    <form method="post" action="{{ panel_path }}/media/{{ media.id }}/reset_count" onsubmit="return confirm('شمارندهٔ دانلود صفر شود؟')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="ghost">صفرکردن شمارندهٔ دانلود</button>
+    </form>
+  </div>
 </div>
 
 <div class="grid grid-2">

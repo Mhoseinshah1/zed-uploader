@@ -61,6 +61,7 @@
     <div class="navsec">سیستم</div>
     {{ nav_item("/stats", "📊", "آمار") }}
     {{ nav_item("/settings", "⚙️", "تنظیمات") }}
+    {% if has_role(current_user, "owner") %}{{ nav_item("/features", "🧩", "قابلیت‌ها") }}{% endif %}
     {{ nav_item("/texts", "📝", "متن‌های ربات") }}
     {{ nav_item("/commands", "⌨️", "منوی دستورات") }}
     {{ nav_item("/logs", "🧾", "گروه لاگ") }}
