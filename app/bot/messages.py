@@ -881,3 +881,7 @@ def subscription_changed_notice(plan: str, expires: str | None) -> str:
 
 
 SUBSCRIPTION_CANCELLED_NOTICE = "⛔️ اشتراک شما لغو شد."
+
+
+# --- Phase I4: Telegram Stars toggle ----------------------------------------
+STARS_DISABLED = "پرداخت با استارز در حال حاضر غیرفعال است."

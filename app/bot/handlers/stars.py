@@ -24,8 +24,12 @@ log = get_logger("handler.stars")
 async def stars_buy(
     callback: CallbackQuery, callback_data: StarsBuyCb, session: AsyncSession
 ) -> None:
+    from app.services.bot_setting_service import BotSettingService
     from app.services.license_service import paid_features_allowed
 
+    if not await BotSettingService(session).stars_enabled():
+        await callback.answer(messages.STARS_DISABLED, show_alert=True)
+        return
     if not await paid_features_allowed(session):
         await callback.answer(messages.LICENSE_BLOCKED, show_alert=True)
         return
@@ -51,6 +55,12 @@ async def stars_buy(
 async def stars_pre_checkout(
     query: PreCheckoutQuery, session: AsyncSession
 ) -> None:
+    from app.services.bot_setting_service import BotSettingService
+
+    # a disabled toggle rejects even an already-issued invoice at checkout
+    if not await BotSettingService(session).stars_enabled():
+        await query.answer(ok=False, error_message=messages.STARS_DISABLED)
+        return
     error = await StarsService(session).validate_pre_checkout(
         query.invoice_payload, query.total_amount, query.currency
     )

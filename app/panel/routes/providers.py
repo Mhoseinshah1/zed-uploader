@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.session import get_session
 from app.panel.deps import audit, render, require_role, verify_csrf
+from app.services.bot_setting_service import BotSettingService
 from app.services.providers import (
     PROVIDER_KEYS,
     get_config,
@@ -55,7 +56,26 @@ async def providers_page(
         request, "providers.html",
         providers=rows,
         centralpay_env=settings.centralpay_enabled,
+        stars_enabled=await BotSettingService(session).stars_enabled(),
     )
+
+
+@router.post("/providers/stars")
+async def providers_stars_toggle(
+    request: Request,
+    enabled: str = Form(""),
+    csrf_token: str = Form(""),
+    _=Depends(require_role("owner")),
+    session: AsyncSession = Depends(get_session),
+):
+    """I4: global Telegram Stars on/off for this tenant (audited)."""
+    await verify_csrf(request)
+    from app.services.bot_setting_service import KEY_STARS_ENABLED
+
+    on = enabled == "on"
+    await BotSettingService(session).set(KEY_STARS_ENABLED, on)
+    await audit(session, request, "stars_toggle", target="on" if on else "off")
+    return RedirectResponse(url=f"{settings.panel_path}/providers", status_code=302)
 
 
 @router.post("/providers/{key}")

@@ -287,13 +287,16 @@ async def buy_prompt(
     if plan is None or not plan.is_active:
         await callback.answer(messages.PLAN_NOT_AVAILABLE, show_alert=True)
         return
+    from app.services.bot_setting_service import BotSettingService
+
+    stars_on = plan.stars_price is not None and await BotSettingService(session).stars_enabled()
     if isinstance(callback.message, Message):
         await callback.message.answer(
             messages.buy_confirm(plan.title, plan.price),
             reply_markup=build_buy_confirm(
                 plan.key,
                 bool(await enabled_providers(session)),
-                stars=plan.stars_price is not None,
+                stars=stars_on,
             ),
         )
     await callback.answer()
