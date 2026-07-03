@@ -108,7 +108,9 @@ class StarsService:
             await self.session.rollback()
             return ALREADY
 
-        result = await SubscriptionService(self.session).purchase(user, plan_key)
+        result = await SubscriptionService(self.session).purchase(
+            user, plan_key, method="stars"
+        )
         if result.status is not PurchaseStatus.OK:
             # charge recorded + wallet credited; the user can buy from wallet
             log.error(

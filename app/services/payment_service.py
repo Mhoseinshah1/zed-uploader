@@ -58,6 +58,15 @@ class PaymentService:
             description="شارژ کیف پول",
         )
         log.info("payment_approved", payment_id=payment.id, user_id=payment.user_id)
+        # H4: a card top-up is a settled payment -> one receipt (best-effort, the
+        # status guard above makes this run exactly once). Never breaks the credit.
+        from app.services.invoice_service import safe_record
+
+        await safe_record(
+            self.session, user_id=payment.user_id, kind="topup",
+            amount=payment.amount, method=payment.method or "card",
+            source_ref=f"payment:{payment.id}", provider_ref=payment.provider_ref,
+        )
         return "approved", payment
 
     async def reject(

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}تیکت #{{ ticket.id }} — پنل مدیریت{% endblock %}
+{% block content %}
+{% set base = (panel_path ~ "/platform/support") if platform else (panel_path ~ "/tickets") %}
+{% if platform %}<div class="plat-ribbon">🛰️ حالت پلتفرم <span class="tag">صندوق پشتیبانی</span></div>{% endif %}
+<a class="back-link" href="{{ base }}">◀ بازگشت به تیکت‌ها</a>
+<div class="page-h">
+  <div>
+    <h1>{{ ticket.subject }}</h1>
+    <p>تیکت #{{ ticket.id }}{% if platform %} · تنانت #{{ ticket.tenant_id }}{% endif %} · کاربر #{{ ticket.opener_user_id }}</p>
+  </div>
+  <div>
+    {% if ticket.status == "open" %}<span class="pill p-amber">باز</span>
+    {% elif ticket.status == "answered" %}<span class="pill p-green">پاسخ‌داده‌شده</span>
+    {% else %}<span class="pill p-gray">بسته</span>{% endif %}
+  </div>
+</div>
+
+<div class="card">
+  {% for m in msgs %}
+  <div class="ticket-msg {{ 'from-admin' if m.sender_kind == 'admin' else 'from-user' }}">
+    <div class="who">{{ "🛟 پشتیبانی" if m.sender_kind == "admin" else "👤 کاربر" }}
+      <span class="muted" dir="ltr">{{ m.created_at.strftime("%Y-%m-%d %H:%M") if m.created_at else "" }}</span></div>
+    <div class="body">{{ m.body }}</div>
+  </div>
+  {% else %}
+  <div class="empty">پیامی نیست.</div>
+  {% endfor %}
+</div>
+
+{% if ticket.status != "closed" %}
+<div class="card">
+  <h2>پاسخ</h2>
+  <form method="post" action="{{ base }}/{{ ticket.id }}/reply">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <textarea name="body" rows="4" placeholder="متن پاسخ..." required></textarea>
+    <button type="submit">ارسال پاسخ</button>
+  </form>
+  <form method="post" action="{{ base }}/{{ ticket.id }}/close" class="actions">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="ghost">بستن تیکت</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

@@ -41,6 +41,7 @@ class PurchaseResult:
     status: PurchaseStatus
     expires_at: datetime | None = None
     price: int = 0
+    invoice_no: int | None = None  # H4: the receipt number, when one was issued
 
 
 class SubscriptionService:
@@ -63,7 +64,9 @@ class SubscriptionService:
             base = current_exp
         return base + timedelta(days=duration_days)
 
-    async def purchase(self, user: User, plan_key: str) -> PurchaseResult:
+    async def purchase(
+        self, user: User, plan_key: str, method: str = "wallet"
+    ) -> PurchaseResult:
         plan = await PlanService(self.session).get(plan_key)
         if plan is None or not plan.is_active:
             return PurchaseResult(PurchaseStatus.NOT_AVAILABLE)
@@ -110,16 +113,29 @@ class SubscriptionService:
             expires = self._compute_expiry(user, plan_key, duration_days, now)
             user.plan = plan_key
             user.plan_expires_at = expires
-            self.session.add(
-                Subscription(
-                    user_id=user_id, plan=plan_key, starts_at=now,
-                    expires_at=expires, is_active=True,
-                )
+            subscription = Subscription(
+                user_id=user_id, plan=plan_key, starts_at=now,
+                expires_at=expires, is_active=True,
             )
+            self.session.add(subscription)
             await self.session.commit()  # debit + plan + subscription, atomically
             release_lock = False  # success: hold the lock as a debounce window
             log.info("plan_purchased", user_id=user_id, plan=plan_key, price=price)
-            return PurchaseResult(PurchaseStatus.OK, expires_at=expires, price=price)
+            # H4: a paid plan purchase is a settled payment -> one receipt
+            # (best-effort, post-commit; keyed to the subscription so it is issued
+            # exactly once). Free plans (price 0) are not payments -> no invoice.
+            invoice_no = None
+            if price > 0:
+                from app.services.invoice_service import safe_record
+
+                inv = await safe_record(
+                    self.session, user_id=user_id, kind="plan", amount=price,
+                    method=method, source_ref=f"sub:{subscription.id}",
+                )
+                invoice_no = inv.invoice_no if inv is not None else None
+            return PurchaseResult(
+                PurchaseStatus.OK, expires_at=expires, price=price, invoice_no=invoice_no
+            )
         except Exception as exc:  # anything after debit fails -> full rollback
             await self.session.rollback()
             log.error(

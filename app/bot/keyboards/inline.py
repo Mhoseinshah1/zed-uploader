@@ -520,6 +520,11 @@ def build_wallet() -> InlineKeyboardMarkup:
             text=messages.BTN_TRANSACTIONS, callback_data=WalletCb(action="tx").pack()
         )
     )
+    b.row(
+        InlineKeyboardButton(
+            text=messages.BTN_INVOICES, callback_data=WalletCb(action="inv").pack()
+        )
+    )
     return b.as_markup()
 
 

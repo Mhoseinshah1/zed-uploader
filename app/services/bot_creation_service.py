@@ -54,6 +54,7 @@ class BotCreationResult:
     price: int = 0
     panel_username: str | None = None
     panel_password: str | None = None  # shown once to the buyer, never stored plain
+    invoice_no: int | None = None  # H4: the receipt number, when one was issued
 
 
 async def validate_bot_token(token: str) -> tuple[int, str | None]:
@@ -154,6 +155,19 @@ class BotCreationService:
                 except Exception:
                     pass
 
+        # H4: a paid bot creation is a settled charge (in the platform ledger) ->
+        # one receipt, best-effort/post-commit, keyed to the bot id (one create
+        # per bot). Never affects the atomic charge+create above.
+        invoice_no = None
+        if price > 0:
+            from app.services.invoice_service import safe_record
+
+            inv = await safe_record(
+                self.session, user_id=owner_user_id, kind="bot_creation",
+                amount=price, method="wallet", source_ref=f"botcreate:{bot_id}",
+            )
+            invoice_no = inv.invoice_no if inv is not None else None
+
         await self._seed_defaults(tenant_id, owner_telegram_id)
         panel_username, panel_password = await self._provision_panel_login(
             tenant_id, bot_id
@@ -163,6 +177,7 @@ class BotCreationService:
             BotCreationStatus.OK, tenant_id=tenant_id, bot_username=bot_username,
             expires_at=expires, price=price,
             panel_username=panel_username, panel_password=panel_password,
+            invoice_no=invoice_no,
         )
 
     async def renew_from_wallet(
@@ -202,9 +217,24 @@ class BotCreationService:
             log.error("bot_renew_failed", tenant_id=tenant_id, error=str(exc))
             return BotCreationResult(BotCreationStatus.FAILED, price=price)
 
+        # H4: a paid rental renewal -> one receipt, keyed per renewal (the new
+        # expiry is distinct each time). Best-effort/post-commit.
+        invoice_no = None
+        if price > 0:
+            from app.services.invoice_service import safe_record
+
+            stamp = int(expires.timestamp()) if expires else 0
+            inv = await safe_record(
+                self.session, user_id=owner_user_id, kind="rental",
+                amount=price, method="wallet",
+                source_ref=f"botrenew:{tenant.bot_id}:{stamp}",
+            )
+            invoice_no = inv.invoice_no if inv is not None else None
+
         await self._register(tenant_id)
         return BotCreationResult(
-            BotCreationStatus.OK, tenant_id=tenant_id, expires_at=expires, price=price
+            BotCreationStatus.OK, tenant_id=tenant_id, expires_at=expires, price=price,
+            invoice_no=invoice_no,
         )
 
     async def _seed_defaults(self, tenant_id: int, owner_telegram_id: int) -> None:

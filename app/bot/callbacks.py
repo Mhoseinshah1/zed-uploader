@@ -189,3 +189,13 @@ class BuyOnlineCb(CallbackData, prefix="buyon"):
     """Buy a plan by paying online via CentralPay."""
 
     plan: str
+
+
+class SupportCb(CallbackData, prefix="sup"):
+    """In-bot support ticket actions (H2). action ∈ {reply, close}.
+
+    ``id`` is the ticket id the opener is acting on.
+    """
+
+    action: str
+    id: int

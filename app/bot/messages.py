@@ -763,3 +763,100 @@ def stars_invoice_title(plan_title: str) -> str:
 def stars_invoice_description(plan_title: str, days: int) -> str:
     period = f"{days}‌روزه" if days else "دائمی"
     return f"اشتراک {period} پلن {plan_title}"
+
+
+# --- Phase H2: in-bot support / ticketing -----------------------------------
+BTN_SUPPORT = "🎧 پشتیبانی"
+
+SUPPORT_INTRO_USER = (
+    "🎧 پشتیبانی\n"
+    "برای ثبت درخواست، یک موضوع کوتاه بفرست تا تیکت باز شود."
+)
+SUPPORT_INTRO_PLATFORM = (
+    "🎧 پشتیبانی پلتفرم\n"
+    "درخواستت به تیم پلتفرم ارسال می‌شود. یک موضوع کوتاه بفرست."
+)
+SUPPORT_ASK_SUBJECT = "موضوع تیکت را در یک خط بفرست:"
+SUPPORT_ASK_MESSAGE = "متن پیام خود را بفرست:"
+SUPPORT_CREATED = "✅ تیکت شما ثبت شد. پاسخ از همین‌جا اطلاع‌رسانی می‌شود."
+SUPPORT_REPLY_SENT = "✅ پیام شما ثبت شد."
+SUPPORT_CLOSED = "✅ تیکت بسته شد."
+SUPPORT_EMPTY_BODY = "متن پیام نمی‌تواند خالی باشد."
+
+SUPPORT_BTN_NEW_MSG = "➕ پیام جدید"
+SUPPORT_BTN_CLOSE = "✅ بستن تیکت"
+
+_SUPPORT_STATUS_FA = {"open": "باز", "answered": "پاسخ‌داده‌شده", "closed": "بسته"}
+
+
+def support_status_fa(status: str) -> str:
+    return _SUPPORT_STATUS_FA.get(status, status)
+
+
+def support_ticket_view(subject: str, status: str, lines: list[str]) -> str:
+    body = "\n".join(lines) if lines else "—"
+    return (
+        f"🎫 {subject}\n"
+        f"وضعیت: {support_status_fa(status)}\n"
+        f"— — —\n{body}"
+    )
+
+
+def support_admin_notify(subject: str) -> str:
+    return (
+        "🎧 پیام پشتیبانی جدید از یک کاربر.\n"
+        f"موضوع: {subject}\n"
+        "برای پاسخ به پنل مدیریت مراجعه کنید."
+    )
+
+
+def support_user_reply_notify(subject: str, body: str) -> str:
+    return f"🎧 پاسخ پشتیبانی برای «{subject}»:\n\n{body}"
+
+
+# --- Phase H4: invoices / receipts ------------------------------------------
+BTN_INVOICES = "🧾 فاکتورها"
+
+_INVOICE_KIND_FA = {
+    "topup": "شارژ کیف پول", "plan": "خرید پلن",
+    "bot_creation": "ساخت ربات", "rental": "تمدید ربات",
+}
+_INVOICE_METHOD_FA = {
+    "card": "کارت‌به‌کارت", "wallet": "کیف پول", "stars": "استارز",
+    "zarinpal": "زرین‌پال", "zibal": "زیبال", "centralpay": "سنترال‌پی",
+}
+
+
+def invoice_kind_fa(kind: str) -> str:
+    return _INVOICE_KIND_FA.get(kind, kind)
+
+
+def invoice_method_fa(method: str) -> str:
+    return _INVOICE_METHOD_FA.get(method, method)
+
+
+def invoice_receipt(*, invoice_no, kind, amount, method, ref=None, date=None) -> str:
+    lines = [
+        "🧾 رسید پرداخت",
+        f"شماره فاکتور: {invoice_no}",
+        f"بابت: {invoice_kind_fa(kind)}",
+        f"مبلغ: {amount:,} تومان",
+        f"روش: {invoice_method_fa(method)}",
+    ]
+    if ref:
+        lines.append(f"کد پیگیری: {ref}")
+    if date:
+        lines.append(f"تاریخ: {date}")
+    return "\n".join(lines)
+
+
+def invoices_view(rows) -> str:
+    if not rows:
+        return "🧾 هنوز فاکتوری ثبت نشده است."
+    out = ["🧾 فاکتورهای شما:"]
+    for inv in rows:
+        out.append(
+            f"#{inv.invoice_no} · {invoice_kind_fa(inv.kind)} · "
+            f"{inv.amount:,} تومان · {invoice_method_fa(inv.method)}"
+        )
+    return "\n".join(out)

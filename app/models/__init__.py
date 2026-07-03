@@ -11,6 +11,7 @@ from app.models.broadcast import BroadcastJob, BroadcastRecipient
 from app.models.channel import RequiredChannel
 from app.models.download_log import DownloadLog
 from app.models.folder import Folder
+from app.models.invoice import Invoice
 from app.models.license import LicenseInfo
 from app.models.media import Media
 from app.models.media_file import MediaFile
@@ -21,6 +22,7 @@ from app.models.payment_provider import PaymentProviderConfig
 from app.models.plan import Plan
 from app.models.settings import BotSetting, FeatureFlag
 from app.models.subscription import Subscription
+from app.models.support import SupportTicket, TicketMessage
 from app.models.tenant import Tenant
 from app.models.tenant_log import TenantLogSettings
 from app.models.user import User
@@ -54,4 +56,7 @@ __all__ = [
     "BotPlan",
     "Tenant",
     "TenantLogSettings",
+    "SupportTicket",
+    "TicketMessage",
+    "Invoice",
 ]

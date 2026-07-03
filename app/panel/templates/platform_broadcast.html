@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}پیام به نمایندگان — پنل مدیریت{% endblock %}
+{% block content %}
+<div class="plat-ribbon">🛰️ حالت پلتفرم <span class="tag">پیام همگانی به نمایندگان</span></div>
+<div class="page-h">
+  <div><h1>پیام به نمایندگان</h1><p>ارسال پیام به مالکان همهٔ ربات‌های فروخته‌شده (از طریق ربات اصلی)</p></div>
+</div>
+
+{% if request.query_params.get("sent") == "1" %}
+<p class="flash ok">پیام در صف ارسال قرار گرفت؛ ورکر آن را با ربات اصلی ارسال می‌کند.</p>
+{% endif %}
+
+{% if confirm %}
+<div class="card platform">
+  <p>این پیام برای <strong>{{ audience }}</strong> نماینده ارسال شود؟</p>
+  <blockquote>{{ text }}</blockquote>
+  <form method="post" action="{{ panel_path }}/platform/broadcast" class="actions">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="text" value="{{ text }}">
+    <input type="hidden" name="confirm" value="1">
+    <button type="submit">بله، ارسال کن</button>
+    <a class="btn ghost" href="{{ panel_path }}/platform/broadcast">انصراف</a>
+  </form>
+</div>
+{% else %}
+<form class="card platform" method="post" action="{{ panel_path }}/platform/broadcast">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <p class="muted">مخاطبان: {{ audience }} نماینده</p>
+  <textarea name="text" rows="5" placeholder="متن پیام به نمایندگان..." required>{{ text }}</textarea>
+  <button type="submit">ادامه</button>
+</form>
+
+<div class="card platform tbl-wrap">
+  <h2>ارسال‌های اخیر</h2>
+  <table>
+    <thead><tr><th>#</th><th>وضعیت</th><th>کل</th><th>ارسال</th><th>ناموفق</th><th>زمان</th></tr></thead>
+    <tbody>
+    {% for job in jobs %}
+      <tr>
+        <td>{{ job.id }}</td>
+        <td>{{ job.status }}</td>
+        <td>{{ job.total }}</td>
+        <td>{{ job.sent }}</td>
+        <td>{{ job.failed }}</td>
+        <td dir="ltr">{{ job.created_at.strftime("%Y-%m-%d %H:%M") if job.created_at else "—" }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6"><div class="empty">موردی نیست</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
