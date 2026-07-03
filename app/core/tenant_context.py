@@ -48,6 +48,17 @@ def require_tenant() -> int:
     return tid
 
 
+def is_platform() -> bool:
+    """True only inside the platform (master) bot/tenant context.
+
+    The single source of truth for platform-owner-only gating (H1). Every
+    seller / bot-factory / platform-management entrypoint must check this so a
+    reseller (customer) bot context can never reach it. ``ALL_TENANTS`` and any
+    customer tenant id are NOT the platform.
+    """
+    return _current.get() == PLATFORM_TENANT_ID
+
+
 @contextmanager
 def tenant_scope(tenant_id: int) -> Iterator[None]:
     """Run a block scoped to one tenant."""

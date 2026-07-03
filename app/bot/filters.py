@@ -9,7 +9,20 @@ from aiogram.filters import BaseFilter
 from aiogram.types import TelegramObject
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.tenant_context import is_platform
 from app.services.admin_service import AdminService
+
+
+class IsPlatform(BaseFilter):
+    """Pass only inside the platform (master) bot context (H1 role isolation).
+
+    Router/handler-level guard for platform-owner-only flows (the buy-a-bot
+    seller flow, platform management). A customer/reseller bot serves under its
+    own tenant context, so this is False there and the handler never runs.
+    """
+
+    async def __call__(self, event: TelegramObject) -> bool:
+        return is_platform()
 
 
 class IsAdmin(BaseFilter):
