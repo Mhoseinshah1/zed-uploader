@@ -26,6 +26,7 @@ OVERRIDABLE_TEXTS: dict[str, str] = {
     "generic_error": messages.GENERIC_ERROR,
     "upload_pending_review": messages.UPLOAD_PENDING_REVIEW,
     "password_prompt": messages.PASSWORD_PROMPT,
+    "account_blocked": messages.ACCOUNT_BLOCKED,
 }
 
 

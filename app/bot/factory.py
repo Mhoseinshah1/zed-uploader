@@ -32,6 +32,7 @@ from app.bot.handlers import (
     upload,
 )
 from app.bot.middlewares import (
+    BlockedUserMiddleware,
     DbSessionMiddleware,
     TenantContextMiddleware,
     UserContextMiddleware,
@@ -75,6 +76,8 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.update.middleware(TenantContextMiddleware())
     dispatcher.update.middleware(DbSessionMiddleware(async_session_maker))
     dispatcher.update.middleware(UserContextMiddleware())
+    # I1: enforce is_blocked AFTER db_user is resolved (admins/owners bypass)
+    dispatcher.update.middleware(BlockedUserMiddleware())
 
     # Order matters. `batch` must precede `upload` so its StateFilter(collecting)
     # media handler wins while batching; the catch-all `common` MUST stay last.

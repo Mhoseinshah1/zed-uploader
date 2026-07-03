@@ -860,3 +860,7 @@ def invoices_view(rows) -> str:
             f"{inv.amount:,} تومان · {invoice_method_fa(inv.method)}"
         )
     return "\n".join(out)
+
+
+# --- Phase I1: blocked users ------------------------------------------------
+ACCOUNT_BLOCKED = "حساب شما مسدود شده است."

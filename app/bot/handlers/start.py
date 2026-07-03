@@ -40,6 +40,7 @@ _STATUS_TEXT_KEYS = {
     DeliveryStatus.INACTIVE: "inactive",
     DeliveryStatus.LIMIT_REACHED: "limit_reached",
     DeliveryStatus.FAILED: "generic_error",
+    DeliveryStatus.BLOCKED: "account_blocked",
 }
 
 
