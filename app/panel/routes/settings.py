@@ -13,6 +13,7 @@ from app.services.bot_setting_service import (
     KEY_AUTODELETE,
     KEY_CAPTION_SIGNATURE,
     KEY_CAPTION_STRIP_LINKS,
+    KEY_FREE_DAILY_QUOTA,
     KEY_PREVIEW_CHANNEL_ID,
     KEY_PREVIEW_ENABLED,
     KEY_CARD_ENABLED,
@@ -52,6 +53,7 @@ async def settings_page(
         "public_search_enabled": await setting.public_search_enabled(),
         "card_enabled": await setting.card_enabled(),
         "topup_min": await setting.get_int(KEY_TOPUP_MIN, DEFAULT_TOPUP_MIN),
+        "free_daily_quota": await setting.get_int(KEY_FREE_DAILY_QUOTA, 0),
         "caption_strip_links": await setting.get_bool(KEY_CAPTION_STRIP_LINKS, False),
         "caption_signature": await setting.get_raw(KEY_CAPTION_SIGNATURE) or "",
         "preview_enabled": await setting.get_bool(KEY_PREVIEW_ENABLED, False),
@@ -102,6 +104,7 @@ async def settings_payments(
     request: Request,
     card_enabled: str = Form(""),
     topup_min: int = Form(DEFAULT_TOPUP_MIN),
+    free_daily_quota: int = Form(0),
     csrf_token: str = Form(""),
     _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
@@ -111,6 +114,7 @@ async def settings_payments(
     setting = BotSettingService(session)
     await setting.set(KEY_CARD_ENABLED, card_enabled == "on")
     await setting.set(KEY_TOPUP_MIN, max(0, topup_min))
+    await setting.set(KEY_FREE_DAILY_QUOTA, max(0, free_daily_quota))  # J6
     await audit(session, request, "settings_payments")
     return RedirectResponse(url=_p("/settings"), status_code=302)
 

@@ -15,7 +15,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import messages
-from app.bot.callbacks import JoinCb
+from app.bot.callbacks import BuyMediaCb, JoinCb
 from app.bot.delivery import DeliveryStatus, deliver_by_code
 from app.bot.keyboards.inline import build_join_gate
 from app.bot.keyboards.reply import build_admin_menu, build_user_menu
@@ -27,6 +27,7 @@ from app.core.security import (
     media_password_locked,
     record_media_password_failure,
 )
+from app.models.media import Media
 from app.models.user import User
 from app.services.admin_service import AdminService
 from app.services.media_service import MediaService
@@ -102,6 +103,26 @@ async def _reply_delivery(
         await state.set_state(Delivery.waiting_password)
         await state.update_data(code=code)
         await message.answer(await get_text(session, "password_prompt"))
+    elif result.status is DeliveryStatus.PLAN_REQUIRED:  # J6
+        await message.answer(
+            messages.plan_required_notice(result.media.required_plan or "")
+        )
+    elif result.status is DeliveryStatus.PAYMENT_REQUIRED:  # J6
+        from app.bot.callbacks import BuyMediaCb
+        from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
+        price = int(result.media.price or 0)
+        await message.answer(
+            messages.payment_required_notice(price),
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(
+                    text=messages.buy_media_button(price),
+                    callback_data=BuyMediaCb(id=result.media.id).pack(),
+                )
+            ]]),
+        )
+    elif result.status is DeliveryStatus.QUOTA_EXCEEDED:  # J6
+        await message.answer(messages.QUOTA_EXCEEDED_NOTICE)
     elif result.status is not DeliveryStatus.DELIVERED:
         await message.answer(await _status_text(session, result.status))
 
@@ -225,3 +246,46 @@ async def start_plain(
     message: Message, session: AsyncSession, db_user: User | None
 ) -> None:
     await _send_welcome(message, session, db_user)
+
+
+@router.callback_query(BuyMediaCb.filter())
+async def cb_buy_media(
+    callback: CallbackQuery,
+    callback_data: BuyMediaCb,
+    session: AsyncSession,
+    db_user: User | None,
+) -> None:
+    """J6: buy a paid file from the wallet, then deliver it immediately."""
+    from app.services.media_service import MediaService
+    from app.services.paywall_service import (
+        ALREADY,
+        INSUFFICIENT,
+        PURCHASED,
+        PaywallService,
+    )
+
+    if db_user is None or not isinstance(callback.message, Message):
+        await callback.answer()
+        return
+    media = await session.get(Media, callback_data.id)
+    if media is None:
+        await callback.answer(messages.NOT_FOUND, show_alert=True)
+        return
+    outcome = await PaywallService(session).purchase(media, db_user)
+    if outcome == PURCHASED:
+        await callback.answer(messages.MEDIA_PURCHASED)
+    elif outcome == ALREADY:
+        await callback.answer(messages.MEDIA_ALREADY_OWNED)
+    else:  # insufficient / not for sale
+        await callback.answer(messages.MEDIA_BUY_FAILED, show_alert=True)
+        return
+    # entitled now -> deliver via the normal guarded path
+    result = await deliver_by_code(
+        callback.bot, session, callback.message.chat.id,
+        callback.from_user, media.code,
+    )
+    if result.status is DeliveryStatus.DELIVERED:
+        try:
+            await callback.message.delete()  # remove the buy prompt
+        except Exception:
+            pass

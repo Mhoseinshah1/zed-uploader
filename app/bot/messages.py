@@ -820,6 +820,7 @@ BTN_INVOICES = "🧾 فاکتورها"
 _INVOICE_KIND_FA = {
     "topup": "شارژ کیف پول", "plan": "خرید پلن",
     "bot_creation": "ساخت ربات", "rental": "تمدید ربات",
+    "media": "خرید فایل",
 }
 _INVOICE_METHOD_FA = {
     "card": "کارت‌به‌کارت", "wallet": "کیف پول", "stars": "استارز",
@@ -939,3 +940,22 @@ BTN_GET_FILE = "📥 دریافت فایل"
 
 def preview_post(name: str) -> str:
     return f"🎬 {name}\n\nبرای دریافت روی دکمهٔ زیر بزنید:"
+
+
+# --- Phase J6: paywall ---------------------------------------------------------
+def plan_required_notice(plan: str) -> str:
+    return f"🔒 این فایل مخصوص اشتراک «{plan}» به بالاست. برای دسترسی، اشتراک تهیه کن."
+
+
+def payment_required_notice(price: int) -> str:
+    return f"💰 این فایل پولی است: {price:,} تومان.\nبا دکمهٔ زیر از کیف پول بخر:"
+
+
+def buy_media_button(price: int) -> str:
+    return f"💳 خرید فایل ({price:,} تومان)"
+
+
+QUOTA_EXCEEDED_NOTICE = "سهمیهٔ دانلود رایگان امروزت تمام شد. فردا دوباره تلاش کن یا اشتراک تهیه کن."
+MEDIA_PURCHASED = "✅ فایل خریداری شد؛ در حال ارسال…"
+MEDIA_ALREADY_OWNED = "قبلاً این فایل را خریده‌ای."
+MEDIA_BUY_FAILED = "خرید انجام نشد. موجودی کیف پول را بررسی کن."

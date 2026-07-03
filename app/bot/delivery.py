@@ -62,6 +62,9 @@ class DeliveryStatus(str, Enum):
     DELIVERED = "delivered"
     FAILED = "failed"
     BLOCKED = "blocked"  # I1: a blocked user is refused, even via a deep link
+    PLAN_REQUIRED = "plan_required"        # J6: needs a higher plan
+    PAYMENT_REQUIRED = "payment_required"  # J6: paid file, no entitlement yet
+    QUOTA_EXCEEDED = "quota_exceeded"      # J6: free daily quota exhausted
 
 
 _FROM_MEDIA_STATUS = {
@@ -116,6 +119,28 @@ async def deliver_by_code(
     if protected is not None and protected.password_hash and not password_verified:
         return DeliveryResult(DeliveryStatus.PASSWORD_REQUIRED, media=protected)
 
+    # (c2) paywall gate WITHOUT claiming (J6): plan / price / free quota
+    if protected is not None:
+        from app.services.paywall_service import (
+            PLAN_REQUIRED,
+            PAYMENT_REQUIRED,
+            QUOTA_EXCEEDED,
+            PaywallService,
+        )
+
+        db_user_pre = (
+            await UserService(session).get_by_telegram_id(user.id) if user else None
+        )
+        gate = await PaywallService(session).check_access(
+            protected, db_user_pre, user_id
+        )
+        if gate == PLAN_REQUIRED:
+            return DeliveryResult(DeliveryStatus.PLAN_REQUIRED, media=protected)
+        if gate == PAYMENT_REQUIRED:
+            return DeliveryResult(DeliveryStatus.PAYMENT_REQUIRED, media=protected)
+        if gate == QUOTA_EXCEEDED:
+            return DeliveryResult(DeliveryStatus.QUOTA_EXCEEDED, media=protected)
+
     # (d) atomic claim
     claim_status, media = await service.try_claim_download(code)
     if claim_status is not MediaStatus.OK or media is None:
@@ -162,6 +187,10 @@ async def deliver_by_code(
         telegram_id=user_id,
         user_id=db_user.id if db_user else None,
     )
+    # J6: count this delivery against the free daily quota (atomic Redis INCR)
+    from app.services.paywall_service import PaywallService
+
+    await PaywallService(session).count_delivery(db_user)
 
     if media.auto_delete_seconds and media.auto_delete_seconds > 0:
         from app.core.tenant_context import current_tenant

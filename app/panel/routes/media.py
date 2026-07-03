@@ -111,12 +111,14 @@ async def media_edit(
     download_limit: str = Form(""),
     auto_delete_seconds: str = Form(""),
     status: str = Form(""),
+    required_plan: str = Form(""),
+    price: str = Form(""),
     csrf_token: str = Form(""),
     _=Depends(require_role(*_CONTENT)),
     session: AsyncSession = Depends(get_session),
 ):
-    """I5: edit title/caption/limit/auto-delete/status in one form (empty numeric
-    field = clear). Every change is audited."""
+    """I5/J6: edit title/caption/limit/auto-delete/status + paywall fields in
+    one form (empty numeric field = clear). Every change is audited."""
     await verify_csrf(request)
     media = await session.scalar(select(Media).where(Media.id == media_id))
     if media is not None:
@@ -128,6 +130,8 @@ async def media_edit(
         )
         if status in MEDIA_STATUSES:
             media.status = status
+        media.required_plan = required_plan.strip() or None  # J6
+        media.price = int(price) if price.strip().isdigit() and int(price) > 0 else None
         await session.commit()
         await audit(session, request, "media_edit", target=str(media_id))
     return RedirectResponse(url=f"{settings.panel_path}/media/{media_id}", status_code=302)

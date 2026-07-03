@@ -54,6 +54,15 @@
           {% for s in statuses %}<option value="{{ s }}" {{ "selected" if media.status == s else "" }}>{{ s }}</option>{% endfor %}
         </select>
       </label>
+      <label>حداقل پلن (خالی = آزاد)
+        <select name="required_plan">
+          <option value="" {{ "selected" if not media.required_plan else "" }}>— آزاد —</option>
+          {% for p in ("plus", "max") %}<option value="{{ p }}" {{ "selected" if media.required_plan == p else "" }}>{{ p }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>قیمت فایل (تومان؛ خالی = رایگان)
+        <input type="number" name="price" min="0" value="{{ media.price if media.price is not none else '' }}">
+      </label>
     </div>
     <button type="submit">ذخیره</button>
   </form>

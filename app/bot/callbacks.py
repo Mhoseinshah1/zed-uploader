@@ -208,6 +208,12 @@ class ReactCb(CallbackData, prefix="react"):
     id: int  # media id
 
 
+class BuyMediaCb(CallbackData, prefix="bym"):
+    """J6: buy a paid media from the wallet (id = media id)."""
+
+    id: int
+
+
 class BrowseCb(CallbackData, prefix="brw"):
     """J1: sorted public listings. sort ∈ {popular, newest, most_viewed, favs}."""
 

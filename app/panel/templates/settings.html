@@ -46,6 +46,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label class="checkbox"><input type="checkbox" name="card_enabled" {{ "checked" if card_enabled else "" }}> فعال‌بودن شارژ کارت‌به‌کارت</label>
       <label>حداقل مبلغ شارژ (تومان) <input type="number" name="topup_min" value="{{ topup_min }}" min="0"></label>
+      <label>سهمیهٔ دانلود رایگان روزانه هر کاربر (۰ = نامحدود) <input type="number" name="free_daily_quota" value="{{ free_daily_quota }}" min="0"></label>
       <button type="submit">ذخیره</button>
     </form>
   </section>
