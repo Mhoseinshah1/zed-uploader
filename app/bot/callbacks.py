@@ -199,3 +199,17 @@ class SupportCb(CallbackData, prefix="sup"):
 
     action: str
     id: int
+
+
+class ReactCb(CallbackData, prefix="react"):
+    """J1: reaction toggle under a delivered file. kind ∈ {like, dislike, favorite}."""
+
+    kind: str
+    id: int  # media id
+
+
+class BrowseCb(CallbackData, prefix="brw"):
+    """J1: sorted public listings. sort ∈ {popular, newest, most_viewed, favs}."""
+
+    sort: str
+    page: int = 0

@@ -3,6 +3,13 @@
 {% block content %}
 <div class="page-h">
   <div><h1>فایل‌ها</h1><p>جستجو و مدیریت فایل‌های آپلودشده</p></div>
+  <div class="chips">
+    {% set sort_labels = {"newest": "جدیدترین", "popular": "محبوب‌ترین", "most_viewed": "پربازدیدترین"} %}
+    {% for s in sorts %}
+    <a href="{{ panel_path }}/media?q={{ q }}&folder_id={{ folder_id or '' }}&sort={{ s }}"
+       class="chip {{ 'on' if sort == s else '' }}">{{ sort_labels[s] }}</a>
+    {% endfor %}
+  </div>
 </div>
 
 <form class="search-bar" method="get" action="{{ panel_path }}/media">

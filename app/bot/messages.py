@@ -885,3 +885,30 @@ SUBSCRIPTION_CANCELLED_NOTICE = "⛔️ اشتراک شما لغو شد."
 
 # --- Phase I4: Telegram Stars toggle ----------------------------------------
 STARS_DISABLED = "پرداخت با استارز در حال حاضر غیرفعال است."
+
+
+# --- Phase J1: reactions + favorites + sorted views --------------------------
+LBL_FAVORITE = "⭐ ذخیره"
+BTN_FAVORITES = "⭐ علاقه‌مندی‌ها"
+
+REACT_SET = {"like": "👍 پسندیدی", "dislike": "👎 نپسندیدی", "favorite": "⭐ ذخیره شد"}
+REACT_CLEARED = {"like": "لغو شد", "dislike": "لغو شد", "favorite": "از علاقه‌مندی‌ها حذف شد"}
+FAVORITES_EMPTY = "هنوز چیزی ذخیره نکرده‌ای. زیر هر فایل روی «⭐ ذخیره» بزن."
+BROWSE_DISABLED = "مرور عمومی فایل‌ها در حال حاضر فعال نیست."
+
+_BROWSE_TITLES = {
+    "favs": "⭐ علاقه‌مندی‌های تو",
+    "popular": "🔥 محبوب‌ترین‌ها",
+    "newest": "🆕 جدیدترین‌ها",
+    "most_viewed": "👁 پربازدیدترین‌ها",
+}
+
+
+def browse_header(sort: str, page: int) -> str:
+    title = _BROWSE_TITLES.get(sort, sort)
+    return f"{title} — صفحه {page + 1}"
+
+
+def browse_row(code: str, title: str | None, likes: int, downloads: int) -> str:
+    name = title or code
+    return f"{name} · 👍 {likes} · ⬇️ {downloads}"

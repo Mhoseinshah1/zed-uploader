@@ -23,6 +23,7 @@ from app.bot.handlers import (
     folders,
     menu,
     newbot,
+    reactions,
     reports,
     review,
     search,
@@ -99,6 +100,7 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.include_router(stars.router)
     dispatcher.include_router(billing_owner.router)
     dispatcher.include_router(support.router)
+    dispatcher.include_router(reactions.router)
     dispatcher.include_router(batch.router)
     # `albums` after batch (so batch-collecting still grabs parts) and before
     # upload (so grouped media buffer instead of each becoming its own Media).

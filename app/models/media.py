@@ -76,6 +76,17 @@ class Media(TenantScoped, Base):
     download_count: Mapped[int] = mapped_column(
         BigInteger, default=0, server_default=text("0"), nullable=False
     )
+    # J1: denormalized reaction counters — updated atomically in the SAME
+    # transaction as the media_reactions row (popular-sort reads these).
+    like_count: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0"), nullable=False
+    )
+    dislike_count: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0"), nullable=False
+    )
+    favorite_count: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0"), nullable=False
+    )
     is_active: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default=text("true"), nullable=False
     )

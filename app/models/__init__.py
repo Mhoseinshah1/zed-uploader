@@ -20,6 +20,7 @@ from app.models.panel import PanelAudit, PanelUser
 from app.models.payment import Payment
 from app.models.payment_provider import PaymentProviderConfig
 from app.models.plan import Plan
+from app.models.reaction import MediaReaction
 from app.models.settings import BotSetting, FeatureFlag
 from app.models.subscription import Subscription
 from app.models.support import SupportTicket, TicketMessage
@@ -59,4 +60,5 @@ __all__ = [
     "SupportTicket",
     "TicketMessage",
     "Invoice",
+    "MediaReaction",
 ]

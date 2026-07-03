@@ -23,11 +23,19 @@ _CONTENT = ("owner", "admin", "content")
 MEDIA_STATUSES = ("pending", "approved", "rejected")
 
 
+_SORTS = {
+    "newest": (Media.id.desc(),),
+    "popular": (Media.like_count.desc(), Media.id.desc()),
+    "most_viewed": (Media.download_count.desc(), Media.id.desc()),
+}
+
+
 @router.get("/media")
 async def media_list(
     request: Request,
     q: str = "",
     folder_id: str = "",
+    sort: str = "newest",
     page: int = 0,
     _=Depends(require_role(*_CONTENT)),
     session: AsyncSession = Depends(get_session),
@@ -51,15 +59,17 @@ async def media_list(
         stmt = stmt.where(Media.folder_id == folder_val)
     total = int(await session.scalar(select(func.count()).select_from(stmt.subquery())))
     page = max(0, page)
+    order = _SORTS.get(sort, _SORTS["newest"])
     rows = list(
         await session.scalars(
-            stmt.order_by(Media.id.desc()).limit(PAGE_SIZE).offset(page * PAGE_SIZE)
+            stmt.order_by(*order).limit(PAGE_SIZE).offset(page * PAGE_SIZE)
         )
     )
     folders = await FolderService(session).list_all()
     return render(
         request, "media.html", media=rows, q=q, page=page, total=total,
         page_size=PAGE_SIZE, folders=folders, folder_id=folder_val,
+        sort=sort if sort in _SORTS else "newest", sorts=tuple(_SORTS),
     )
 
 

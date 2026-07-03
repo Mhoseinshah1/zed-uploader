@@ -17,7 +17,10 @@ def build_user_menu(is_platform: bool = False) -> ReplyKeyboardMarkup:
             KeyboardButton(text=messages.BTN_WALLET),
             KeyboardButton(text=messages.BTN_SUBSCRIPTION),
         ],
-        [KeyboardButton(text=messages.BTN_SUPPORT)],
+        [
+            KeyboardButton(text=messages.BTN_SUPPORT),
+            KeyboardButton(text=messages.BTN_FAVORITES),
+        ],
     ]
     if is_platform:
         keyboard.append([KeyboardButton(text=messages.BTN_CREATE_BOT)])
@@ -74,6 +77,7 @@ def build_admin_menu(is_owner: bool = False, is_platform: bool = False) -> Reply
             KeyboardButton(text=messages.BTN_SUPPORT),
         ]
     )
+    keyboard.append([KeyboardButton(text=messages.BTN_FAVORITES)])
     if is_platform:
         keyboard.append([KeyboardButton(text=messages.BTN_CREATE_BOT)])
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)

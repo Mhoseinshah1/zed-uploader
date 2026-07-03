@@ -366,9 +366,27 @@ def build_share(url: str) -> InlineKeyboardMarkup:
     return b.as_markup()
 
 
-def build_delivered_actions(share_url: str, media_id: int) -> InlineKeyboardMarkup:
-    """Under a delivered file: share link + a 🚩 report button."""
+def build_delivered_actions(
+    share_url: str, media_id: int, likes: int = 0, dislikes: int = 0
+) -> InlineKeyboardMarkup:
+    """Under a delivered file: reactions (J1) + share link + a 🚩 report button."""
+    from app.bot.callbacks import ReactCb
+
     b = InlineKeyboardBuilder()
+    b.row(
+        InlineKeyboardButton(
+            text=f"👍 {likes}" if likes else "👍",
+            callback_data=ReactCb(kind="like", id=media_id).pack(),
+        ),
+        InlineKeyboardButton(
+            text=f"👎 {dislikes}" if dislikes else "👎",
+            callback_data=ReactCb(kind="dislike", id=media_id).pack(),
+        ),
+        InlineKeyboardButton(
+            text=messages.LBL_FAVORITE,
+            callback_data=ReactCb(kind="favorite", id=media_id).pack(),
+        ),
+    )
     b.row(InlineKeyboardButton(text=messages.SHARE_BUTTON, url=share_url))
     b.row(
         InlineKeyboardButton(

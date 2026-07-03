@@ -125,7 +125,10 @@ async def deliver_by_code(
     await send_placement_ads(bot, session, chat_id, user_id, "before_file")
 
     # send every file; caption + share button on the first only
-    share_markup = build_delivered_actions(await service.deep_link(media), media.id)
+    share_markup = build_delivered_actions(
+        await service.deep_link(media), media.id,
+        likes=media.like_count, dislikes=media.dislike_count,
+    )
     sent_ids: list[int] = []
     for index, media_file in enumerate(media.files):
         caption = media.caption if index == 0 else None
