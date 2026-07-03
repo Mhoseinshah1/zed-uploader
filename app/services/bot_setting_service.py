@@ -36,6 +36,21 @@ DEFAULT_STARS_ENABLED = True
 KEY_CARD_ENABLED = "card_enabled"
 DEFAULT_CARD_ENABLED = True
 
+# J3 — caption tools (per tenant)
+KEY_CAPTION_STRIP_LINKS = "caption_strip_links"
+KEY_CAPTION_SIGNATURE = "caption_signature"
+
+# J7 — maintenance mode (per tenant)
+KEY_MAINTENANCE_MODE = "maintenance_mode"
+KEY_MAINTENANCE_MESSAGE = "maintenance_message"
+
+# J5 — channel preview auto-post (per tenant)
+KEY_PREVIEW_CHANNEL_ID = "preview_channel_id"
+KEY_PREVIEW_ENABLED = "preview_enabled"
+
+# J6 — paywall free-download quota per user per day (0 = off/unlimited)
+KEY_FREE_DAILY_QUOTA = "free_daily_quota"
+
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 

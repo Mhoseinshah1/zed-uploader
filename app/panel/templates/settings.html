@@ -17,6 +17,18 @@
   </section>
 
   <section class="card">
+    <h2>ابزار کپشن</h2>
+    <form method="post" action="{{ panel_path }}/settings/caption">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="checkbox"><input type="checkbox" name="caption_strip_links" {{ "checked" if caption_strip_links else "" }}> حذف لینک‌ها و منشن‌ها از کپشن هنگام ارسال</label>
+      <label>امضای انتهای کپشن (خالی = بدون امضا)
+        <textarea name="caption_signature" rows="2" placeholder="مثلاً: @mychannel">{{ caption_signature }}</textarea>
+      </label>
+      <button type="submit">ذخیره</button>
+    </form>
+  </section>
+
+  <section class="card">
     <h2>تنظیمات پرداخت</h2>
     <form method="post" action="{{ panel_path }}/settings/payments">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

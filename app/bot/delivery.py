@@ -129,9 +129,13 @@ async def deliver_by_code(
         await service.deep_link(media), media.id,
         likes=media.like_count, dislikes=media.dislike_count,
     )
+    # J3: per-tenant caption tools (strip links / signature), applied at delivery
+    from app.services.caption_service import apply_caption_tools
+
+    delivered_caption = await apply_caption_tools(session, media.caption)
     sent_ids: list[int] = []
     for index, media_file in enumerate(media.files):
-        caption = media.caption if index == 0 else None
+        caption = delivered_caption if index == 0 else None
         reply_markup = share_markup if index == 0 else None
         try:
             message_id = await send_media_file(

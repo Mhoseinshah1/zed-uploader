@@ -11,6 +11,8 @@ from app.panel.deps import audit, render, require_role, verify_csrf
 from app.services.bot_setting_service import (
     DEFAULT_TOPUP_MIN,
     KEY_AUTODELETE,
+    KEY_CAPTION_SIGNATURE,
+    KEY_CAPTION_STRIP_LINKS,
     KEY_CARD_ENABLED,
     KEY_CARD_HOLDER,
     KEY_CARD_NUMBER,
@@ -48,9 +50,29 @@ async def settings_page(
         "public_search_enabled": await setting.public_search_enabled(),
         "card_enabled": await setting.card_enabled(),
         "topup_min": await setting.get_int(KEY_TOPUP_MIN, DEFAULT_TOPUP_MIN),
+        "caption_strip_links": await setting.get_bool(KEY_CAPTION_STRIP_LINKS, False),
+        "caption_signature": await setting.get_raw(KEY_CAPTION_SIGNATURE) or "",
         "channels": channels,
     }
     return render(request, "settings.html", **ctx)
+
+
+@router.post("/settings/caption")
+async def settings_caption(
+    request: Request,
+    caption_strip_links: str = Form(""),
+    caption_signature: str = Form(""),
+    csrf_token: str = Form(""),
+    _=Depends(require_role("owner")),
+    session: AsyncSession = Depends(get_session),
+):
+    """J3: caption tools — strip links/mentions + optional signature."""
+    await verify_csrf(request)
+    setting = BotSettingService(session)
+    await setting.set(KEY_CAPTION_STRIP_LINKS, caption_strip_links == "on")
+    await setting.set(KEY_CAPTION_SIGNATURE, caption_signature.strip())
+    await audit(session, request, "settings_caption")
+    return RedirectResponse(url=_p("/settings"), status_code=302)
 
 
 @router.post("/settings/payments")
