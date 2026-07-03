@@ -1,6 +1,7 @@
 """Panel dependencies: auth, CSRF, audit, templating."""
 from __future__ import annotations
 
+import hashlib
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -27,6 +28,28 @@ log = get_logger("panel")
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+STATIC_DIR = Path(__file__).parent / "static"
+
+
+def _asset_version() -> str:
+    """Short content hash of the panel's CSS+JS, used as a ``?v=`` cache-buster.
+
+    Computed once at import from the bytes on disk (build-time in the image), so
+    the query string changes whenever the stylesheet or script changes and
+    browsers/proxies stop serving a stale cached copy. Pure presentation glue —
+    no request, DB, or env access.
+    """
+    h = hashlib.sha1()
+    for rel in ("css/panel.css", "js/panel.js"):
+        try:
+            h.update((STATIC_DIR / rel).read_bytes())
+        except OSError:
+            continue
+    return h.hexdigest()[:10]
+
+
+ASSET_VERSION = _asset_version()
 
 
 class PanelAuthRequired(Exception):
@@ -149,6 +172,7 @@ def render(request: Request, template: str, **context):
         "csrf_token": data.get("csrf") if data else "",
         "current_user": getattr(request.state, "panel_user", None),
         "theme": "light" if theme == "light" else "dark",
+        "asset_version": ASSET_VERSION,
     }
     base.update(context)
     return templates.TemplateResponse(request, template, base)
