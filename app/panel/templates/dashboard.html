@@ -1,38 +1,133 @@
 {% extends "base.html" %}
+{% block title %}داشبورد — پنل مدیریت زد‌آپلودر{% endblock %}
 {% block content %}
-<p><small>نسخهٔ نصب‌شده: <b dir="ltr">{{ installed_version }}</b>
-{% if code_version != installed_version %} · نسخهٔ کد: <b dir="ltr">{{ code_version }}</b> (پس از ری‌استارت ثبت می‌شود){% endif %}</small></p>
-<h1>داشبورد</h1>
-<section class="cards">
-  <div class="card"><span class="num">{{ stats.total_users }}</span><span class="lbl">کاربران</span></div>
-  <div class="card"><span class="num">{{ stats.total_media }}</span><span class="lbl">فایل‌ها</span></div>
-  <div class="card"><span class="num">{{ stats.total_downloads }}</span><span class="lbl">دانلودها</span></div>
-  <div class="card"><span class="num">{{ "{:,}".format(stats.revenue) }}</span><span class="lbl">درآمد این ماه (تومان)</span></div>
-  <div class="card"><span class="num">{{ stats.pending }}</span><span class="lbl">پرداخت‌های در انتظار</span></div>
-  <div class="card"><span class="num">{{ stats.active_subs }}</span><span class="lbl">اشتراک‌های فعال</span></div>
-</section>
+<div class="page-h">
+  <div>
+    <h1>داشبورد</h1>
+    <p>خلاصهٔ عملکرد ربات در یک نگاه</p>
+  </div>
+  <div class="h-actions">
+    <a class="btn ghost" href="{{ panel_path }}/stats">📊 آمار کامل</a>
+    <a class="btn" href="{{ panel_path }}/review">✅ صف تأیید</a>
+  </div>
+</div>
 
-<h2>پرطرفدارترین فایل‌ها</h2>
-<table>
-  <thead><tr><th>کد</th><th>عنوان</th><th>دانلود</th></tr></thead>
-  <tbody>
-  {% for m in top_files %}
-    <tr><td><a href="{{ panel_path }}/media/{{ m.id }}">{{ m.code }}</a></td><td>{{ m.title or "—" }}</td><td>{{ m.download_count }}</td></tr>
-  {% else %}
-    <tr><td colspan="3">موردی نیست</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<p class="ver-note">نسخهٔ نصب‌شده: <b dir="ltr">{{ installed_version }}</b>
+{% if code_version != installed_version %} · نسخهٔ کد: <b dir="ltr">{{ code_version }}</b> (پس از ری‌استارت ثبت می‌شود){% endif %}</p>
 
-<h2>پرداخت‌های اخیر</h2>
-<table>
-  <thead><tr><th>#</th><th>کاربر</th><th>مبلغ</th><th>وضعیت</th></tr></thead>
-  <tbody>
-  {% for p in recent_payments %}
-    <tr><td>{{ p.id }}</td><td>{{ p.user_id }}</td><td>{{ "{:,}".format(p.amount) }}</td><td>{{ p.status }}</td></tr>
-  {% else %}
-    <tr><td colspan="4">موردی نیست</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<!-- Stat cards -->
+<div class="grid stats">
+  <div class="card stat">
+    <div class="top"><div class="ico i-blue">🗂️</div></div>
+    <h3>{{ "{:,}".format(stats.total_media) }}</h3><div class="lbl">کل فایل‌ها</div>
+  </div>
+  <div class="card stat">
+    <div class="top"><div class="ico i-green">👥</div></div>
+    <h3>{{ "{:,}".format(stats.total_users) }}</h3><div class="lbl">کاربران</div>
+  </div>
+  <div class="card stat">
+    <div class="top"><div class="ico i-amber">⬇️</div></div>
+    <h3>{{ "{:,}".format(stats.total_downloads) }}</h3><div class="lbl">دانلودها</div>
+  </div>
+  <div class="card stat">
+    <div class="top"><div class="ico i-cyan">💰</div></div>
+    <h3>{{ "{:,}".format(stats.revenue) }}</h3><div class="lbl">درآمد این ماه (تومان)</div>
+  </div>
+</div>
+
+<div class="grid stats">
+  <div class="card stat">
+    <div class="top"><div class="ico i-amber">⏳</div></div>
+    <h3>{{ "{:,}".format(stats.pending) }}</h3><div class="lbl">پرداخت‌های در انتظار</div>
+  </div>
+  <div class="card stat">
+    <div class="top"><div class="ico i-green">🔖</div></div>
+    <h3>{{ "{:,}".format(stats.active_subs) }}</h3><div class="lbl">اشتراک‌های فعال</div>
+  </div>
+</div>
+
+<!-- Chart + donut -->
+{% set top_max = (top_files | map(attribute='download_count') | max) if top_files else 0 %}
+{% set approved = recent_payments | selectattr('status', 'equalto', 'approved') | list | length %}
+{% set pending = recent_payments | selectattr('status', 'equalto', 'pending') | list | length %}
+{% set rejected = recent_payments | selectattr('status', 'equalto', 'rejected') | list | length %}
+{% set ptotal = recent_payments | length %}
+{% set pother = ptotal - approved - pending - rejected %}
+<div class="grid row2">
+  <div class="card">
+    <h2>پرطرفدارترین فایل‌ها</h2><div class="sub">بر اساس تعداد دانلود</div>
+    {% if top_files %}
+    <div class="chart">
+      {% for m in top_files %}
+      <div class="barcol" title="{{ m.code }} — {{ m.download_count }}">
+        <div class="val">{{ m.download_count }}</div>
+        <svg class="barsvg" viewBox="0 0 10 100" preserveAspectRatio="none" aria-hidden="true">
+          <rect x="0" width="10" rx="1"
+            y="{{ (100 - (m.download_count / top_max * 96)) | round(2) if top_max else 96 }}"
+            height="{{ (m.download_count / top_max * 96) | round(2) if top_max else 4 }}"></rect>
+        </svg>
+        <div class="cap"><a href="{{ panel_path }}/media/{{ m.id }}">{{ m.code }}</a></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<p class="empty">هنوز دانلودی ثبت نشده.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2>پرداخت‌های اخیر</h2><div class="sub">سهم وضعیت‌ها</div>
+    <div class="don">
+      <svg class="donsvg" viewBox="0 0 42 42" aria-hidden="true">
+        <circle class="seg seg-bg" cx="21" cy="21" r="15.9155" stroke-dasharray="100 0" stroke-dashoffset="0"></circle>
+        {% set ns = namespace(acc=0) %}
+        {% for seg in [{"c": approved, "cls": "seg-green"}, {"c": pending, "cls": "seg-amber"}, {"c": rejected, "cls": "seg-red"}, {"c": pother, "cls": "seg-brand"}] %}
+        {% if seg.c > 0 and ptotal > 0 %}
+        {% set pct = seg.c / ptotal * 100 %}
+        <circle class="seg {{ seg.cls }}" cx="21" cy="21" r="15.9155"
+          stroke-dasharray="{{ pct | round(2) }} {{ (100 - pct) | round(2) }}"
+          stroke-dashoffset="{{ (25 - ns.acc) | round(2) }}"></circle>
+        {% set ns.acc = ns.acc + pct %}
+        {% endif %}
+        {% endfor %}
+      </svg>
+      <div class="ring-label"><b>{{ ptotal }}<small>پرداخت اخیر</small></b></div>
+    </div>
+    <div class="legend">
+      <div><span class="dot c-green"></span> تأییدشده — {{ approved }}</div>
+      <div><span class="dot c-amber"></span> در انتظار — {{ pending }}</div>
+      <div><span class="dot c-red"></span> ردشده — {{ rejected }}</div>
+      {% if pother > 0 %}<div><span class="dot c-brand"></span> سایر — {{ pother }}</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Recent payments table -->
+<div class="card tbl-wrap">
+  <div class="tbl-h">
+    <div><h2>آخرین پرداخت‌ها</h2></div>
+    <div class="chips">
+      <a class="chip on" href="{{ panel_path }}/payments?status=all">همه</a>
+      <a class="chip" href="{{ panel_path }}/payments?status=pending">در انتظار</a>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>کاربر</th><th>مبلغ</th><th>وضعیت</th></tr></thead>
+    <tbody>
+    {% for p in recent_payments %}
+      <tr>
+        <td>{{ p.id }}</td>
+        <td><div class="u"><div class="ua g{{ p.user_id % 8 }}">{{ p.user_id }}</div></div></td>
+        <td class="money">{{ "{:,}".format(p.amount) }}</td>
+        <td>
+          {% if p.status == "approved" %}<span class="pill p-green">{{ p.status }}</span>
+          {% elif p.status == "pending" %}<span class="pill p-amber">{{ p.status }}</span>
+          {% elif p.status == "rejected" %}<span class="pill p-red">{{ p.status }}</span>
+          {% else %}<span class="pill p-gray">{{ p.status }}</span>{% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4"><div class="empty">موردی نیست</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

@@ -1,11 +1,28 @@
 {% extends "base.html" %}
+{% block title %}پلتفرم — پنل مدیریت{% endblock %}
 {% block content %}
-<h1>پلتفرم (سوپر ادمین)</h1>
-<section class="panel-box">
-  <p>تعداد ربات‌های فروخته‌شده: <strong>{{ total_tenants }}</strong></p>
-  <p>ربات‌های فعال: <strong>{{ active_tenants }}</strong></p>
-  <p>درآمد فروش/تمدید ربات: <strong>{{ "{:,}".format(revenue) }}</strong> تومان</p>
-  <p><a href="{{ panel_path }}/platform/tenants">مدیریت ربات‌ها</a> ·
-     <a href="{{ panel_path }}/bot-plans">قیمت‌گذاری فروش ربات</a></p>
+<div class="plat-ribbon">🛰️ حالت پلتفرم <span class="tag">سوپر ادمین</span></div>
+<div class="page-h">
+  <div><h1>پلتفرم</h1><p>نمای کلی فروش و مدیریت ربات‌های مشتریان</p></div>
+</div>
+
+<div class="grid stats">
+  <div class="card stat platform">
+    <div class="top"><div class="ico i-blue">🤖</div></div>
+    <h3>{{ "{:,}".format(total_tenants) }}</h3><div class="lbl">ربات‌های فروخته‌شده</div>
+  </div>
+  <div class="card stat platform">
+    <div class="top"><div class="ico i-green">🟢</div></div>
+    <h3>{{ "{:,}".format(active_tenants) }}</h3><div class="lbl">ربات‌های فعال</div>
+  </div>
+  <div class="card stat platform">
+    <div class="top"><div class="ico i-cyan">💰</div></div>
+    <h3>{{ "{:,}".format(revenue) }}</h3><div class="lbl">درآمد فروش/تمدید (تومان)</div>
+  </div>
+</div>
+
+<section class="card platform">
+  <p><a class="btn ghost" href="{{ panel_path }}/platform/tenants">مدیریت ربات‌ها ←</a>
+     <a class="btn ghost" href="{{ panel_path }}/bot-plans">قیمت‌گذاری فروش ربات ←</a></p>
 </section>
 {% endblock %}

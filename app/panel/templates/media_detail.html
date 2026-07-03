@@ -1,72 +1,87 @@
 {% extends "base.html" %}
+{% block title %}فایل {{ media.code }} — پنل مدیریت{% endblock %}
 {% block content %}
-<p><a href="{{ panel_path }}/media">◀ بازگشت به فایل‌ها</a></p>
-<h1>فایل {{ media.code }}</h1>
-<table class="kv">
-  <tr><th>عنوان</th><td>{{ media.title or "—" }}</td></tr>
-  <tr><th>دانلود</th><td>{{ media.download_count }}{% if media.download_limit %} / {{ media.download_limit }}{% endif %}</td></tr>
-  <tr><th>وضعیت</th><td>{{ "فعال" if media.is_active else "غیرفعال" }}</td></tr>
-  <tr><th>بازبینی</th><td>{{ media.status }}</td></tr>
-  <tr><th>پوشه</th><td>{{ media.folder_id or "بدون پوشه" }}</td></tr>
-  <tr><th>محافظت محتوا</th><td>{{ "روشن" if media.protect_content else "خاموش" }}</td></tr>
-  <tr><th>گذرواژه</th><td>{{ "🔒 دارد" if media.password_hash else "🔓 ندارد" }}</td></tr>
-  <tr><th>حذف خودکار</th><td>{{ media.auto_delete_seconds or "خاموش" }}</td></tr>
-</table>
-
-<div class="actions">
-  <form method="post" action="{{ panel_path }}/media/{{ media.id }}/toggle">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button type="submit">{{ "غیرفعال کردن" if media.is_active else "فعال کردن" }}</button>
-  </form>
-  <form method="post" action="{{ panel_path }}/media/{{ media.id }}/delete" onsubmit="return confirm('حذف شود؟')">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button type="submit" class="danger">حذف</button>
-  </form>
+<a class="back-link" href="{{ panel_path }}/media">◀ بازگشت به فایل‌ها</a>
+<div class="page-h">
+  <div><h1>فایل <code>{{ media.code }}</code></h1><p>جزئیات، دسترسی و لاگ دانلود</p></div>
+  <div class="h-actions">
+    <form method="post" action="{{ panel_path }}/media/{{ media.id }}/toggle">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="ghost">{{ "غیرفعال کردن" if media.is_active else "فعال کردن" }}</button>
+    </form>
+    <form method="post" action="{{ panel_path }}/media/{{ media.id }}/delete" onsubmit="return confirm('حذف شود؟')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="danger">حذف</button>
+    </form>
+  </div>
 </div>
 
-<h2>پوشه</h2>
-<form method="post" action="{{ panel_path }}/media/{{ media.id }}/folder" class="actions">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <select name="folder_id">
-    <option value="" {{ "selected" if not media.folder_id else "" }}>— بدون پوشه —</option>
-    {% for f in folders %}
-    <option value="{{ f.id }}" {{ "selected" if media.folder_id == f.id else "" }}>{{ f.name }}</option>
-    {% endfor %}
-  </select>
-  <button type="submit">انتقال</button>
-</form>
+<div class="card">
+  <table class="kv">
+    <tr><th>عنوان</th><td>{{ media.title or "—" }}</td></tr>
+    <tr><th>دانلود</th><td>{{ media.download_count }}{% if media.download_limit %} / {{ media.download_limit }}{% endif %}</td></tr>
+    <tr><th>وضعیت</th><td>{% if media.is_active %}<span class="pill p-green">فعال</span>{% else %}<span class="pill p-gray">غیرفعال</span>{% endif %}</td></tr>
+    <tr><th>بازبینی</th><td>{{ media.status }}</td></tr>
+    <tr><th>پوشه</th><td>{{ media.folder_id or "بدون پوشه" }}</td></tr>
+    <tr><th>محافظت محتوا</th><td>{{ "روشن" if media.protect_content else "خاموش" }}</td></tr>
+    <tr><th>گذرواژه</th><td>{{ "🔒 دارد" if media.password_hash else "🔓 ندارد" }}</td></tr>
+    <tr><th>حذف خودکار</th><td>{{ media.auto_delete_seconds or "خاموش" }}</td></tr>
+  </table>
+</div>
 
-<h2>گذرواژهٔ فایل</h2>
-<form method="post" action="{{ panel_path }}/media/{{ media.id }}/password" class="actions">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <input type="password" name="password" placeholder="گذرواژهٔ جدید" autocomplete="new-password">
-  <button type="submit">{{ "تغییر گذرواژه" if media.password_hash else "تنظیم گذرواژه" }}</button>
-</form>
-{% if media.password_hash %}
-<form method="post" action="{{ panel_path }}/media/{{ media.id }}/password" onsubmit="return confirm('گذرواژه حذف شود؟')">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <input type="hidden" name="password" value="">
-  <button type="submit" class="danger">حذف گذرواژه</button>
-</form>
-{% endif %}
+<div class="grid grid-2">
+  <div class="card">
+    <h2>پوشه</h2>
+    <form method="post" action="{{ panel_path }}/media/{{ media.id }}/folder" class="actions">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <select name="folder_id">
+        <option value="" {{ "selected" if not media.folder_id else "" }}>— بدون پوشه —</option>
+        {% for f in folders %}
+        <option value="{{ f.id }}" {{ "selected" if media.folder_id == f.id else "" }}>{{ f.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">انتقال</button>
+    </form>
+  </div>
 
-<h2>فایل‌های داخلی</h2>
-<table>
-  <thead><tr><th>نوع</th><th>نام</th><th>حجم</th></tr></thead>
-  <tbody>
-  {% for f in media.files %}
-    <tr><td>{{ f.file_type }}</td><td>{{ f.file_name or "—" }}</td><td>{{ f.file_size or "—" }}</td></tr>
-  {% else %}<tr><td colspan="3">موردی نیست</td></tr>{% endfor %}
-  </tbody>
-</table>
+  <div class="card">
+    <h2>گذرواژهٔ فایل</h2>
+    <form method="post" action="{{ panel_path }}/media/{{ media.id }}/password" class="actions">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="password" name="password" placeholder="گذرواژهٔ جدید" autocomplete="new-password">
+      <button type="submit">{{ "تغییر گذرواژه" if media.password_hash else "تنظیم گذرواژه" }}</button>
+    </form>
+    {% if media.password_hash %}
+    <form method="post" action="{{ panel_path }}/media/{{ media.id }}/password" onsubmit="return confirm('گذرواژه حذف شود؟')" class="actions">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="password" value="">
+      <button type="submit" class="danger">حذف گذرواژه</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
 
-<h2>لاگ دانلود (اخیر)</h2>
-<table>
-  <thead><tr><th>#</th><th>آیدی تلگرام</th><th>زمان</th></tr></thead>
-  <tbody>
-  {% for l in logs %}
-    <tr><td>{{ l.id }}</td><td>{{ l.telegram_id }}</td><td>{{ l.created_at }}</td></tr>
-  {% else %}<tr><td colspan="3">موردی نیست</td></tr>{% endfor %}
-  </tbody>
-</table>
+<div class="card tbl-wrap">
+  <h2>فایل‌های داخلی</h2>
+  <table>
+    <thead><tr><th>نوع</th><th>نام</th><th>حجم</th></tr></thead>
+    <tbody>
+    {% for f in media.files %}
+      <tr><td>{{ f.file_type }}</td><td>{{ f.file_name or "—" }}</td><td>{{ f.file_size or "—" }}</td></tr>
+    {% else %}<tr><td colspan="3"><div class="empty">موردی نیست</div></td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card tbl-wrap">
+  <h2>لاگ دانلود (اخیر)</h2>
+  <table>
+    <thead><tr><th>#</th><th>آیدی تلگرام</th><th>زمان</th></tr></thead>
+    <tbody>
+    {% for l in logs %}
+      <tr><td>{{ l.id }}</td><td dir="ltr">{{ l.telegram_id }}</td><td>{{ l.created_at }}</td></tr>
+    {% else %}<tr><td colspan="3"><div class="empty">موردی نیست</div></td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

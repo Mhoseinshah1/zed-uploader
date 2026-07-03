@@ -1,32 +1,41 @@
 {% extends "base.html" %}
+{% block title %}ادمین‌ها — پنل مدیریت{% endblock %}
 {% block content %}
-<h1>ادمین‌ها</h1>
-<form class="search" method="post" action="{{ panel_path }}/admins/add">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <input type="number" name="telegram_id" placeholder="آیدی عددی تلگرام" required>
-  <button type="submit">افزودن ادمین</button>
-</form>
-<table>
-  <thead><tr><th>#</th><th>آیدی تلگرام</th><th>نقش</th><th>فعال</th><th>اقدام</th></tr></thead>
-  <tbody>
-  {% for a in admins %}
-    <tr>
-      <td>{{ a.id }}</td>
-      <td>{{ a.telegram_id }}</td>
-      <td>{{ a.role }}</td>
-      <td>{{ "بله" if a.is_active else "خیر" }}</td>
-      <td>
-        {% if a.telegram_id in env_owners %}
-          <span class="muted">مالک سرور</span>
-        {% else %}
-        <form method="post" action="{{ panel_path }}/admins/{{ a.id }}/remove" style="display:inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button type="submit" class="danger">حذف</button>
-        </form>
-        {% endif %}
-      </td>
-    </tr>
-  {% else %}<tr><td colspan="5">موردی نیست</td></tr>{% endfor %}
-  </tbody>
-</table>
+<div class="page-h">
+  <div><h1>ادمین‌ها</h1><p>مدیریت دسترسی ادمین‌های ربات</p></div>
+</div>
+
+<section class="card">
+  <form class="form-grid" method="post" action="{{ panel_path }}/admins/add">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="number" name="telegram_id" placeholder="آیدی عددی تلگرام" required>
+    <button type="submit">افزودن ادمین</button>
+  </form>
+</section>
+
+<div class="card tbl-wrap">
+  <table>
+    <thead><tr><th>#</th><th>آیدی تلگرام</th><th>نقش</th><th>فعال</th><th>اقدام</th></tr></thead>
+    <tbody>
+    {% for a in admins %}
+      <tr>
+        <td>{{ a.id }}</td>
+        <td dir="ltr">{{ a.telegram_id }}</td>
+        <td><span class="pill p-blue">{{ a.role }}</span></td>
+        <td>{% if a.is_active %}<span class="pill p-green">بله</span>{% else %}<span class="pill p-gray">خیر</span>{% endif %}</td>
+        <td>
+          {% if a.telegram_id in env_owners %}
+            <span class="muted">مالک سرور</span>
+          {% else %}
+          <form method="post" action="{{ panel_path }}/admins/{{ a.id }}/remove" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="danger">حذف</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}<tr><td colspan="5"><div class="empty">موردی نیست</div></td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

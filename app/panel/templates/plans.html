@@ -1,10 +1,14 @@
 {% extends "base.html" %}
+{% block title %}پلن‌ها — پنل مدیریت{% endblock %}
 {% block content %}
-<h1>پلن‌ها</h1>
+<div class="page-h">
+  <div><h1>پلن‌ها</h1><p>قیمت‌گذاری اشتراک‌های کاربران</p></div>
+</div>
+
 {% for p in plans %}
 <form class="plan-row" method="post" action="{{ panel_path }}/plans/{{ p.key }}/update">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <h3>{{ p.title }} <small>({{ p.key }})</small></h3>
+  <h3>{{ p.title }} <small class="muted">({{ p.key }})</small></h3>
   <label>قیمت (تومان)
     <input type="number" name="price" value="{{ p.price }}" min="0">
   </label>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-theme="{{ theme }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,43 +8,109 @@
   <link rel="stylesheet" href="{{ panel_path }}/static/css/panel.css">
 </head>
 <body>
-  <header class="topbar">
-    <span class="brand">زد‌آپلودر</span>
-    {% if current_user %}
-    <nav class="nav">
-      <a href="{{ panel_path }}">داشبورد</a>
-      <a href="{{ panel_path }}/users">کاربران</a>
-      <a href="{{ panel_path }}/media">فایل‌ها</a>
-      <a href="{{ panel_path }}/folders">پوشه‌ها</a>
-      <a href="{{ panel_path }}/review">بازبینی</a>
-      <a href="{{ panel_path }}/reports">گزارش‌ها</a>
-      <a href="{{ panel_path }}/payments">پرداخت‌ها</a>
-      <a href="{{ panel_path }}/providers">درگاه‌ها</a>
-      <a href="{{ panel_path }}/ads">تبلیغات</a>
-      <a href="{{ panel_path }}/plans">پلن‌ها</a>
-      <a href="{{ panel_path }}/admins">ادمین‌ها</a>
-      <a href="{{ panel_path }}/settings">تنظیمات</a>
-      <a href="{{ panel_path }}/texts">متن‌ها</a>
-      <a href="{{ panel_path }}/commands">منوی دستورات</a>
-      <a href="{{ panel_path }}/logs">گروه لاگ</a>
-      <a href="{{ panel_path }}/stats">آمار</a>
-      <a href="{{ panel_path }}/license">لایسنس</a>
-      <a href="{{ panel_path }}/broadcast">پیام همگانی</a>
-      {% if current_user.is_superadmin %}
-      <a href="{{ panel_path }}/backups">پشتیبان</a>
-      <a href="{{ panel_path }}/platform">پلتفرم</a>
-      <a href="{{ panel_path }}/bot-plans">فروش ربات</a>
-      {% endif %}
-    </nav>
-    <form class="logout" method="post" action="{{ panel_path }}/logout">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <span class="user">{{ current_user.username }}</span>
-      <button type="submit">خروج</button>
-    </form>
+<svg class="svg-defs" aria-hidden="true" focusable="false"><defs>
+  <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#7f9bff"></stop>
+    <stop offset="1" stop-color="#5b7cfa" stop-opacity="0.28"></stop>
+  </linearGradient>
+  <linearGradient id="barGradH" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#5b7cfa"></stop>
+    <stop offset="1" stop-color="#7c5bfa"></stop>
+  </linearGradient>
+</defs></svg>
+
+{% macro nav_item(suffix, icon, label, mode='prefix') %}
+  {% set href = panel_path ~ suffix %}
+  {% set path = request.url.path %}
+  {% if mode == 'exact' %}{% set active = (path == href) %}
+  {% elif mode == 'alias' %}{% set active = False %}
+  {% else %}{% set active = (path == href or path.startswith(href ~ '/')) %}{% endif %}
+  <a href="{{ href }}"{% if active %} class="active"{% endif %}>
+    <span class="ic">{{ icon }}</span> {{ label }}
+  </a>
+{% endmacro %}
+
+{% if current_user %}
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="logo">Z</div>
+    <div><b>ZedUploader</b><span>پنل مدیریت</span></div>
+  </div>
+  <nav class="nav">
+    <div class="navsec">اصلی</div>
+    {{ nav_item("", "🏠", "داشبورد", "exact") }}
+    {{ nav_item("/media", "🗂️", "فایل‌ها") }}
+    {{ nav_item("/users", "👥", "کاربران") }}
+    {{ nav_item("/folders", "📁", "پوشه‌ها") }}
+    {{ nav_item("/media", "🔎", "جستجو", "alias") }}
+
+    <div class="navsec">مالی</div>
+    {{ nav_item("/payments", "💳", "پرداخت‌ها") }}
+    {{ nav_item("/providers", "🏦", "درگاه‌ها") }}
+    {{ nav_item("/plans", "📦", "پلن‌ها") }}
+    {{ nav_item("/users", "💰", "کیف پول", "alias") }}
+
+    <div class="navsec">محتوا و رشد</div>
+    {{ nav_item("/review", "✅", "صف تأیید") }}
+    {{ nav_item("/ads", "📣", "تبلیغات") }}
+    {{ nav_item("/broadcast", "📢", "ارسال همگانی") }}
+    {{ nav_item("/reports", "🚩", "گزارش‌ها") }}
+
+    <div class="navsec">سیستم</div>
+    {{ nav_item("/stats", "📊", "آمار") }}
+    {{ nav_item("/settings", "⚙️", "تنظیمات") }}
+    {{ nav_item("/texts", "📝", "متن‌های ربات") }}
+    {{ nav_item("/commands", "⌨️", "منوی دستورات") }}
+    {{ nav_item("/logs", "🧾", "گروه لاگ") }}
+    {{ nav_item("/admins", "🛡️", "ادمین‌ها") }}
+    {{ nav_item("/license", "🔑", "لایسنس") }}
+
+    {% if current_user.is_superadmin %}
+    <div class="navsec platform">حالت پلتفرم</div>
+    {{ nav_item("/platform", "🤖", "ربات‌ها (مادر)", "exact") }}
+    {{ nav_item("/platform/tenants", "🏢", "ربات‌های مشتریان") }}
+    {{ nav_item("/bot-plans", "🏷️", "فروش ربات") }}
+    {{ nav_item("/backups", "💾", "پشتیبان‌گیری") }}
     {% endif %}
+  </nav>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<div class="main">
+  <header class="topbar">
+    <button class="hamburger" id="menuBtn" type="button" aria-label="منو">☰</button>
+    <form class="search" method="get" action="{{ panel_path }}/media" role="search">
+      <span aria-hidden="true">🔍</span>
+      <input type="search" name="q" placeholder="جستجو در فایل‌ها با کد…" aria-label="جستجو">
+    </form>
+    <div class="spacer"></div>
+    {% if current_user.is_superadmin %}
+    <span class="plat-badge">🛰️ حالت پلتفرم</span>
+    {% endif %}
+    <button class="tbtn" id="themeBtn" type="button" title="تغییر تم" aria-label="تغییر تم">🌙</button>
+    <a class="tbtn" href="{{ panel_path }}/logs" title="گروه لاگ" aria-label="لاگ">🔔</a>
+    <div class="me">
+      <div class="av">{{ (current_user.username[:1] | upper) if current_user.username else "?" }}</div>
+      <div class="who">
+        <b>{{ current_user.username }}</b>
+        <small>{{ "مدیر پلتفرم" if current_user.is_superadmin else "مدیر" }}</small>
+      </div>
+      <form method="post" action="{{ panel_path }}/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="logout-btn" title="خروج">خروج ⎋</button>
+      </form>
+    </div>
   </header>
   <main class="content">
     {% block content %}{% endblock %}
   </main>
+</div>
+{% else %}
+<main class="content">
+  {% block content_anon %}{% endblock %}
+</main>
+{% endif %}
+
+<script src="{{ panel_path }}/static/js/panel.js"></script>
 </body>
 </html>

@@ -1,11 +1,14 @@
 {% extends "base.html" %}
+{% block title %}لایسنس — پنل مدیریت{% endblock %}
 {% block content %}
-<h1>لایسنس</h1>
+<div class="page-h">
+  <div><h1>لایسنس</h1><p>وضعیت فعال‌سازی و قابلیت‌های فروش</p></div>
+</div>
 
-{% if result == "ok" %}<p class="ok">فعال‌سازی موفق بود. ✅</p>
-{% elif result == "rejected" %}<p style="color:#ef4444">کلید رد شد (نامعتبر/باطل/سقف نصب پر).</p>
-{% elif result == "offline" %}<p style="color:#f59e0b">سرور فعال‌سازی در دسترس نبود؛ در دورهٔ مدارا (Grace) ادامه می‌دهیم.</p>
-{% elif result == "invalid" %}<p style="color:#ef4444">کلید خالی است.</p>{% endif %}
+{% if result == "ok" %}<p class="flash ok">فعال‌سازی موفق بود. ✅</p>
+{% elif result == "rejected" %}<p class="flash error">کلید رد شد (نامعتبر/باطل/سقف نصب پر).</p>
+{% elif result == "offline" %}<p class="flash warn">سرور فعال‌سازی در دسترس نبود؛ در دورهٔ مدارا (Grace) ادامه می‌دهیم.</p>
+{% elif result == "invalid" %}<p class="flash error">کلید خالی است.</p>{% endif %}
 
 {% if bypassed %}
 <div class="panel-box">
@@ -14,21 +17,21 @@
 </div>
 {% endif %}
 
-<section class="panel-box">
+<section class="card">
   <table class="kv">
     <tr><th>وضعیت</th><td>{{ row.status if row else "فعال‌نشده" }}
       — {{ "قابلیت‌های فروش فعال ✅" if paid_allowed else "قابلیت‌های فروش غیرفعال ⛔️ (دریافت فایل کاربران فعال می‌ماند)" }}</td></tr>
     <tr><th>انقضا</th><td dir="ltr">{{ row.expires_at.strftime("%Y-%m-%d") if row and row.expires_at else "—" }}</td></tr>
     <tr><th>سقف نصب</th><td>{{ row.allowed_install_count if row and row.allowed_install_count else "—" }}</td></tr>
-    <tr><th>اثر انگشت سرور</th><td dir="ltr" style="word-break:break-all">{{ fingerprint }}</td></tr>
+    <tr><th>اثر انگشت سرور</th><td dir="ltr" class="fp">{{ fingerprint }}</td></tr>
     <tr><th>آخرین تأیید سرور</th><td dir="ltr">{{ row.last_ok_at.strftime("%Y-%m-%d %H:%M") if row and row.last_ok_at else "—" }}</td></tr>
     <tr><th>دورهٔ مدارا (آفلاین)</th><td>{{ grace_days }} روز</td></tr>
   </table>
 </section>
 
-<section class="panel-box">
+<section class="card">
   <h2>فعال‌سازی</h2>
-  <form method="post" action="{{ panel_path }}/license/activate">
+  <form method="post" action="{{ panel_path }}/license/activate" class="form-grid">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="text" name="key" placeholder="کلید لایسنس" dir="ltr" required>
     <button type="submit">فعال‌سازی</button>

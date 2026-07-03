@@ -1,8 +1,11 @@
 {% extends "base.html" %}
+{% block title %}تبلیغات — پنل مدیریت{% endblock %}
 {% block content %}
-<h1>تبلیغات</h1>
+<div class="page-h">
+  <div><h1>تبلیغات</h1><p>بنرهای درون‌رباتی و آمار نمایش/کلیک</p></div>
+</div>
 
-<section class="panel-box">
+<section class="card">
   <h2>تبلیغ جدید</h2>
   <form method="post" action="{{ panel_path }}/ads/create">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -23,54 +26,58 @@
   </form>
 </section>
 
-<table>
-  <thead>
-    <tr><th>#</th><th>عنوان</th><th>جایگاه</th><th>پلن هدف</th><th>نمایش</th><th>کلیک</th><th>فعال</th><th>اقدام</th></tr>
-  </thead>
-  <tbody>
-  {% for a in ads %}
-    <tr>
-      <td>{{ a.id }}</td>
-      <td>{{ a.title }}</td>
-      <td>{{ a.placement }}</td>
-      <td>{{ a.target_plan or "همه" }}</td>
-      <td>{{ a.impression_count }}{% if a.impression_limit %}/{{ a.impression_limit }}{% endif %}</td>
-      <td>{{ a.click_count }}</td>
-      <td>{{ "بله" if a.is_active else "خیر" }}</td>
-      <td>
-        <form method="post" action="{{ panel_path }}/ads/{{ a.id }}/toggle" style="display:inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button type="submit">{{ "غیرفعال" if a.is_active else "فعال" }}</button>
-        </form>
-        <form method="post" action="{{ panel_path }}/ads/{{ a.id }}/delete" style="display:inline" onsubmit="return confirm('حذف شود؟')">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button type="submit" class="danger">حذف</button>
-        </form>
-        <details style="display:inline-block">
-          <summary>ویرایش</summary>
-          <form method="post" action="{{ panel_path }}/ads/{{ a.id }}/edit">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <label>عنوان <input type="text" name="title" value="{{ a.title }}" required></label>
-            <label>متن <textarea name="text" rows="3" required>{{ a.text }}</textarea></label>
-            <label>جایگاه
-              <select name="placement">
-                {% for p in placements %}
-                <option value="{{ p }}" {{ "selected" if a.placement == p else "" }}>{{ p }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <label>متن دکمه <input type="text" name="button_text" value="{{ a.button_text or '' }}"></label>
-            <label>لینک دکمه <input type="text" name="button_url" value="{{ a.button_url or '' }}"></label>
-            <label>پلن هدف <input type="text" name="target_plan" value="{{ a.target_plan or '' }}"></label>
-            <label>سقف نمایش <input type="number" name="impression_limit" min="1" value="{{ a.impression_limit or '' }}"></label>
-            <button type="submit">ذخیره</button>
-          </form>
-        </details>
-      </td>
-    </tr>
-  {% else %}
-    <tr><td colspan="8">تبلیغی تعریف نشده.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div class="card tbl-wrap">
+  <table>
+    <thead>
+      <tr><th>#</th><th>عنوان</th><th>جایگاه</th><th>پلن هدف</th><th>نمایش</th><th>کلیک</th><th>فعال</th><th>اقدام</th></tr>
+    </thead>
+    <tbody>
+    {% for a in ads %}
+      <tr>
+        <td>{{ a.id }}</td>
+        <td>{{ a.title }}</td>
+        <td>{{ a.placement }}</td>
+        <td>{{ a.target_plan or "همه" }}</td>
+        <td>{{ a.impression_count }}{% if a.impression_limit %}/{{ a.impression_limit }}{% endif %}</td>
+        <td>{{ a.click_count }}</td>
+        <td>{% if a.is_active %}<span class="pill p-green">بله</span>{% else %}<span class="pill p-gray">خیر</span>{% endif %}</td>
+        <td>
+          <div class="act">
+            <form method="post" action="{{ panel_path }}/ads/{{ a.id }}/toggle">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit">{{ "غیرفعال" if a.is_active else "فعال" }}</button>
+            </form>
+            <form method="post" action="{{ panel_path }}/ads/{{ a.id }}/delete" onsubmit="return confirm('حذف شود؟')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="danger">حذف</button>
+            </form>
+          </div>
+          <details>
+            <summary>ویرایش</summary>
+            <form method="post" action="{{ panel_path }}/ads/{{ a.id }}/edit">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <label>عنوان <input type="text" name="title" value="{{ a.title }}" required></label>
+              <label>متن <textarea name="text" rows="3" required>{{ a.text }}</textarea></label>
+              <label>جایگاه
+                <select name="placement">
+                  {% for p in placements %}
+                  <option value="{{ p }}" {{ "selected" if a.placement == p else "" }}>{{ p }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label>متن دکمه <input type="text" name="button_text" value="{{ a.button_text or '' }}"></label>
+              <label>لینک دکمه <input type="text" name="button_url" value="{{ a.button_url or '' }}"></label>
+              <label>پلن هدف <input type="text" name="target_plan" value="{{ a.target_plan or '' }}"></label>
+              <label>سقف نمایش <input type="number" name="impression_limit" min="1" value="{{ a.impression_limit or '' }}"></label>
+              <button type="submit">ذخیره</button>
+            </form>
+          </details>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8"><div class="empty">تبلیغی تعریف نشده.</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

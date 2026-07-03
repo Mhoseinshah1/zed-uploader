@@ -1,12 +1,14 @@
 {% extends "base.html" %}
+{% block title %}درگاه‌های پرداخت — پنل مدیریت{% endblock %}
 {% block content %}
-<h1>درگاه‌های پرداخت</h1>
-<p>هر درگاه را جداگانه پیکربندی کنید. مقادیر محرمانه نمایش داده نمی‌شوند؛ برای نگه‌داشتن مقدار فعلی، فیلد را خالی بگذارید.</p>
+<div class="page-h">
+  <div><h1>درگاه‌های پرداخت</h1><p>هر درگاه را جداگانه پیکربندی کنید. مقادیر محرمانه نمایش داده نمی‌شوند؛ برای نگه‌داشتن مقدار فعلی، فیلد را خالی بگذارید.</p></div>
+</div>
 
 {% macro badge(status) -%}
-  {% if status == "ready" %}<strong style="color:#22c55e">آماده ✅</strong>
-  {% elif status == "enabled-but-unconfigured" %}<strong style="color:#f59e0b">فعال؛ پیکربندی ناقص ⚠️</strong>
-  {% else %}<strong style="color:#9ca3af">غیرفعال</strong>{% endif %}
+  {% if status == "ready" %}<span class="pill p-green">آماده ✅</span>
+  {% elif status == "enabled-but-unconfigured" %}<span class="pill p-amber">فعال؛ پیکربندی ناقص ⚠️</span>
+  {% else %}<span class="pill p-gray">غیرفعال</span>{% endif %}
 {%- endmacro %}
 
 {% macro secret_input(name, label, is_set) -%}
@@ -16,19 +18,19 @@
   </label>
 {%- endmacro %}
 
-<section class="panel-box">
+<section class="card">
   <h2>سنترال‌پی — {{ badge(providers.centralpay.status) }}</h2>
   <form method="post" action="{{ panel_path }}/providers/centralpay">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label class="checkbox"><input type="checkbox" name="is_enabled" {{ "checked" if providers.centralpay.is_enabled else "" }}> فعال</label>
     {{ secret_input("getlink_key", "کلید getLink", providers.centralpay.has.getlink_key) }}
     {{ secret_input("verify_key", "کلید verify", providers.centralpay.has.verify_key) }}
-    {% if centralpay_env %}<p>کلیدهای .env تنظیم شده‌اند و در نبود مقدار پنل استفاده می‌شوند.</p>{% endif %}
+    {% if centralpay_env %}<p class="muted">کلیدهای .env تنظیم شده‌اند و در نبود مقدار پنل استفاده می‌شوند.</p>{% endif %}
     <button type="submit">ذخیره</button>
   </form>
 </section>
 
-<section class="panel-box">
+<section class="card">
   <h2>زرین‌پال — {{ badge(providers.zarinpal.status) }}</h2>
   <form method="post" action="{{ panel_path }}/providers/zarinpal">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -39,7 +41,7 @@
   </form>
 </section>
 
-<section class="panel-box">
+<section class="card">
   <h2>زیبال — {{ badge(providers.zibal.status) }}</h2>
   <form method="post" action="{{ panel_path }}/providers/zibal">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

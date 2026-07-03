@@ -1,41 +1,49 @@
 {% extends "base.html" %}
+{% block title %}صف تأیید — پنل مدیریت{% endblock %}
 {% block content %}
-<h1>بازبینی آپلودها ({{ total }})</h1>
+<div class="page-h">
+  <div><h1>بازبینی آپلودها</h1><p>تأیید یا رد فایل‌های در انتظار</p></div>
+  <span class="pill p-amber">{{ total }} در انتظار</span>
+</div>
 
-<table>
-  <thead>
-    <tr><th>#</th><th>کد</th><th>نوع</th><th>کاربر</th><th>کپشن</th><th>اقدام</th></tr>
-  </thead>
-  <tbody>
-  {% for m in items %}
-    <tr>
-      <td>{{ m.id }}</td>
-      <td><a href="{{ panel_path }}/media/{{ m.id }}">{{ m.code }}</a></td>
-      <td>{{ m.files[0].file_type if m.files else "—" }}</td>
-      <td>{{ ("#" ~ m.owner_user_id) if m.owner_user_id else "—" }}</td>
-      <td>{{ (m.caption[:40] ~ "…") if m.caption and m.caption|length > 40 else (m.caption or "—") }}</td>
-      <td>
-        <form method="post" action="{{ panel_path }}/review/{{ m.id }}/approve" style="display:inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button type="submit">تأیید</button>
-        </form>
-        <form method="post" action="{{ panel_path }}/review/{{ m.id }}/reject" style="display:inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="text" name="note" placeholder="دلیل رد (اختیاری)">
-          <button type="submit" class="danger">رد</button>
-        </form>
-      </td>
-    </tr>
-  {% else %}
-    <tr><td colspan="6">موردی در انتظار بازبینی نیست.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div class="card tbl-wrap">
+  <table>
+    <thead>
+      <tr><th>#</th><th>کد</th><th>نوع</th><th>کاربر</th><th>کپشن</th><th>اقدام</th></tr>
+    </thead>
+    <tbody>
+    {% for m in items %}
+      <tr>
+        <td>{{ m.id }}</td>
+        <td><a href="{{ panel_path }}/media/{{ m.id }}"><code>{{ m.code }}</code></a></td>
+        <td>{{ m.files[0].file_type if m.files else "—" }}</td>
+        <td>{{ ("#" ~ m.owner_user_id) if m.owner_user_id else "—" }}</td>
+        <td>{{ (m.caption[:40] ~ "…") if m.caption and m.caption|length > 40 else (m.caption or "—") }}</td>
+        <td>
+          <div class="act">
+            <form method="post" action="{{ panel_path }}/review/{{ m.id }}/approve">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit">تأیید</button>
+            </form>
+            <form method="post" action="{{ panel_path }}/review/{{ m.id }}/reject">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="text" name="note" placeholder="دلیل رد (اختیاری)">
+              <button type="submit" class="danger">رد</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6"><div class="empty">موردی در انتظار بازبینی نیست.</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 
 {% if total > page_size %}
 <div class="pager">
-  {% if page > 0 %}<a href="{{ panel_path }}/review?page={{ page - 1 }}">قبلی</a>{% endif %}
-  {% if (page + 1) * page_size < total %}<a href="{{ panel_path }}/review?page={{ page + 1 }}">بعدی</a>{% endif %}
+  {% if page > 0 %}<a href="{{ panel_path }}/review?page={{ page - 1 }}">◀ قبلی</a>{% endif %}
+  {% if (page + 1) * page_size < total %}<a href="{{ panel_path }}/review?page={{ page + 1 }}">بعدی ▶</a>{% endif %}
 </div>
 {% endif %}
 {% endblock %}
