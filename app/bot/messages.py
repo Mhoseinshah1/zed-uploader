@@ -518,6 +518,14 @@ def user_credited(amount: int) -> str:
 
 USER_PAYMENT_REJECTED = "❌ پرداخت شما تأیید نشد. در صورت واریز، با پشتیبانی تماس بگیرید."
 
+
+def payment_refunded_notify(amount: int) -> str:
+    """L1: refund performed by the panel — the internal effect was reversed."""
+    return (
+        f"↩️ پرداخت {_toman(amount)} شما بازپرداخت شد.\n"
+        "برای جزئیات با پشتیبانی در تماس باشید."
+    )
+
 # --- owner: sell settings ----------------------------------------------------
 def sell_view(card_number: str | None, card_holder: str | None) -> str:
     return (
@@ -820,7 +828,7 @@ BTN_INVOICES = "🧾 فاکتورها"
 _INVOICE_KIND_FA = {
     "topup": "شارژ کیف پول", "plan": "خرید پلن",
     "bot_creation": "ساخت ربات", "rental": "تمدید ربات",
-    "media": "خرید فایل",
+    "media": "خرید فایل", "refund": "بازپرداخت",
 }
 _INVOICE_METHOD_FA = {
     "card": "کارت‌به‌کارت", "wallet": "کیف پول", "stars": "استارز",

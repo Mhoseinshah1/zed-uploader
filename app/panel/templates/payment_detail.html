@@ -8,6 +8,7 @@
     {% if payment.status == "approved" %}<span class="pill p-green">{{ payment.status }}</span>
     {% elif payment.status == "pending" %}<span class="pill p-amber">{{ payment.status }}</span>
     {% elif payment.status == "rejected" %}<span class="pill p-red">{{ payment.status }}</span>
+    {% elif payment.status == "refunded" %}<span class="pill p-blue">{{ payment.status }}</span>
     {% else %}<span class="pill p-gray">{{ payment.status }}</span>{% endif %}
   </div>
 </div>
@@ -23,6 +24,9 @@
     <tr><th>کد مرجع</th><td dir="ltr">{{ payment.provider_ref or "—" }}</td></tr>
     <tr><th>Authority</th><td dir="ltr">{{ payment.authority or "—" }}</td></tr>
     <tr><th>رسید</th><td>{{ payment.receipt or "—" }}</td></tr>
+    {% if payment.status == "refunded" %}
+    <tr><th>بازپرداخت</th><td>{{ payment.refunded_at.strftime("%Y-%m-%d %H:%M") if payment.refunded_at else "—" }} — علت: {{ payment.refund_reason or "—" }}</td></tr>
+    {% endif %}
   </table>
 </div>
 
@@ -39,6 +43,13 @@
       <button type="submit" class="danger">رد</button>
     </form>
     {% endif %}
+    {% if payment.status == "approved" %}
+    <form method="post" action="{{ panel_path }}/payments/{{ payment.id }}/refund">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="text" name="reason" placeholder="علت بازپرداخت (الزامی برای سابقه)" required>
+      <button type="submit" class="danger">↩️ بازپرداخت</button>
+    </form>
+    {% endif %}
     {% if is_gateway %}
     <form method="post" action="{{ panel_path }}/payments/{{ payment.id }}/recheck">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -47,5 +58,6 @@
     {% endif %}
   </div>
   {% if is_gateway %}<p class="muted"><small>تأیید دستی فقط برای کارت‌به‌کارت است؛ پرداخت درگاهی تنها با «بازبینی درگاه» تأیید می‌شود.</small></p>{% endif %}
+  {% if payment.status == "approved" %}<p class="muted"><small>بازپرداخت فقط اثر داخلی را برمی‌گرداند: شارژ کیف پول برداشت می‌شود (اگر خرج شده باشد، بازپرداخت رد می‌شود) و خرید پلن لغو اشتراک می‌کند. برگشت وجه به مشتری خارج از سیستم انجام می‌شود.</small></p>{% endif %}
 </div>
 {% endblock %}

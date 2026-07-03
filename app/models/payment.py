@@ -61,6 +61,14 @@ class Payment(TenantScoped, Base):
     # gateway-issued transaction token (Zarinpal Authority) so the GET return
     # can be resolved back to our order.
     authority: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
+    # --- refund (L1) -------------------------------------------------------
+    # set exactly once when status becomes "refunded"; refunded_by is the
+    # panel_users.id of the operator (global table -> plain int, no FK).
+    refund_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    refunded_by: Mapped[int | None] = mapped_column(nullable=True)
+    refunded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
