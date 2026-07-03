@@ -22,7 +22,13 @@ _SNAPSHOT_CHUNK = 1000
 
 
 async def audience_count(session: AsyncSession) -> int:
-    return int(await session.scalar(select(func.count(User.id))) or 0)
+    # I1: blocked users are never counted or messaged
+    return int(
+        await session.scalar(
+            select(func.count(User.id)).where(User.is_blocked.is_(False))
+        )
+        or 0
+    )
 
 
 async def create_job(
@@ -53,7 +59,14 @@ async def create_job(
     # tenant_id explicitly (the recipients belong to the current tenant, same as
     # the users just selected under this tenant context).
     tenant_id = require_tenant()
-    rows = (await session.execute(select(User.id, User.telegram_id).order_by(User.id))).all()
+    # I1: exclude blocked users from the recipient snapshot entirely
+    rows = (
+        await session.execute(
+            select(User.id, User.telegram_id)
+            .where(User.is_blocked.is_(False))
+            .order_by(User.id)
+        )
+    ).all()
     batch: list[dict] = []
     for uid, tg in rows:
         batch.append(

@@ -61,6 +61,7 @@ class DeliveryStatus(str, Enum):
     PASSWORD_REQUIRED = "password_required"
     DELIVERED = "delivered"
     FAILED = "failed"
+    BLOCKED = "blocked"  # I1: a blocked user is refused, even via a deep link
 
 
 _FROM_MEDIA_STATUS = {
@@ -89,6 +90,16 @@ async def deliver_by_code(
 ) -> DeliveryResult:
     service = MediaService(session)
     user_id = user.id if user else chat_id
+
+    # (a0) blocked-user guard (defense-in-depth): a blocked, non-admin user is
+    # refused a file even via a deep link, independent of the bot middleware.
+    if user is not None:
+        db = await UserService(session).get_by_telegram_id(user.id)
+        if db is not None and db.is_blocked:
+            from app.services.admin_service import AdminService
+
+            if not await AdminService.is_admin(session, user.id):
+                return DeliveryResult(DeliveryStatus.BLOCKED)
 
     # (a) status check WITHOUT claiming
     status = await service.check_status(code)
