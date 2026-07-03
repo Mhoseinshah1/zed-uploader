@@ -13,6 +13,8 @@ from app.services.bot_setting_service import (
     KEY_AUTODELETE,
     KEY_CAPTION_SIGNATURE,
     KEY_CAPTION_STRIP_LINKS,
+    KEY_PREVIEW_CHANNEL_ID,
+    KEY_PREVIEW_ENABLED,
     KEY_CARD_ENABLED,
     KEY_CARD_HOLDER,
     KEY_CARD_NUMBER,
@@ -52,9 +54,29 @@ async def settings_page(
         "topup_min": await setting.get_int(KEY_TOPUP_MIN, DEFAULT_TOPUP_MIN),
         "caption_strip_links": await setting.get_bool(KEY_CAPTION_STRIP_LINKS, False),
         "caption_signature": await setting.get_raw(KEY_CAPTION_SIGNATURE) or "",
+        "preview_enabled": await setting.get_bool(KEY_PREVIEW_ENABLED, False),
+        "preview_channel_id": await setting.get_raw(KEY_PREVIEW_CHANNEL_ID) or "",
         "channels": channels,
     }
     return render(request, "settings.html", **ctx)
+
+
+@router.post("/settings/preview")
+async def settings_preview(
+    request: Request,
+    preview_enabled: str = Form(""),
+    preview_channel_id: str = Form(""),
+    csrf_token: str = Form(""),
+    _=Depends(require_role("owner")),
+    session: AsyncSession = Depends(get_session),
+):
+    """J5: channel preview auto-post — toggle + channel id."""
+    await verify_csrf(request)
+    setting = BotSettingService(session)
+    await setting.set(KEY_PREVIEW_ENABLED, preview_enabled == "on")
+    await setting.set(KEY_PREVIEW_CHANNEL_ID, preview_channel_id.strip())
+    await audit(session, request, "settings_preview")
+    return RedirectResponse(url=_p("/settings"), status_code=302)
 
 
 @router.post("/settings/caption")

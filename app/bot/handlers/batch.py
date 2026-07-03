@@ -129,6 +129,9 @@ async def batch_finish(
         await callback.message.answer(
             messages.batch_done(await service.deep_link(media), media.code, len(files))
         )
+        from app.services.preview_service import maybe_post_preview
+
+        await maybe_post_preview(session, media, bot=callback.bot)  # J5
     await callback.answer()
 
 

@@ -17,6 +17,18 @@
   </section>
 
   <section class="card">
+    <h2>پیش‌نمایش کانال</h2>
+    <form method="post" action="{{ panel_path }}/settings/preview">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="checkbox"><input type="checkbox" name="preview_enabled" {{ "checked" if preview_enabled else "" }}> ارسال خودکار پیش‌نمایش به کانال پس از انتشار فایل</label>
+      <label>شناسهٔ کانال (مثلاً <span dir="ltr">-1001234567890</span>؛ ربات باید ادمین کانال باشد)
+        <input type="text" name="preview_channel_id" dir="ltr" value="{{ preview_channel_id }}">
+      </label>
+      <button type="submit">ذخیره</button>
+    </form>
+  </section>
+
+  <section class="card">
     <h2>ابزار کپشن</h2>
     <form method="post" action="{{ panel_path }}/settings/caption">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

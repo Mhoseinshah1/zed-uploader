@@ -931,3 +931,11 @@ THUMBNAIL_CLEARED = "کاور فایل حذف شد."
 
 def lbl_thumbnail(has_thumbnail: bool) -> str:
     return "🖼 کاور: دارد" if has_thumbnail else "🖼 کاور"
+
+
+# --- Phase J5: channel preview -------------------------------------------------
+BTN_GET_FILE = "📥 دریافت فایل"
+
+
+def preview_post(name: str) -> str:
+    return f"🎬 {name}\n\nبرای دریافت روی دکمهٔ زیر بزنید:"

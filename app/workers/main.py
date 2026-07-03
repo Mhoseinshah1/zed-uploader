@@ -238,6 +238,10 @@ async def _finalize_album(bot, session_maker, group) -> None:
         )
         link = await service.deep_link(media)
         code, count = media.code, len(files)
+        if status == "approved":
+            from app.services.preview_service import maybe_post_preview
+
+            await maybe_post_preview(session, media, bot=bot)  # J5
 
     log.info("album_finalized", chat_id=chat_id, count=count, status=status)
     if status == "approved":

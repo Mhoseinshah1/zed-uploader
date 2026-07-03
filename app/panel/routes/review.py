@@ -44,6 +44,9 @@ async def review_approve(
     service = MediaService(session)
     media = await service.approve(media_id, None)
     if media is not None:
+        from app.services.preview_service import maybe_post_preview
+
+        await maybe_post_preview(session, media)  # J5: best-effort channel post
         owner_tg = await service.owner_telegram_id(media.owner_user_id)
         await notify_user(
             owner_tg, messages.upload_approved_notify(await service.deep_link(media), media.code)
