@@ -43,7 +43,7 @@ async def payments_list(
     session: AsyncSession = Depends(get_session),
 ):
     stmt = select(Payment).order_by(Payment.id.desc())
-    if status in ("pending", "approved", "rejected"):
+    if status in ("pending", "approved", "rejected", "refunded", "expired"):
         stmt = stmt.where(Payment.status == status)
     method = method.strip()
     if method in _METHODS:
@@ -91,6 +91,59 @@ async def payment_recheck(
     await audit(session, request, "payment_recheck", target=f"{payment_id}:{result}")
     return RedirectResponse(
         url=f"{settings.panel_path}/payments/{payment_id}?msg={result}", status_code=302
+    )
+
+
+@router.post("/payments/reconcile")
+async def payments_reconcile(
+    request: Request,
+    csrf_token: str = Form(""),
+    _=Depends(require_role(*_FIN)),
+    session: AsyncSession = Depends(get_session),
+):
+    """L1: batch re-verify pending gateway payments via the idempotent verify,
+    expiring stale unpaid ones. Never double-credits (verify locks + checks)."""
+    await verify_csrf(request)
+    from app.services.reconcile_service import reconcile_pending
+
+    report = await reconcile_pending(session)
+    await audit(
+        session, request, "payments_reconcile",
+        target=",".join(f"{k}={v}" for k, v in report.items()),
+    )
+    query = "&".join(f"r_{k}={v}" for k, v in report.items())
+    return RedirectResponse(
+        url=f"{settings.panel_path}/payments?reconciled=1&{query}", status_code=302
+    )
+
+
+@router.post("/payments/{payment_id}/refund")
+async def payment_refund(
+    request: Request,
+    payment_id: int,
+    reason: str = Form(""),
+    csrf_token: str = Form(""),
+    panel_user=Depends(require_role(*_FIN)),
+    session: AsyncSession = Depends(get_session),
+):
+    """L1: reverse a settled payment exactly once (see RefundService policy)."""
+    await verify_csrf(request)
+    from app.services.refund_service import REFUNDED, RefundService
+
+    result = await RefundService(session).refund(
+        payment_id, panel_user_id=panel_user.id, reason=reason
+    )
+    await audit(session, request, "payment_refund", target=f"{payment_id}:{result}")
+    if result == REFUNDED:
+        payment = await PaymentService(session).get(payment_id)
+        if payment is not None:
+            await _notify(
+                request, session, payment.user_id,
+                bot_messages.payment_refunded_notify(payment.amount),
+            )
+    return RedirectResponse(
+        url=f"{settings.panel_path}/payments/{payment_id}?msg={result}",
+        status_code=302,
     )
 
 

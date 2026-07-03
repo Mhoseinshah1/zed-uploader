@@ -7,9 +7,27 @@
     <a href="{{ panel_path }}/payments?status=pending" class="chip {{ 'on' if status == 'pending' else '' }}">در انتظار</a>
     <a href="{{ panel_path }}/payments?status=approved" class="chip {{ 'on' if status == 'approved' else '' }}">تأییدشده</a>
     <a href="{{ panel_path }}/payments?status=rejected" class="chip {{ 'on' if status == 'rejected' else '' }}">ردشده</a>
+    <a href="{{ panel_path }}/payments?status=refunded" class="chip {{ 'on' if status == 'refunded' else '' }}">بازپرداخت</a>
+    <a href="{{ panel_path }}/payments?status=expired" class="chip {{ 'on' if status == 'expired' else '' }}">منقضی</a>
     <a href="{{ panel_path }}/payments?status=all" class="chip {{ 'on' if status == 'all' else '' }}">همه</a>
   </div>
 </div>
+
+{% if request.query_params.get("reconciled") %}
+<p class="flash ok">
+  نتیجهٔ همگام‌سازی درگاه —
+  تسویه‌شده: {{ request.query_params.get("r_settled", "0") }}،
+  قبلاً تسویه: {{ request.query_params.get("r_already", "0") }}،
+  مغایرت: {{ request.query_params.get("r_mismatch", "0") }}،
+  منقضی‌شده: {{ request.query_params.get("r_expired", "0") }}،
+  همچنان در انتظار: {{ request.query_params.get("r_pending", "0") }}
+</p>
+{% endif %}
+
+<form method="post" action="{{ panel_path }}/payments/reconcile" class="inline">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button type="submit" class="ghost">🔄 همگام‌سازی پرداخت‌های در انتظار با درگاه</button>
+</form>
 
 <form class="search-bar" method="get" action="{{ panel_path }}/payments">
   <input type="hidden" name="status" value="{{ status }}">
