@@ -864,3 +864,20 @@ def invoices_view(rows) -> str:
 
 # --- Phase I1: blocked users ------------------------------------------------
 ACCOUNT_BLOCKED = "حساب شما مسدود شده است."
+
+
+# --- Phase I3: panel manual wallet + subscription notices -------------------
+def wallet_credited_notice(amount: int, reason: str) -> str:
+    return f"💰 مبلغ {amount:,} تومان به کیف پول شما اضافه شد.\nبابت: {reason}"
+
+
+def wallet_debited_notice(amount: int, reason: str) -> str:
+    return f"💳 مبلغ {amount:,} تومان از کیف پول شما کسر شد.\nبابت: {reason}"
+
+
+def subscription_changed_notice(plan: str, expires: str | None) -> str:
+    tail = f" تا {expires}" if expires else " (دائمی)"
+    return f"⭐️ اشتراک شما به «{plan}»{tail} تغییر کرد."
+
+
+SUBSCRIPTION_CANCELLED_NOTICE = "⛔️ اشتراک شما لغو شد."

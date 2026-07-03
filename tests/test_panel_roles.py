@@ -122,8 +122,9 @@ async def test_wallet_adjust_is_finance_only(env):
         client, csrf = await _client(app, ids[role])
         try:
             resp = await client.post(
-                f"/panel/users/{uid}/adjust",
-                data={"amount": "100", "csrf_token": csrf}, follow_redirects=False,
+                f"/panel/users/{uid}/wallet",
+                data={"direction": "credit", "amount": "100", "reason": "t", "csrf_token": csrf},
+                follow_redirects=False,
             )
             if role in {"owner", "finance"}:
                 assert resp.status_code == 302, role  # performed
@@ -139,8 +140,9 @@ async def test_support_can_view_users_but_not_adjust(env):
     try:
         assert (await client.get("/panel/users")).status_code == 200  # can view
         r = await client.post(
-            f"/panel/users/{ids['target_user']}/adjust",
-            data={"amount": "50", "csrf_token": csrf}, follow_redirects=False,
+            f"/panel/users/{ids['target_user']}/wallet",
+            data={"direction": "credit", "amount": "50", "reason": "t", "csrf_token": csrf},
+            follow_redirects=False,
         )
         assert r.status_code == 403  # cannot adjust wallets
     finally:
