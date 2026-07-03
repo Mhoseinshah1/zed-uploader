@@ -10,6 +10,8 @@ from aiogram.fsm.storage.redis import RedisStorage
 
 from app.bot.handlers import (
     admin_panel,
+    comments,
+    custom_buttons,
     admins,
     ads,
     albums,
@@ -21,8 +23,10 @@ from app.bot.handlers import (
     commands,
     common,
     folders,
+    inline,
     menu,
     newbot,
+    reactions,
     reports,
     review,
     search,
@@ -33,6 +37,7 @@ from app.bot.handlers import (
 )
 from app.bot.middlewares import (
     BlockedUserMiddleware,
+    MaintenanceMiddleware,
     DbSessionMiddleware,
     TenantContextMiddleware,
     UserContextMiddleware,
@@ -78,6 +83,8 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.update.middleware(UserContextMiddleware())
     # I1: enforce is_blocked AFTER db_user is resolved (admins/owners bypass)
     dispatcher.update.middleware(BlockedUserMiddleware())
+    # J7: per-tenant maintenance mode (admins bypass; everyone else is paused)
+    dispatcher.update.middleware(MaintenanceMiddleware())
 
     # Order matters. `batch` must precede `upload` so its StateFilter(collecting)
     # media handler wins while batching; the catch-all `common` MUST stay last.
@@ -99,6 +106,9 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.include_router(stars.router)
     dispatcher.include_router(billing_owner.router)
     dispatcher.include_router(support.router)
+    dispatcher.include_router(reactions.router)
+    dispatcher.include_router(inline.router)
+    dispatcher.include_router(comments.router)
     dispatcher.include_router(batch.router)
     # `albums` after batch (so batch-collecting still grabs parts) and before
     # upload (so grouped media buffer instead of each becoming its own Media).
@@ -106,6 +116,9 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.include_router(upload.router)
     # `search` after the reply-keyboard routers so a menu-button tap while a
     # search is active still routes to its own handler (which clears state).
+    # J8: tenant-defined buttons — after every built-in button router (those
+    # always win) and before search/common
+    dispatcher.include_router(custom_buttons.router)
     dispatcher.include_router(search.router)
     dispatcher.include_router(common.router)
 

@@ -100,6 +100,10 @@ async def require_panel_user(
         )
     if not data or user is None:
         raise PanelAuthRequired(_wants_json(request))
+    # J9: a session minted before the user's epoch was bumped (logout-all /
+    # password change) is dead, even though the Redis record still exists.
+    if int(data.get("epoch", 0)) != int(user.session_epoch or 0):
+        raise PanelAuthRequired(_wants_json(request))
     request.state.panel_session = data
     request.state.panel_user = user
     token = set_tenant(user.tenant_id)

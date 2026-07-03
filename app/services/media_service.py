@@ -343,6 +343,14 @@ class MediaService:
     async def clear_password(self, media_id: int, owner_user_id: int) -> bool:
         return await self._owned_update(media_id, owner_user_id, password_hash=None)
 
+    async def set_thumbnail(
+        self, media_id: int, owner_user_id: int, file_id: str | None
+    ) -> bool:
+        """J4: set (a photo file_id) or clear (None) the custom video cover."""
+        return await self._owned_update(
+            media_id, owner_user_id, thumbnail_file_id=file_id
+        )
+
     @staticmethod
     def verify_password(media: Media, raw_password: str) -> bool:
         """True if the file has no password, or the given one matches."""

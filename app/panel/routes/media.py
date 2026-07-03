@@ -23,11 +23,19 @@ _CONTENT = ("owner", "admin", "content")
 MEDIA_STATUSES = ("pending", "approved", "rejected")
 
 
+_SORTS = {
+    "newest": (Media.id.desc(),),
+    "popular": (Media.like_count.desc(), Media.id.desc()),
+    "most_viewed": (Media.download_count.desc(), Media.id.desc()),
+}
+
+
 @router.get("/media")
 async def media_list(
     request: Request,
     q: str = "",
     folder_id: str = "",
+    sort: str = "newest",
     page: int = 0,
     _=Depends(require_role(*_CONTENT)),
     session: AsyncSession = Depends(get_session),
@@ -51,15 +59,17 @@ async def media_list(
         stmt = stmt.where(Media.folder_id == folder_val)
     total = int(await session.scalar(select(func.count()).select_from(stmt.subquery())))
     page = max(0, page)
+    order = _SORTS.get(sort, _SORTS["newest"])
     rows = list(
         await session.scalars(
-            stmt.order_by(Media.id.desc()).limit(PAGE_SIZE).offset(page * PAGE_SIZE)
+            stmt.order_by(*order).limit(PAGE_SIZE).offset(page * PAGE_SIZE)
         )
     )
     folders = await FolderService(session).list_all()
     return render(
         request, "media.html", media=rows, q=q, page=page, total=total,
         page_size=PAGE_SIZE, folders=folders, folder_id=folder_val,
+        sort=sort if sort in _SORTS else "newest", sorts=tuple(_SORTS),
     )
 
 
@@ -101,12 +111,14 @@ async def media_edit(
     download_limit: str = Form(""),
     auto_delete_seconds: str = Form(""),
     status: str = Form(""),
+    required_plan: str = Form(""),
+    price: str = Form(""),
     csrf_token: str = Form(""),
     _=Depends(require_role(*_CONTENT)),
     session: AsyncSession = Depends(get_session),
 ):
-    """I5: edit title/caption/limit/auto-delete/status in one form (empty numeric
-    field = clear). Every change is audited."""
+    """I5/J6: edit title/caption/limit/auto-delete/status + paywall fields in
+    one form (empty numeric field = clear). Every change is audited."""
     await verify_csrf(request)
     media = await session.scalar(select(Media).where(Media.id == media_id))
     if media is not None:
@@ -118,6 +130,8 @@ async def media_edit(
         )
         if status in MEDIA_STATUSES:
             media.status = status
+        media.required_plan = required_plan.strip() or None  # J6
+        media.price = int(price) if price.strip().isdigit() and int(price) > 0 else None
         await session.commit()
         await audit(session, request, "media_edit", target=str(media_id))
     return RedirectResponse(url=f"{settings.panel_path}/media/{media_id}", status_code=302)
@@ -137,6 +151,29 @@ async def media_protect(
         media.protect_content = not media.protect_content
         await session.commit()
         await audit(session, request, "media_protect", target=str(media_id))
+    return RedirectResponse(url=f"{settings.panel_path}/media/{media_id}", status_code=302)
+
+
+@router.post("/media/{media_id}/thumbnail")
+async def media_thumbnail(
+    request: Request,
+    media_id: int,
+    file_id: str = Form(""),
+    csrf_token: str = Form(""),
+    _=Depends(require_role(*_CONTENT)),
+    session: AsyncSession = Depends(get_session),
+):
+    """J4: set (a photo file_id) or clear (empty) the custom cover."""
+    await verify_csrf(request)
+    media = await session.scalar(select(Media).where(Media.id == media_id))
+    if media is not None:
+        media.thumbnail_file_id = file_id.strip() or None
+        await session.commit()
+        await audit(
+            session, request,
+            "media_thumbnail_set" if file_id.strip() else "media_thumbnail_clear",
+            target=str(media_id),
+        )
     return RedirectResponse(url=f"{settings.panel_path}/media/{media_id}", status_code=302)
 
 

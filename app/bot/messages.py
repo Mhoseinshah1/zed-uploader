@@ -820,6 +820,7 @@ BTN_INVOICES = "🧾 فاکتورها"
 _INVOICE_KIND_FA = {
     "topup": "شارژ کیف پول", "plan": "خرید پلن",
     "bot_creation": "ساخت ربات", "rental": "تمدید ربات",
+    "media": "خرید فایل",
 }
 _INVOICE_METHOD_FA = {
     "card": "کارت‌به‌کارت", "wallet": "کیف پول", "stars": "استارز",
@@ -885,3 +886,97 @@ SUBSCRIPTION_CANCELLED_NOTICE = "⛔️ اشتراک شما لغو شد."
 
 # --- Phase I4: Telegram Stars toggle ----------------------------------------
 STARS_DISABLED = "پرداخت با استارز در حال حاضر غیرفعال است."
+
+
+# --- Phase J1: reactions + favorites + sorted views --------------------------
+LBL_FAVORITE = "⭐ ذخیره"
+BTN_FAVORITES = "⭐ علاقه‌مندی‌ها"
+
+REACT_SET = {"like": "👍 پسندیدی", "dislike": "👎 نپسندیدی", "favorite": "⭐ ذخیره شد"}
+REACT_CLEARED = {"like": "لغو شد", "dislike": "لغو شد", "favorite": "از علاقه‌مندی‌ها حذف شد"}
+FAVORITES_EMPTY = "هنوز چیزی ذخیره نکرده‌ای. زیر هر فایل روی «⭐ ذخیره» بزن."
+BROWSE_DISABLED = "مرور عمومی فایل‌ها در حال حاضر فعال نیست."
+
+_BROWSE_TITLES = {
+    "favs": "⭐ علاقه‌مندی‌های تو",
+    "popular": "🔥 محبوب‌ترین‌ها",
+    "newest": "🆕 جدیدترین‌ها",
+    "most_viewed": "👁 پربازدیدترین‌ها",
+}
+
+
+def browse_header(sort: str, page: int) -> str:
+    title = _BROWSE_TITLES.get(sort, sort)
+    return f"{title} — صفحه {page + 1}"
+
+
+def browse_row(code: str, title: str | None, likes: int, downloads: int) -> str:
+    name = title or code
+    return f"{name} · 👍 {likes} · ⬇️ {downloads}"
+
+
+# --- Phase J2: inline search --------------------------------------------------
+def inline_result_description(downloads: int, likes: int) -> str:
+    return f"⬇️ {downloads} · 👍 {likes}"
+
+
+def inline_result_message(name: str, link: str) -> str:
+    return f"📁 {name}\n{link}"
+
+
+# --- Phase J4: video thumbnail / cover ---------------------------------------
+ASK_THUMBNAIL = "عکس کاور را بفرست (برای حذف کاور «-» بفرست):"
+THUMBNAIL_SET = "کاور فایل تنظیم شد. 🖼"
+THUMBNAIL_CLEARED = "کاور فایل حذف شد."
+
+
+def lbl_thumbnail(has_thumbnail: bool) -> str:
+    return "🖼 کاور: دارد" if has_thumbnail else "🖼 کاور"
+
+
+# --- Phase J5: channel preview -------------------------------------------------
+BTN_GET_FILE = "📥 دریافت فایل"
+
+
+def preview_post(name: str) -> str:
+    return f"🎬 {name}\n\nبرای دریافت روی دکمهٔ زیر بزنید:"
+
+
+# --- Phase J6: paywall ---------------------------------------------------------
+def plan_required_notice(plan: str) -> str:
+    return f"🔒 این فایل مخصوص اشتراک «{plan}» به بالاست. برای دسترسی، اشتراک تهیه کن."
+
+
+def payment_required_notice(price: int) -> str:
+    return f"💰 این فایل پولی است: {price:,} تومان.\nبا دکمهٔ زیر از کیف پول بخر:"
+
+
+def buy_media_button(price: int) -> str:
+    return f"💳 خرید فایل ({price:,} تومان)"
+
+
+QUOTA_EXCEEDED_NOTICE = "سهمیهٔ دانلود رایگان امروزت تمام شد. فردا دوباره تلاش کن یا اشتراک تهیه کن."
+MEDIA_PURCHASED = "✅ فایل خریداری شد؛ در حال ارسال…"
+MEDIA_ALREADY_OWNED = "قبلاً این فایل را خریده‌ای."
+MEDIA_BUY_FAILED = "خرید انجام نشد. موجودی کیف پول را بررسی کن."
+
+
+# --- Phase J7: maintenance mode -------------------------------------------------
+MAINTENANCE_DEFAULT = "🔧 ربات در حال به‌روزرسانی است. کمی بعد دوباره تلاش کن."
+
+
+# --- Phase J8: comments + custom buttons ------------------------------------
+LBL_COMMENTS = "💬 نظرات"
+ASK_COMMENT = "نظرت را دربارهٔ این فایل بنویس (پس از تأیید ادمین نمایش داده می‌شود):"
+COMMENT_SAVED = "✅ نظرت ثبت شد و پس از تأیید نمایش داده می‌شود."
+COMMENTS_EMPTY = "هنوز نظری تأیید نشده. اولین نفر باش!"
+LBL_WRITE_COMMENT = "✍️ نوشتن نظر"
+
+
+def comments_view(rows) -> str:
+    if not rows:
+        return COMMENTS_EMPTY
+    out = ["💬 نظرات کاربران:"]
+    for c in rows:
+        out.append(f"• {c.body}")
+    return "\n".join(out)

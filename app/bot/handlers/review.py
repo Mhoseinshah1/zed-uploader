@@ -106,6 +106,9 @@ async def review_approve(
         await callback.answer(messages.REVIEW_GONE, show_alert=True)
         return
     log.info("upload_approved", media_id=media.id, by=tg_id)
+    from app.services.preview_service import maybe_post_preview
+
+    await maybe_post_preview(session, media, bot=callback.bot)  # J5
     await _notify_uploader(
         callback.bot,
         service,

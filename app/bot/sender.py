@@ -20,8 +20,15 @@ async def send_media_file(
     caption: str | None = None,
     protect_content: bool = False,
     reply_markup: InlineKeyboardMarkup | None = None,
+    thumbnail: str | None = None,
 ) -> int:
-    """Send a single stored file by its Telegram file_id; return message_id."""
+    """Send a single stored file by its Telegram file_id; return message_id.
+
+    ``thumbnail`` (J4) is a stored photo file_id used as the video cover when
+    the Telegram API accepts it. Bot API versions/library builds that reject a
+    reused file_id are handled by retrying WITHOUT the cover — a custom cover
+    must never break the delivery itself.
+    """
     file_type = media_file.file_type
     file_id = media_file.telegram_file_id
     common = {
@@ -33,7 +40,16 @@ async def send_media_file(
     if file_type == "photo":
         sent = await bot.send_photo(photo=file_id, caption=caption, **common)
     elif file_type == "video":
-        sent = await bot.send_video(video=file_id, caption=caption, **common)
+        sent = None
+        if thumbnail:
+            try:
+                sent = await bot.send_video(
+                    video=file_id, caption=caption, thumbnail=thumbnail, **common
+                )
+            except Exception:  # cover rejected -> plain send below
+                sent = None
+        if sent is None:
+            sent = await bot.send_video(video=file_id, caption=caption, **common)
     elif file_type == "animation":
         sent = await bot.send_animation(animation=file_id, caption=caption, **common)
     elif file_type == "audio":

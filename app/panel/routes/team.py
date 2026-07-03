@@ -97,6 +97,75 @@ async def team_set_role(
     return RedirectResponse(url=_p(), status_code=302)
 
 
+async def _my_member(
+    session: AsyncSession, owner: PanelUser, user_id: int
+) -> PanelUser | None:
+    """A member row the owner may act on: own tenant, never a super-admin."""
+    member = await session.scalar(select(PanelUser).where(PanelUser.id == user_id))
+    if member is None or member.tenant_id != owner.tenant_id or member.is_superadmin:
+        return None
+    return member
+
+
+@router.post("/team/{user_id}/password")
+async def team_set_password(
+    request: Request,
+    user_id: int,
+    password: str = Form(...),
+    csrf_token: str = Form(""),
+    owner: PanelUser = Depends(require_role("owner")),
+    session: AsyncSession = Depends(get_session),
+):
+    """J9: owner resets a member's password (also kills their sessions)."""
+    await verify_csrf(request)
+    if len(password) < 8:
+        return RedirectResponse(url=_p("?error=invalid"), status_code=302)
+    member = await _my_member(session, owner, user_id)
+    if member is not None:
+        member.password_hash = hash_password(password)
+        member.session_epoch = int(member.session_epoch or 0) + 1
+        await session.commit()
+        await audit(session, request, "panel_user_password", target=str(user_id))
+    return RedirectResponse(url=_p(), status_code=302)
+
+
+@router.post("/team/{user_id}/logout_all")
+async def team_logout_all(
+    request: Request,
+    user_id: int,
+    csrf_token: str = Form(""),
+    owner: PanelUser = Depends(require_role("owner")),
+    session: AsyncSession = Depends(get_session),
+):
+    """J9: invalidate EVERY session of a member (epoch bump; self allowed)."""
+    await verify_csrf(request)
+    member = await _my_member(session, owner, user_id)
+    if member is not None:
+        member.session_epoch = int(member.session_epoch or 0) + 1
+        await session.commit()
+        await audit(session, request, "panel_user_logout_all", target=str(user_id))
+    return RedirectResponse(url=_p(), status_code=302)
+
+
+@router.post("/team/{user_id}/2fa/disable")
+async def team_twofa_disable(
+    request: Request,
+    user_id: int,
+    csrf_token: str = Form(""),
+    owner: PanelUser = Depends(require_role("owner")),
+    session: AsyncSession = Depends(get_session),
+):
+    """J9: recovery — owner turns a member's 2FA off (lost authenticator)."""
+    await verify_csrf(request)
+    member = await _my_member(session, owner, user_id)
+    if member is not None and member.twofa_enabled:
+        member.twofa_enabled = False
+        member.totp_secret = None
+        await session.commit()
+        await audit(session, request, "panel_user_twofa_disable", target=str(user_id))
+    return RedirectResponse(url=_p(), status_code=302)
+
+
 @router.post("/team/{user_id}/toggle")
 async def team_toggle(
     request: Request,

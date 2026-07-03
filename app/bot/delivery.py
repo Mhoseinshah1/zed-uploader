@@ -62,6 +62,9 @@ class DeliveryStatus(str, Enum):
     DELIVERED = "delivered"
     FAILED = "failed"
     BLOCKED = "blocked"  # I1: a blocked user is refused, even via a deep link
+    PLAN_REQUIRED = "plan_required"        # J6: needs a higher plan
+    PAYMENT_REQUIRED = "payment_required"  # J6: paid file, no entitlement yet
+    QUOTA_EXCEEDED = "quota_exceeded"      # J6: free daily quota exhausted
 
 
 _FROM_MEDIA_STATUS = {
@@ -116,6 +119,28 @@ async def deliver_by_code(
     if protected is not None and protected.password_hash and not password_verified:
         return DeliveryResult(DeliveryStatus.PASSWORD_REQUIRED, media=protected)
 
+    # (c2) paywall gate WITHOUT claiming (J6): plan / price / free quota
+    if protected is not None:
+        from app.services.paywall_service import (
+            PLAN_REQUIRED,
+            PAYMENT_REQUIRED,
+            QUOTA_EXCEEDED,
+            PaywallService,
+        )
+
+        db_user_pre = (
+            await UserService(session).get_by_telegram_id(user.id) if user else None
+        )
+        gate = await PaywallService(session).check_access(
+            protected, db_user_pre, user_id
+        )
+        if gate == PLAN_REQUIRED:
+            return DeliveryResult(DeliveryStatus.PLAN_REQUIRED, media=protected)
+        if gate == PAYMENT_REQUIRED:
+            return DeliveryResult(DeliveryStatus.PAYMENT_REQUIRED, media=protected)
+        if gate == QUOTA_EXCEEDED:
+            return DeliveryResult(DeliveryStatus.QUOTA_EXCEEDED, media=protected)
+
     # (d) atomic claim
     claim_status, media = await service.try_claim_download(code)
     if claim_status is not MediaStatus.OK or media is None:
@@ -125,10 +150,17 @@ async def deliver_by_code(
     await send_placement_ads(bot, session, chat_id, user_id, "before_file")
 
     # send every file; caption + share button on the first only
-    share_markup = build_delivered_actions(await service.deep_link(media), media.id)
+    share_markup = build_delivered_actions(
+        await service.deep_link(media), media.id,
+        likes=media.like_count, dislikes=media.dislike_count,
+    )
+    # J3: per-tenant caption tools (strip links / signature), applied at delivery
+    from app.services.caption_service import apply_caption_tools
+
+    delivered_caption = await apply_caption_tools(session, media.caption)
     sent_ids: list[int] = []
     for index, media_file in enumerate(media.files):
-        caption = media.caption if index == 0 else None
+        caption = delivered_caption if index == 0 else None
         reply_markup = share_markup if index == 0 else None
         try:
             message_id = await send_media_file(
@@ -138,6 +170,7 @@ async def deliver_by_code(
                 caption=caption,
                 protect_content=media.protect_content,
                 reply_markup=reply_markup,
+                thumbnail=media.thumbnail_file_id,  # J4: custom video cover
             )
             sent_ids.append(message_id)
         except Exception as exc:  # a failed item shouldn't abort the rest
@@ -154,6 +187,10 @@ async def deliver_by_code(
         telegram_id=user_id,
         user_id=db_user.id if db_user else None,
     )
+    # J6: count this delivery against the free daily quota (atomic Redis INCR)
+    from app.services.paywall_service import PaywallService
+
+    await PaywallService(session).count_delivery(db_user)
 
     if media.auto_delete_seconds and media.auto_delete_seconds > 0:
         from app.core.tenant_context import current_tenant

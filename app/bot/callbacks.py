@@ -199,3 +199,30 @@ class SupportCb(CallbackData, prefix="sup"):
 
     action: str
     id: int
+
+
+class ReactCb(CallbackData, prefix="react"):
+    """J1: reaction toggle under a delivered file. kind ∈ {like, dislike, favorite}."""
+
+    kind: str
+    id: int  # media id
+
+
+class CommentCb(CallbackData, prefix="cmt"):
+    """J8: comments under a delivered file. action ∈ {open, write}."""
+
+    action: str
+    id: int  # media id
+
+
+class BuyMediaCb(CallbackData, prefix="bym"):
+    """J6: buy a paid media from the wallet (id = media id)."""
+
+    id: int
+
+
+class BrowseCb(CallbackData, prefix="brw"):
+    """J1: sorted public listings. sort ∈ {popular, newest, most_viewed, favs}."""
+
+    sort: str
+    page: int = 0

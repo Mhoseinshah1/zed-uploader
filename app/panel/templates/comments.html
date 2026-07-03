@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}نظرات — پنل مدیریت{% endblock %}
+{% block content %}
+<div class="page-h">
+  <div><h1>نظرات کاربران</h1><p>بازبینی نظرات ثبت‌شده روی فایل‌ها</p></div>
+  <div class="chips">
+    {% for s in statuses %}
+    <a href="{{ panel_path }}/comments?status={{ s }}" class="chip {{ 'on' if status == s else '' }}">
+      {% if s == "pending" %}در انتظار{% elif s == "approved" %}تأییدشده{% else %}ردشده{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card tbl-wrap">
+  <table>
+    <thead>
+      <tr><th>#</th><th>فایل</th><th>کاربر</th><th>متن</th><th>وضعیت</th><th>اقدام</th></tr>
+    </thead>
+    <tbody>
+    {% for c in items %}
+      <tr>
+        <td>{{ c.id }}</td>
+        <td>
+          {% if media_codes.get(c.media_id) %}
+          <a href="{{ panel_path }}/media/{{ c.media_id }}"><code>{{ media_codes[c.media_id] }}</code></a>
+          {% else %}#{{ c.media_id }}{% endif %}
+        </td>
+        <td>#{{ c.user_id }}</td>
+        <td>{{ (c.body[:80] ~ "…") if c.body|length > 80 else c.body }}</td>
+        <td>
+          {% if c.status == "pending" %}<span class="pill p-amber">در انتظار</span>
+          {% elif c.status == "approved" %}<span class="pill p-green">تأییدشده</span>
+          {% else %}<span class="pill p-gray">ردشده</span>{% endif %}
+        </td>
+        <td>
+          <div class="act">
+            {% if c.status != "approved" %}
+            <form method="post" action="{{ panel_path }}/comments/{{ c.id }}/status">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="status" value="approved">
+              <button type="submit">تأیید</button>
+            </form>
+            {% endif %}
+            {% if c.status != "rejected" %}
+            <form method="post" action="{{ panel_path }}/comments/{{ c.id }}/status">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="status" value="rejected">
+              <button type="submit">رد</button>
+            </form>
+            {% endif %}
+            <form method="post" action="{{ panel_path }}/comments/{{ c.id }}/delete">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="danger">حذف</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6"><div class="empty">نظری در این وضعیت وجود ندارد.</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

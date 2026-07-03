@@ -17,11 +17,48 @@
   </section>
 
   <section class="card">
+    <h2>حالت تعمیر و نگهداری</h2>
+    <form method="post" action="{{ panel_path }}/settings/maintenance">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="checkbox"><input type="checkbox" name="maintenance_mode" {{ "checked" if maintenance_mode else "" }}> فعال (فقط ادمین‌ها می‌توانند از ربات استفاده کنند)</label>
+      <label>پیام تعمیر (خالی = پیش‌فرض)
+        <textarea name="maintenance_message" rows="2">{{ maintenance_message }}</textarea>
+      </label>
+      <button type="submit">ذخیره</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>پیش‌نمایش کانال</h2>
+    <form method="post" action="{{ panel_path }}/settings/preview">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="checkbox"><input type="checkbox" name="preview_enabled" {{ "checked" if preview_enabled else "" }}> ارسال خودکار پیش‌نمایش به کانال پس از انتشار فایل</label>
+      <label>شناسهٔ کانال (مثلاً <span dir="ltr">-1001234567890</span>؛ ربات باید ادمین کانال باشد)
+        <input type="text" name="preview_channel_id" dir="ltr" value="{{ preview_channel_id }}">
+      </label>
+      <button type="submit">ذخیره</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>ابزار کپشن</h2>
+    <form method="post" action="{{ panel_path }}/settings/caption">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="checkbox"><input type="checkbox" name="caption_strip_links" {{ "checked" if caption_strip_links else "" }}> حذف لینک‌ها و منشن‌ها از کپشن هنگام ارسال</label>
+      <label>امضای انتهای کپشن (خالی = بدون امضا)
+        <textarea name="caption_signature" rows="2" placeholder="مثلاً: @mychannel">{{ caption_signature }}</textarea>
+      </label>
+      <button type="submit">ذخیره</button>
+    </form>
+  </section>
+
+  <section class="card">
     <h2>تنظیمات پرداخت</h2>
     <form method="post" action="{{ panel_path }}/settings/payments">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label class="checkbox"><input type="checkbox" name="card_enabled" {{ "checked" if card_enabled else "" }}> فعال‌بودن شارژ کارت‌به‌کارت</label>
       <label>حداقل مبلغ شارژ (تومان) <input type="number" name="topup_min" value="{{ topup_min }}" min="0"></label>
+      <label>سهمیهٔ دانلود رایگان روزانه هر کاربر (۰ = نامحدود) <input type="number" name="free_daily_quota" value="{{ free_daily_quota }}" min="0"></label>
       <button type="submit">ذخیره</button>
     </form>
   </section>

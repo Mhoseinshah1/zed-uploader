@@ -15,7 +15,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from app.models.mixins import TenantScoped
 
-INVOICE_KINDS = ("topup", "plan", "bot_creation", "rental")
+INVOICE_KINDS = ("topup", "plan", "bot_creation", "rental", "media")
 
 
 class Invoice(TenantScoped, Base):

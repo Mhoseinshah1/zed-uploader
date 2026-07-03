@@ -43,14 +43,36 @@
           </form>
           {% endif %}
         </td>
-        <td>{% if m.is_active %}<span class="pill p-green">فعال</span>{% else %}<span class="pill p-gray">غیرفعال</span>{% endif %}</td>
         <td>
+          {% if m.is_active %}<span class="pill p-green">فعال</span>{% else %}<span class="pill p-gray">غیرفعال</span>{% endif %}
+          {% if m.twofa_enabled %}<span class="pill p-blue">۲مرحله‌ای</span>{% endif %}
+        </td>
+        <td>
+          <div class="act">
           {% if m.id != me_id and not m.is_superadmin %}
           <form method="post" action="{{ panel_path }}/team/{{ m.id }}/toggle" class="inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button type="submit" class="{{ 'danger' if m.is_active else 'ghost' }} sm">{{ "غیرفعال" if m.is_active else "فعال" }}</button>
           </form>
-          {% else %}<span class="muted">—</span>{% endif %}
+          {% endif %}
+          {% if not m.is_superadmin %}
+          <form method="post" action="{{ panel_path }}/team/{{ m.id }}/password" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="password" name="password" placeholder="رمز جدید (۸+)" autocomplete="new-password" minlength="8" required>
+            <button type="submit" class="sm">تغییر رمز</button>
+          </form>
+          <form method="post" action="{{ panel_path }}/team/{{ m.id }}/logout_all" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="ghost sm">خروج از همهٔ نشست‌ها</button>
+          </form>
+          {% if m.twofa_enabled %}
+          <form method="post" action="{{ panel_path }}/team/{{ m.id }}/2fa/disable" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="ghost sm">غیرفعال‌کردن ۲مرحله‌ای</button>
+          </form>
+          {% endif %}
+          {% endif %}
+          </div>
         </td>
       </tr>
     {% else %}

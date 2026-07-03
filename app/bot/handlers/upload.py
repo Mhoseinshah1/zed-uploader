@@ -187,6 +187,9 @@ async def admin_upload(
     except Exception:
         pass
     await message.answer(messages.upload_success(await service.deep_link(media), media.code))
+    from app.services.preview_service import maybe_post_preview
+
+    await maybe_post_preview(session, media, bot=message.bot)  # J5
 
 
 @router.message(MEDIA_FILTER)
@@ -233,6 +236,9 @@ async def non_admin_upload(
     log.info("user_media_created", media_id=media.id, code=media.code, status=status)
     if status == "approved":
         await message.answer(messages.upload_success(await service.deep_link(media), media.code))
+        from app.services.preview_service import maybe_post_preview
+
+        await maybe_post_preview(session, media, bot=message.bot)  # J5
     else:
         from app.services.text_service import get_text
 

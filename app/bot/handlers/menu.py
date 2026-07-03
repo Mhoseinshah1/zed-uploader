@@ -260,6 +260,12 @@ async def cb_media(
         await callback.message.answer(messages.ASK_MEDIA_PASSWORD)
         await callback.answer()
 
+    elif action == "setcover":
+        await state.set_state(MediaEdit.waiting_thumbnail)
+        await state.update_data(media_id=mid, page=page)
+        await callback.message.answer(messages.ASK_THUMBNAIL)
+        await callback.answer()
+
     elif action == "movefolder":
         from app.bot.keyboards.inline import build_folder_picker
         from app.services.folder_service import FolderService
@@ -449,6 +455,37 @@ async def input_media_password(
         await message.answer(messages.NOT_OWNED)
         return
     log.info("media_updated", id=mid, field="password_hash")
+    await message.answer(confirmation)
+    await _reshow_manage(message, service, db_user.id, mid, page)
+
+
+@router.message(IsAdmin(), StateFilter(MediaEdit.waiting_thumbnail), F.photo | F.text)
+async def input_media_thumbnail(
+    message: Message, state: FSMContext, session: AsyncSession, db_user: User | None
+) -> None:
+    """J4: a photo sets the cover; «-» clears it back to the default."""
+    data = await state.get_data()
+    if db_user is None:
+        await state.clear()
+        return
+    service = MediaService(session)
+    mid, page = int(data["media_id"]), int(data.get("page", 0))
+
+    if message.photo:
+        file_id = message.photo[-1].file_id  # the largest size
+        ok = await service.set_thumbnail(mid, db_user.id, file_id)
+        confirmation = messages.THUMBNAIL_SET
+    elif (message.text or "").strip() == "-":
+        ok = await service.set_thumbnail(mid, db_user.id, None)
+        confirmation = messages.THUMBNAIL_CLEARED
+    else:
+        await message.answer(messages.ASK_THUMBNAIL)  # re-prompt, keep state
+        return
+    await state.clear()
+    if not ok:
+        await message.answer(messages.NOT_OWNED)
+        return
+    log.info("media_updated", id=mid, field="thumbnail_file_id")
     await message.answer(confirmation)
     await _reshow_manage(message, service, db_user.id, mid, page)
 

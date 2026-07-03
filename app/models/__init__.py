@@ -9,6 +9,8 @@ from app.models.bot_command import BotCommandEntry
 from app.models.bot_plan import BotPlan
 from app.models.broadcast import BroadcastJob, BroadcastRecipient
 from app.models.channel import RequiredChannel
+from app.models.comment import MediaComment
+from app.models.custom_button import CustomButton
 from app.models.download_log import DownloadLog
 from app.models.folder import Folder
 from app.models.invoice import Invoice
@@ -20,6 +22,9 @@ from app.models.panel import PanelAudit, PanelUser
 from app.models.payment import Payment
 from app.models.payment_provider import PaymentProviderConfig
 from app.models.plan import Plan
+from app.models.preview import MediaPreview
+from app.models.purchase import MediaPurchase
+from app.models.reaction import MediaReaction
 from app.models.settings import BotSetting, FeatureFlag
 from app.models.subscription import Subscription
 from app.models.support import SupportTicket, TicketMessage
@@ -59,4 +64,9 @@ __all__ = [
     "SupportTicket",
     "TicketMessage",
     "Invoice",
+    "MediaReaction",
+    "MediaPreview",
+    "MediaPurchase",
+    "MediaComment",
+    "CustomButton",
 ]

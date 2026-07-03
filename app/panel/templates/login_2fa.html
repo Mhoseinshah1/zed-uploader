@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="{{ theme }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="same-origin">
+  <title>کد تأیید — پنل مدیریت زد‌آپلودر</title>
+  <link rel="stylesheet" href="{{ panel_path }}/static/css/panel.css?v={{ asset_version }}">
+</head>
+<body class="login-body">
+  <form class="login-card" method="post" action="{{ panel_path }}/login/2fa">
+    <div class="brand">
+      <div class="logo">Z</div>
+      <div><b>ZedUploader</b><span>پنل مدیریت</span></div>
+    </div>
+    <h1>تأیید دومرحله‌ای</h1>
+    <p>کد ۶ رقمی برنامهٔ احراز هویت خود را وارد کنید.</p>
+    {% if error %}<p class="flash error">{{ error }}</p>{% endif %}
+    <input type="hidden" name="csrf_token" value="{{ login_csrf }}">
+    <label>کد تأیید
+      <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required autofocus>
+    </label>
+    <button type="submit">ورود</button>
+  </form>
+</body>
+</html>
