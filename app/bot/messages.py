@@ -912,3 +912,12 @@ def browse_header(sort: str, page: int) -> str:
 def browse_row(code: str, title: str | None, likes: int, downloads: int) -> str:
     name = title or code
     return f"{name} · 👍 {likes} · ⬇️ {downloads}"
+
+
+# --- Phase J2: inline search --------------------------------------------------
+def inline_result_description(downloads: int, likes: int) -> str:
+    return f"⬇️ {downloads} · 👍 {likes}"
+
+
+def inline_result_message(name: str, link: str) -> str:
+    return f"📁 {name}\n{link}"

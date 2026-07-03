@@ -47,11 +47,14 @@ class BlockedUserMiddleware(BaseMiddleware):
             pre_checkout = getattr(event, "pre_checkout_query", None)
             callback = getattr(event, "callback_query", None)
             message = getattr(event, "message", None)
+            inline_query = getattr(event, "inline_query", None)
             if pre_checkout is not None:
                 await pre_checkout.answer(ok=False, error_message=text)
             elif callback is not None:
                 await callback.answer(text, show_alert=True)
             elif message is not None:
                 await message.answer(text)
+            elif inline_query is not None:  # J2: no results for a blocked user
+                await inline_query.answer([], cache_time=5, is_personal=True)
         except Exception:  # never let the block notice raise
             pass

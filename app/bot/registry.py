@@ -99,7 +99,7 @@ class BotRegistry:
                 drop_pending_updates=False,
                 # pre_checkout_query is required for Telegram Stars to work on a
                 # tenant bot (message covers successful_payment).
-                allowed_updates=["message", "callback_query", "pre_checkout_query"],
+                allowed_updates=["message", "callback_query", "pre_checkout_query", "inline_query"],
             )
         except Exception as exc:
             log.warning("tenant_bot_register_failed", tenant_id=tenant.id, error=str(exc))
