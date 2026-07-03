@@ -208,6 +208,13 @@ class ReactCb(CallbackData, prefix="react"):
     id: int  # media id
 
 
+class CommentCb(CallbackData, prefix="cmt"):
+    """J8: comments under a delivered file. action ∈ {open, write}."""
+
+    action: str
+    id: int  # media id
+
+
 class BuyMediaCb(CallbackData, prefix="bym"):
     """J6: buy a paid media from the wallet (id = media id)."""
 

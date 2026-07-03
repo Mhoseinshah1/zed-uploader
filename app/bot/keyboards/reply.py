@@ -6,7 +6,7 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from app.bot import messages
 
 
-def build_user_menu(is_platform: bool = False) -> ReplyKeyboardMarkup:
+def build_user_menu(is_platform: bool = False, custom_labels: tuple[str, ...] = ()) -> ReplyKeyboardMarkup:
     """Menu for regular (non-admin) users: wallet + subscription.
 
     On the platform (master) bot only, a "ساخت ربات" button lets any user buy
@@ -22,6 +22,8 @@ def build_user_menu(is_platform: bool = False) -> ReplyKeyboardMarkup:
             KeyboardButton(text=messages.BTN_FAVORITES),
         ],
     ]
+    for label in custom_labels:  # J8: tenant-defined buttons
+        keyboard.append([KeyboardButton(text=label)])
     if is_platform:
         keyboard.append([KeyboardButton(text=messages.BTN_CREATE_BOT)])
     return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)

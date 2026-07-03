@@ -374,7 +374,7 @@ def build_delivered_actions(
     share_url: str, media_id: int, likes: int = 0, dislikes: int = 0
 ) -> InlineKeyboardMarkup:
     """Under a delivered file: reactions (J1) + share link + a 🚩 report button."""
-    from app.bot.callbacks import ReactCb
+    from app.bot.callbacks import CommentCb, ReactCb
 
     b = InlineKeyboardBuilder()
     b.row(
@@ -394,9 +394,13 @@ def build_delivered_actions(
     b.row(InlineKeyboardButton(text=messages.SHARE_BUTTON, url=share_url))
     b.row(
         InlineKeyboardButton(
+            text=messages.LBL_COMMENTS,
+            callback_data=CommentCb(action="open", id=media_id).pack(),
+        ),
+        InlineKeyboardButton(
             text=messages.REPORT_BUTTON,
             callback_data=ReportCb(action="start", id=media_id).pack(),
-        )
+        ),
     )
     return b.as_markup()
 

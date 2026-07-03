@@ -9,6 +9,8 @@ from app.models.bot_command import BotCommandEntry
 from app.models.bot_plan import BotPlan
 from app.models.broadcast import BroadcastJob, BroadcastRecipient
 from app.models.channel import RequiredChannel
+from app.models.comment import MediaComment
+from app.models.custom_button import CustomButton
 from app.models.download_log import DownloadLog
 from app.models.folder import Folder
 from app.models.invoice import Invoice
@@ -65,4 +67,6 @@ __all__ = [
     "MediaReaction",
     "MediaPreview",
     "MediaPurchase",
+    "MediaComment",
+    "CustomButton",
 ]

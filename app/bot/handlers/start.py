@@ -80,7 +80,14 @@ async def _send_welcome(
 
         await push_admin_commands(message.bot, session, user.id)
     else:
-        await message.answer(welcome, reply_markup=build_user_menu(is_platform))
+        from app.services.custom_button_service import CustomButtonService
+
+        labels = tuple(
+            b.label for b in await CustomButtonService(session).list_active()
+        )
+        await message.answer(
+            welcome, reply_markup=build_user_menu(is_platform, custom_labels=labels)
+        )
     # best-effort start_message ad (never blocks the welcome)
     from app.bot.delivery import send_placement_ads
 

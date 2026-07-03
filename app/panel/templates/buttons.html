@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}دکمه‌های منو — پنل مدیریت{% endblock %}
+{% block content %}
+<div class="page-h">
+  <div><h1>دکمه‌های سفارشی منو</h1><p>دکمه‌های دلخواه کیبورد ربات (لینک، متن یا اکشن مجاز)</p></div>
+</div>
+
+{% if error == "invalid" %}<p class="flash error">ورودی نامعتبر — برچسب لازم است؛ لینک باید با https شروع شود؛ اکشن فقط از فهرست مجاز.</p>{% endif %}
+
+<section class="card">
+  <h2>افزودن دکمه</h2>
+  <form method="post" action="{{ panel_path }}/buttons/create" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>برچسب دکمه <input type="text" name="label" maxlength="64" required></label>
+    <label>نوع
+      <select name="type">
+        {% for t in types %}
+        <option value="{{ t }}">{% if t == "url" %}لینک{% elif t == "message" %}متن پاسخ{% else %}اکشن{% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>مقدار <input type="text" name="value" required></label>
+    <label>ترتیب <input type="number" name="sort_order" value="0"></label>
+    <button type="submit">افزودن</button>
+  </form>
+  <p class="muted">مقدار: برای «لینک» یک آدرس https، برای «متن پاسخ» متن دلخواه، برای «اکشن» یکی از: {% for a in actions %}<code>{{ a }}</code>{% if not loop.last %}، {% endif %}{% endfor %}</p>
+</section>
+
+<div class="card tbl-wrap">
+  <table>
+    <thead><tr><th>#</th><th>برچسب</th><th>نوع</th><th>مقدار</th><th>ترتیب</th><th>وضعیت</th><th>اقدام</th></tr></thead>
+    <tbody>
+    {% for b in items %}
+      <tr>
+        <td>{{ b.id }}</td>
+        <td>{{ b.label }}</td>
+        <td>
+          {% if b.type == "url" %}<span class="pill p-blue">لینک</span>
+          {% elif b.type == "message" %}<span class="pill p-gray">متن</span>
+          {% else %}<span class="pill p-amber">اکشن</span>{% endif %}
+        </td>
+        <td dir="ltr">{{ (b.value[:50] ~ "…") if b.value|length > 50 else b.value }}</td>
+        <td>{{ b.sort_order }}</td>
+        <td>{% if b.is_active %}<span class="pill p-green">فعال</span>{% else %}<span class="pill p-gray">غیرفعال</span>{% endif %}</td>
+        <td>
+          <div class="act">
+            <form method="post" action="{{ panel_path }}/buttons/{{ b.id }}/toggle">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="sm">{{ "غیرفعال" if b.is_active else "فعال" }}</button>
+            </form>
+            <form method="post" action="{{ panel_path }}/buttons/{{ b.id }}/delete">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="danger sm">حذف</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7"><div class="empty">هنوز دکمه‌ای تعریف نشده است.</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

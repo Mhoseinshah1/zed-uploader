@@ -963,3 +963,20 @@ MEDIA_BUY_FAILED = "خرید انجام نشد. موجودی کیف پول را 
 
 # --- Phase J7: maintenance mode -------------------------------------------------
 MAINTENANCE_DEFAULT = "🔧 ربات در حال به‌روزرسانی است. کمی بعد دوباره تلاش کن."
+
+
+# --- Phase J8: comments + custom buttons ------------------------------------
+LBL_COMMENTS = "💬 نظرات"
+ASK_COMMENT = "نظرت را دربارهٔ این فایل بنویس (پس از تأیید ادمین نمایش داده می‌شود):"
+COMMENT_SAVED = "✅ نظرت ثبت شد و پس از تأیید نمایش داده می‌شود."
+COMMENTS_EMPTY = "هنوز نظری تأیید نشده. اولین نفر باش!"
+LBL_WRITE_COMMENT = "✍️ نوشتن نظر"
+
+
+def comments_view(rows) -> str:
+    if not rows:
+        return COMMENTS_EMPTY
+    out = ["💬 نظرات کاربران:"]
+    for c in rows:
+        out.append(f"• {c.body}")
+    return "\n".join(out)

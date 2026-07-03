@@ -10,6 +10,8 @@ from aiogram.fsm.storage.redis import RedisStorage
 
 from app.bot.handlers import (
     admin_panel,
+    comments,
+    custom_buttons,
     admins,
     ads,
     albums,
@@ -106,6 +108,7 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.include_router(support.router)
     dispatcher.include_router(reactions.router)
     dispatcher.include_router(inline.router)
+    dispatcher.include_router(comments.router)
     dispatcher.include_router(batch.router)
     # `albums` after batch (so batch-collecting still grabs parts) and before
     # upload (so grouped media buffer instead of each becoming its own Media).
@@ -113,6 +116,9 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.include_router(upload.router)
     # `search` after the reply-keyboard routers so a menu-button tap while a
     # search is active still routes to its own handler (which clears state).
+    # J8: tenant-defined buttons — after every built-in button router (those
+    # always win) and before search/common
+    dispatcher.include_router(custom_buttons.router)
     dispatcher.include_router(search.router)
     dispatcher.include_router(common.router)
 

@@ -53,6 +53,7 @@
 
     <div class="navsec">محتوا و رشد</div>
     {{ nav_item("/review", "✅", "صف تأیید") }}
+    {{ nav_item("/comments", "💬", "نظرات") }}
     {{ nav_item("/tickets", "🎧", "تیکت‌های پشتیبانی") }}
     {{ nav_item("/ads", "📣", "تبلیغات") }}
     {{ nav_item("/broadcast", "📢", "ارسال همگانی") }}
@@ -64,6 +65,7 @@
     {% if has_role(current_user, "owner") %}{{ nav_item("/features", "🧩", "قابلیت‌ها") }}{% endif %}
     {{ nav_item("/texts", "📝", "متن‌های ربات") }}
     {{ nav_item("/commands", "⌨️", "منوی دستورات") }}
+    {{ nav_item("/buttons", "🔘", "دکمه‌های منو") }}
     {{ nav_item("/logs", "🧾", "گروه لاگ") }}
     {{ nav_item("/admins", "🛡️", "ادمین‌ها") }}
     {% if has_role(current_user, "owner") %}{{ nav_item("/team", "👤", "کاربران پنل") }}{% endif %}

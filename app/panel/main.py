@@ -17,7 +17,9 @@ from app.panel.routes import (
     backups,
     bot_plans,
     broadcast,
+    buttons,
     commands,
+    comments,
     dashboard,
     folders,
     logs,
@@ -68,6 +70,8 @@ for _module in (
     invoices,
     team,
     features,
+    comments,
+    buttons,
 ):
     router.include_router(_module.router)
 
