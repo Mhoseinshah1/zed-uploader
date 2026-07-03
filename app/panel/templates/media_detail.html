@@ -26,7 +26,18 @@
     <tr><th>محافظت محتوا</th><td>{{ "روشن" if media.protect_content else "خاموش" }}</td></tr>
     <tr><th>گذرواژه</th><td>{{ "🔒 دارد" if media.password_hash else "🔓 ندارد" }}</td></tr>
     <tr><th>حذف خودکار</th><td>{{ media.auto_delete_seconds or "خاموش" }} ثانیه</td></tr>
+    <tr><th>کاور ویدیو</th><td>{{ "🖼 دارد" if media.thumbnail_file_id else "— (پیش‌فرض)" }}</td></tr>
   </table>
+</div>
+
+<div class="card">
+  <h2>کاور ویدیو</h2>
+  <p class="muted"><small>راه سادهٔ تنظیم: در ربات از منوی مدیریت فایل، «🖼 کاور» را بزن و عکس بفرست. اینجا می‌توانی file_id عکس را دستی بگذاری یا کاور را حذف کنی.</small></p>
+  <form method="post" action="{{ panel_path }}/media/{{ media.id }}/thumbnail" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="text" name="file_id" dir="ltr" placeholder="photo file_id (خالی = حذف کاور)" value="">
+    <button type="submit">ذخیره</button>
+  </form>
 </div>
 
 <div class="card">

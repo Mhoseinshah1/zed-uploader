@@ -145,6 +145,7 @@ async def deliver_by_code(
                 caption=caption,
                 protect_content=media.protect_content,
                 reply_markup=reply_markup,
+                thumbnail=media.thumbnail_file_id,  # J4: custom video cover
             )
             sent_ids.append(message_id)
         except Exception as exc:  # a failed item shouldn't abort the rest

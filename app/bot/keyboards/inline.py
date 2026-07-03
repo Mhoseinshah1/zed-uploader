@@ -291,7 +291,11 @@ def build_manage(media: Media, page: int) -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=messages.LBL_EDITCAP,
             callback_data=MediaCb(action="editcap", id=mid, page=page).pack(),
-        )
+        ),
+        InlineKeyboardButton(
+            text=messages.lbl_thumbnail(media.thumbnail_file_id is not None),
+            callback_data=MediaCb(action="setcover", id=mid, page=page).pack(),
+        ),
     )
     b.row(
         InlineKeyboardButton(

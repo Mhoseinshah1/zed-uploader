@@ -921,3 +921,13 @@ def inline_result_description(downloads: int, likes: int) -> str:
 
 def inline_result_message(name: str, link: str) -> str:
     return f"📁 {name}\n{link}"
+
+
+# --- Phase J4: video thumbnail / cover ---------------------------------------
+ASK_THUMBNAIL = "عکس کاور را بفرست (برای حذف کاور «-» بفرست):"
+THUMBNAIL_SET = "کاور فایل تنظیم شد. 🖼"
+THUMBNAIL_CLEARED = "کاور فایل حذف شد."
+
+
+def lbl_thumbnail(has_thumbnail: bool) -> str:
+    return "🖼 کاور: دارد" if has_thumbnail else "🖼 کاور"

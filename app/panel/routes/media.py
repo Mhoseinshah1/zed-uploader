@@ -150,6 +150,29 @@ async def media_protect(
     return RedirectResponse(url=f"{settings.panel_path}/media/{media_id}", status_code=302)
 
 
+@router.post("/media/{media_id}/thumbnail")
+async def media_thumbnail(
+    request: Request,
+    media_id: int,
+    file_id: str = Form(""),
+    csrf_token: str = Form(""),
+    _=Depends(require_role(*_CONTENT)),
+    session: AsyncSession = Depends(get_session),
+):
+    """J4: set (a photo file_id) or clear (empty) the custom cover."""
+    await verify_csrf(request)
+    media = await session.scalar(select(Media).where(Media.id == media_id))
+    if media is not None:
+        media.thumbnail_file_id = file_id.strip() or None
+        await session.commit()
+        await audit(
+            session, request,
+            "media_thumbnail_set" if file_id.strip() else "media_thumbnail_clear",
+            target=str(media_id),
+        )
+    return RedirectResponse(url=f"{settings.panel_path}/media/{media_id}", status_code=302)
+
+
 @router.post("/media/{media_id}/reset_count")
 async def media_reset_count(
     request: Request,

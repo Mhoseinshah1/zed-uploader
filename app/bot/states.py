@@ -10,6 +10,7 @@ class MediaEdit(StatesGroup):
     waiting_caption = State()
     waiting_password = State()  # data: media_id, page — set/change/remove
     waiting_folder = State()    # data: media_id, page — picking a target folder
+    waiting_thumbnail = State()  # data: media_id, page — J4 cover photo (or «-»)
 
 
 class FolderEdit(StatesGroup):
