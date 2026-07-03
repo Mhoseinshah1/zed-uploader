@@ -11,7 +11,7 @@ from app.core.config import settings
 from app.db.session import get_session
 from app.models.payment import Payment
 from app.models.user import User
-from app.panel.deps import audit, render, require_panel_user, verify_csrf
+from app.panel.deps import audit, render, require_role, verify_csrf
 from app.services.payment_service import PaymentService
 
 router = APIRouter()
@@ -33,7 +33,7 @@ async def _notify(request: Request, session: AsyncSession, user_id: int, text: s
 async def payments_list(
     request: Request,
     status: str = "pending",
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "finance")),
     session: AsyncSession = Depends(get_session),
 ):
     stmt = select(Payment).order_by(Payment.id.desc())
@@ -48,7 +48,7 @@ async def payment_approve(
     request: Request,
     payment_id: int,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "finance")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -79,7 +79,7 @@ async def payment_reject(
     request: Request,
     payment_id: int,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "finance")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)

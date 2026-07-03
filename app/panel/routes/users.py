@@ -10,11 +10,16 @@ from app.core.config import settings
 from app.db.session import get_session
 from app.models.subscription import Subscription
 from app.models.user import User
-from app.panel.deps import audit, render, require_panel_user, verify_csrf
+from app.panel.deps import audit, render, require_role, verify_csrf
 from app.services.wallet_service import InsufficientFunds, WalletService
 
 router = APIRouter()
 PAGE_SIZE = 20
+
+# I2 role gates: viewing users is broad; wallet adjust stays finance-only.
+_VIEW = ("owner", "admin", "support", "finance")
+_FINANCE = ("owner", "finance")
+_MODERATE = ("owner", "admin")
 
 
 @router.get("/users")
@@ -22,7 +27,7 @@ async def users_list(
     request: Request,
     q: str = "",
     page: int = 0,
-    _=Depends(require_panel_user),
+    _=Depends(require_role(*_VIEW)),
     session: AsyncSession = Depends(get_session),
 ):
     stmt = select(User)
@@ -50,7 +55,7 @@ async def user_detail(
     request: Request,
     user_id: int,
     msg: str = "",
-    _=Depends(require_panel_user),
+    _=Depends(require_role(*_VIEW)),
     session: AsyncSession = Depends(get_session),
 ):
     user = await session.scalar(select(User).where(User.id == user_id))
@@ -73,7 +78,7 @@ async def user_block(
     request: Request,
     user_id: int,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role(*_MODERATE)),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -95,7 +100,7 @@ async def user_adjust(
     user_id: int,
     amount: int = Form(...),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role(*_FINANCE)),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)

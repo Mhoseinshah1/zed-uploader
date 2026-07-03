@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_session
-from app.panel.deps import audit, render, require_panel_user, verify_csrf
+from app.panel.deps import audit, render, require_role, verify_csrf
 from app.services.plan_service import PlanService
 
 router = APIRouter()
@@ -16,7 +16,7 @@ router = APIRouter()
 @router.get("/plans")
 async def plans_list(
     request: Request,
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
 ):
     plans = await PlanService(session).list_all()
@@ -33,7 +33,7 @@ async def plan_update(
     stars_price: str = Form(""),
     is_active: str = Form(""),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)

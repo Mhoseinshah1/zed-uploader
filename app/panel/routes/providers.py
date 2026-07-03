@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_session
-from app.panel.deps import audit, render, require_panel_user, verify_csrf
+from app.panel.deps import audit, render, require_role, verify_csrf
 from app.services.providers import (
     PROVIDER_KEYS,
     get_config,
@@ -30,7 +30,7 @@ def _cfg(row) -> dict:
 @router.get("/providers")
 async def providers_page(
     request: Request,
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
 ):
     rows = {}
@@ -69,7 +69,7 @@ async def providers_save(
     merchant_id: str = Form(""),
     merchant: str = Form(""),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)

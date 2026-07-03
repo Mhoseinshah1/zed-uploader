@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings as app_settings
 from app.db.session import get_session
-from app.panel.deps import audit, render, require_panel_user, verify_csrf
+from app.panel.deps import audit, render, require_role, verify_csrf
 from app.services.bot_setting_service import (
     KEY_AUTODELETE,
     KEY_CARD_HOLDER,
@@ -30,7 +30,7 @@ def _p(path: str) -> str:
 @router.get("/settings")
 async def settings_page(
     request: Request,
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
 ):
     setting = BotSettingService(session)
@@ -54,7 +54,7 @@ async def settings_card(
     card_number: str = Form(""),
     card_holder: str = Form(""),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -71,7 +71,7 @@ async def settings_defaults(
     default_protect: str = Form(""),
     default_autodelete: int = Form(0),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -88,7 +88,7 @@ async def settings_uploads(
     user_upload_enabled: str = Form(""),
     user_upload_requires_review: str = Form(""),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -104,7 +104,7 @@ async def settings_search(
     request: Request,
     public_search_enabled: str = Form(""),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -130,7 +130,7 @@ async def channel_add(
     chat_id: str = Form(...),
     title: str = Form(""),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -146,7 +146,7 @@ async def channel_toggle(
     request: Request,
     channel_id: int,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -160,7 +160,7 @@ async def channel_remove(
     request: Request,
     channel_id: int,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)

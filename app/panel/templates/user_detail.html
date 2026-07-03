@@ -24,17 +24,21 @@
 
   <div class="card">
     <h2>عملیات کیف پول</h2>
+    {% if has_role(current_user, "owner", "admin") %}
     <div class="actions">
       <form method="post" action="{{ panel_path }}/users/{{ user.id }}/block">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button type="submit" class="{{ 'ghost' if user.is_blocked else 'danger' }}">{{ "رفع مسدودی" if user.is_blocked else "مسدودسازی" }}</button>
       </form>
     </div>
+    {% endif %}
+    {% if has_role(current_user, "owner", "finance") %}
     <form method="post" action="{{ panel_path }}/users/{{ user.id }}/adjust" class="actions">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="number" name="amount" placeholder="مبلغ (منفی = کسر)" required>
       <button type="submit">تعدیل موجودی</button>
     </form>
+    {% endif %}
   </div>
 </div>
 

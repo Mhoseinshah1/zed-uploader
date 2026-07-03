@@ -65,6 +65,7 @@
     {{ nav_item("/commands", "⌨️", "منوی دستورات") }}
     {{ nav_item("/logs", "🧾", "گروه لاگ") }}
     {{ nav_item("/admins", "🛡️", "ادمین‌ها") }}
+    {% if has_role(current_user, "owner") %}{{ nav_item("/team", "👤", "کاربران پنل") }}{% endif %}
 
     {% if current_user.is_superadmin %}
     <div class="navsec platform">حالت پلتفرم</div>

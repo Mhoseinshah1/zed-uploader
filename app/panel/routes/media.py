@@ -11,7 +11,7 @@ from app.core.security import hash_media_password
 from app.db.session import get_session
 from app.models.download_log import DownloadLog
 from app.models.media import Media
-from app.panel.deps import audit, render, require_panel_user, verify_csrf
+from app.panel.deps import audit, render, require_role, verify_csrf
 from app.services.folder_service import FolderService
 
 router = APIRouter()
@@ -24,7 +24,7 @@ async def media_list(
     q: str = "",
     folder_id: str = "",
     page: int = 0,
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "admin", "content")),
     session: AsyncSession = Depends(get_session),
 ):
     stmt = select(Media)
@@ -52,7 +52,7 @@ async def media_list(
 async def media_detail(
     request: Request,
     media_id: int,
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "admin", "content")),
     session: AsyncSession = Depends(get_session),
 ):
     media = await session.scalar(select(Media).where(Media.id == media_id))
@@ -76,7 +76,7 @@ async def media_move_folder(
     media_id: int,
     folder_id: str = Form(""),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "admin", "content")),
     session: AsyncSession = Depends(get_session),
 ):
     """Move a media into a folder (empty = uncategorised). Panel admins can move
@@ -99,7 +99,7 @@ async def media_toggle(
     request: Request,
     media_id: int,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "admin", "content")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -119,7 +119,7 @@ async def media_password(
     media_id: int,
     password: str = Form(""),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "admin", "content")),
     session: AsyncSession = Depends(get_session),
 ):
     """Set/change (non-empty) or remove (empty) a media's password."""
@@ -145,7 +145,7 @@ async def media_delete(
     request: Request,
     media_id: int,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "admin", "content")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)

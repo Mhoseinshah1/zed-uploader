@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bot import messages
 from app.core.config import settings
 from app.db.session import get_session
-from app.panel.deps import audit, render, require_panel_user, verify_csrf
+from app.panel.deps import audit, render, require_role, verify_csrf
 from app.panel.notify import notify_user
 from app.services.media_service import MediaService
 
@@ -20,7 +20,7 @@ PAGE_SIZE = 20
 async def review_list(
     request: Request,
     page: int = 0,
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "admin", "content")),
     session: AsyncSession = Depends(get_session),
 ):
     service = MediaService(session)
@@ -37,7 +37,7 @@ async def review_approve(
     request: Request,
     media_id: int,
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "admin", "content")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
@@ -58,7 +58,7 @@ async def review_reject(
     media_id: int,
     note: str = Form(""),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_role("owner", "admin", "content")),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)
