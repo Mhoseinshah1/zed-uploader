@@ -78,6 +78,54 @@ async def create_job(
     return job
 
 
+async def create_job_for_users(
+    session: AsyncSession,
+    *,
+    user_rows: list[tuple[int, int]],
+    text: str | None = None,
+    created_by: int | None = None,
+) -> BroadcastJob:
+    """Like ``create_job`` but snapshots a SPECIFIC recipient set (H3).
+
+    ``user_rows`` are ``(user_id, telegram_id)`` pairs (deduped by user_id).
+    Used for the platform's reseller broadcast: the recipients are the tenant
+    owners, so the job is created under the platform tenant and drained by the
+    same exactly-once worker/ledger as any other broadcast.
+    """
+    job = BroadcastJob(text=text, created_by=created_by, status="pending")
+    session.add(job)
+    await session.flush()  # assign job.id before snapshotting recipients
+
+    tenant_id = require_tenant()
+    seen: set[int] = set()
+    batch: list[dict] = []
+    total = 0
+    for uid, tg in user_rows:
+        if uid in seen or not tg:
+            continue
+        seen.add(uid)
+        batch.append(
+            {
+                "tenant_id": tenant_id,
+                "broadcast_id": job.id,
+                "user_id": uid,
+                "telegram_id": tg,
+                "status": "pending",
+            }
+        )
+        if len(batch) >= _SNAPSHOT_CHUNK:
+            await session.execute(insert(BroadcastRecipient), batch)
+            total += len(batch)
+            batch = []
+    if batch:
+        await session.execute(insert(BroadcastRecipient), batch)
+        total += len(batch)
+
+    job.total = total
+    await session.commit()
+    return job
+
+
 # ---------------------------------------------------------------------------
 # worker-side helpers (DB is the source of truth)
 # ---------------------------------------------------------------------------

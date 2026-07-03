@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}ربات #{{ tenant.id }} — پنل مدیریت{% endblock %}
+{% block content %}
+<div class="plat-ribbon">🛰️ حالت پلتفرم <span class="tag">جزئیات نماینده</span></div>
+<a class="back-link" href="{{ panel_path }}/platform/tenants">◀ بازگشت به ربات‌ها</a>
+<div class="page-h">
+  <div>
+    <h1 dir="ltr">{{ "@" ~ tenant.bot_username if tenant.bot_username else tenant.id }}</h1>
+    <p>تنانت #{{ tenant.id }} · مالک #{{ tenant.owner_user_id or "—" }}</p>
+  </div>
+  <div>
+    {% if tenant.status == "active" %}<span class="pill p-green">{{ tenant.status }}</span>
+    {% else %}<span class="pill p-red">{{ tenant.status }}</span>{% endif %}
+  </div>
+</div>
+
+<div class="grid stats">
+  <div class="card stat platform">
+    <div class="top"><div class="ico i-green">👥</div></div>
+    <h3>{{ "{:,}".format(stats.users) }}</h3><div class="lbl">کاربران</div>
+  </div>
+  <div class="card stat platform">
+    <div class="top"><div class="ico i-blue">🗂️</div></div>
+    <h3>{{ "{:,}".format(stats.media) }}</h3><div class="lbl">فایل‌ها</div>
+  </div>
+  <div class="card stat platform">
+    <div class="top"><div class="ico i-amber">⬇️</div></div>
+    <h3>{{ "{:,}".format(stats.downloads) }}</h3><div class="lbl">دانلودها</div>
+  </div>
+  <div class="card stat platform">
+    <div class="top"><div class="ico i-cyan">💰</div></div>
+    <h3>{{ "{:,}".format(stats.revenue) }}</h3><div class="lbl">درآمد نماینده (تومان)</div>
+  </div>
+</div>
+
+<section class="card platform">
+  <table class="kv">
+    <tr><th>پلن</th><td>{{ tenant.plan or "—" }}</td></tr>
+    <tr><th>اعتبار تا</th><td dir="ltr">{{ "%s"|format(tenant.expires_at.date()) if tenant.expires_at else "دائمی" }}</td></tr>
+    <tr><th>شناسهٔ ربات</th><td dir="ltr">{{ tenant.bot_id or "—" }}</td></tr>
+  </table>
+  <div class="actions">
+    {% if tenant.status == "active" %}
+    <form method="post" action="{{ panel_path }}/platform/tenants/{{ tenant.id }}/suspend">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="danger">تعلیق</button>
+    </form>
+    {% else %}
+    <form method="post" action="{{ panel_path }}/platform/tenants/{{ tenant.id }}/reactivate">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">فعال‌سازی</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{{ panel_path }}/platform/tenants/{{ tenant.id }}/extend" class="actions">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="number" name="days" value="30" min="1"> روز
+      <button type="submit" class="ghost">تمدید</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

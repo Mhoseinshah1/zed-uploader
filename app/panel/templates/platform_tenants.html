@@ -15,7 +15,7 @@
 {% for t in tenants %}
 <section class="card platform">
   <div class="tbl-h">
-    <h2 dir="ltr">{{ "@" ~ t.bot_username if t.bot_username else t.id }}</h2>
+    <h2 dir="ltr"><a href="{{ panel_path }}/platform/tenants/{{ t.id }}">{{ "@" ~ t.bot_username if t.bot_username else t.id }}</a></h2>
     {% if t.status == "active" %}<span class="pill p-green">{{ t.status }}</span>
     {% else %}<span class="pill p-red">{{ t.status }}</span>{% endif %}
   </div>
