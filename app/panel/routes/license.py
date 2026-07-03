@@ -1,4 +1,9 @@
-"""License — status/expiry/fingerprint page + activate action (panel)."""
+"""License — status/expiry/fingerprint page + activate action (panel).
+
+Platform-owner only (H1): the license governs the whole installation (a single
+global row), so both routes are gated to ``require_superadmin``. A reseller /
+customer panel user gets 403 and can never view or change licensing.
+"""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -7,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_session
-from app.panel.deps import audit, render, require_panel_user, verify_csrf
+from app.panel.deps import audit, render, require_superadmin, verify_csrf
 from app.services.license_service import (
     LicenseService,
     evaluate,
@@ -21,7 +26,7 @@ router = APIRouter()
 @router.get("/license")
 async def license_page(
     request: Request,
-    _=Depends(require_panel_user),
+    _=Depends(require_superadmin),
     session: AsyncSession = Depends(get_session),
 ):
     row = await LicenseService(session).get_row()
@@ -41,7 +46,7 @@ async def license_activate(
     request: Request,
     key: str = Form(...),
     csrf_token: str = Form(""),
-    _=Depends(require_panel_user),
+    _=Depends(require_superadmin),
     session: AsyncSession = Depends(get_session),
 ):
     await verify_csrf(request)

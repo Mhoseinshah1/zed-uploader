@@ -24,7 +24,7 @@ from app.bot.callbacks import NewBotCb
 from app.bot.states import NewBot
 from app.core.config import settings
 from app.core.logging import get_logger
-from app.core.tenant_context import PLATFORM_TENANT_ID, current_tenant
+from app.core.tenant_context import is_platform
 from app.db.session import async_session_maker
 from app.models.user import User
 from app.services.bot_creation_service import (
@@ -38,9 +38,10 @@ from app.services.wallet_service import WalletService
 router = Router(name="newbot")
 log = get_logger("handler.newbot")
 
-
-def _is_platform() -> bool:
-    return current_tenant() == PLATFORM_TENANT_ID
+# Shared, single-source-of-truth platform guard (H1). Kept as a module alias so
+# every handler below reads the same helper; a non-platform (reseller) context
+# can never proceed through the seller flow.
+_is_platform = is_platform
 
 
 async def _show_plans(message: Message, session: AsyncSession, db_user: User | None) -> None:
