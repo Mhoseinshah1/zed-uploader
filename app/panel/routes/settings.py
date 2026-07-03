@@ -9,11 +9,14 @@ from app.core.config import settings as app_settings
 from app.db.session import get_session
 from app.panel.deps import audit, render, require_role, verify_csrf
 from app.services.bot_setting_service import (
+    DEFAULT_TOPUP_MIN,
     KEY_AUTODELETE,
+    KEY_CARD_ENABLED,
     KEY_CARD_HOLDER,
     KEY_CARD_NUMBER,
     KEY_PROTECT,
     KEY_PUBLIC_SEARCH_ENABLED,
+    KEY_TOPUP_MIN,
     KEY_USER_UPLOAD_ENABLED,
     KEY_USER_UPLOAD_REVIEW,
     BotSettingService,
@@ -43,9 +46,29 @@ async def settings_page(
         "user_upload_enabled": await setting.user_upload_enabled(),
         "user_upload_requires_review": await setting.user_upload_requires_review(),
         "public_search_enabled": await setting.public_search_enabled(),
+        "card_enabled": await setting.card_enabled(),
+        "topup_min": await setting.get_int(KEY_TOPUP_MIN, DEFAULT_TOPUP_MIN),
         "channels": channels,
     }
     return render(request, "settings.html", **ctx)
+
+
+@router.post("/settings/payments")
+async def settings_payments(
+    request: Request,
+    card_enabled: str = Form(""),
+    topup_min: int = Form(DEFAULT_TOPUP_MIN),
+    csrf_token: str = Form(""),
+    _=Depends(require_role("owner")),
+    session: AsyncSession = Depends(get_session),
+):
+    """I6: card top-up on/off (independent of the card number) + minimum top-up."""
+    await verify_csrf(request)
+    setting = BotSettingService(session)
+    await setting.set(KEY_CARD_ENABLED, card_enabled == "on")
+    await setting.set(KEY_TOPUP_MIN, max(0, topup_min))
+    await audit(session, request, "settings_payments")
+    return RedirectResponse(url=_p("/settings"), status_code=302)
 
 
 @router.post("/settings/card")

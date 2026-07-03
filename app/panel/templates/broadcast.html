@@ -15,13 +15,15 @@
 <p class="flash ok">{{ request.query_params.get("retried") }} مورد ناموفق دوباره در صف قرار گرفت.</p>
 {% endif %}
 
+{% set filter_labels = {"all": "همهٔ فعال‌ها", "free": "فقط رایگان", "premium": "فقط پولی (plus/max)"} %}
 {% if confirm %}
 <div class="card">
-  <p>این پیام برای <strong>{{ audience }}</strong> کاربر ارسال شود؟</p>
+  <p>این پیام برای <strong>{{ audience }}</strong> کاربر ({{ filter_labels[audience_filter] }}) ارسال شود؟</p>
   <blockquote>{{ text }}</blockquote>
   <form method="post" action="{{ panel_path }}/broadcast" class="actions">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="text" value="{{ text }}">
+    <input type="hidden" name="audience_filter" value="{{ audience_filter }}">
     <input type="hidden" name="confirm" value="1">
     <button type="submit">بله، ارسال کن</button>
     <a class="btn ghost" href="{{ panel_path }}/broadcast">انصراف</a>
@@ -30,7 +32,12 @@
 {% else %}
 <form class="card" method="post" action="{{ panel_path }}/broadcast">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <p class="muted">مخاطبان: {{ audience }} کاربر</p>
+  <label>مخاطبان
+    <select name="audience_filter">
+      {% for f in filters %}<option value="{{ f }}" {{ "selected" if audience_filter == f else "" }}>{{ filter_labels[f] }}</option>{% endfor %}
+    </select>
+  </label>
+  <p class="muted">تعداد مخاطبان فعلی: {{ audience }} کاربر (کاربران مسدود هرگز پیام نمی‌گیرند)</p>
   <textarea name="text" rows="6" placeholder="متن پیام..." required>{{ text }}</textarea>
   <button type="submit">ادامه</button>
 </form>

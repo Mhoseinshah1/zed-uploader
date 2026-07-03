@@ -17,6 +17,16 @@
   </section>
 
   <section class="card">
+    <h2>تنظیمات پرداخت</h2>
+    <form method="post" action="{{ panel_path }}/settings/payments">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="checkbox"><input type="checkbox" name="card_enabled" {{ "checked" if card_enabled else "" }}> فعال‌بودن شارژ کارت‌به‌کارت</label>
+      <label>حداقل مبلغ شارژ (تومان) <input type="number" name="topup_min" value="{{ topup_min }}" min="0"></label>
+      <button type="submit">ذخیره</button>
+    </form>
+  </section>
+
+  <section class="card">
     <h2>پیش‌فرض‌ها</h2>
     <form method="post" action="{{ panel_path }}/settings/defaults">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
