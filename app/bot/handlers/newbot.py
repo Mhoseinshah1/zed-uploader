@@ -139,6 +139,13 @@ async def newbot_receive_token(
         bot_token=token,
     )
     await message.answer(_result_text(result))
+    if result.status == BotCreationStatus.OK and result.invoice_no is not None:
+        await message.answer(
+            messages.invoice_receipt(
+                invoice_no=result.invoice_no, kind="bot_creation",
+                amount=result.price, method="wallet",
+            )
+        )
 
 
 def _result_text(result) -> str:

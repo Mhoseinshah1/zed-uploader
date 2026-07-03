@@ -117,6 +117,19 @@ async def wallet_transactions(
     await callback.answer()
 
 
+@router.callback_query(WalletCb.filter(F.action == "inv"))
+async def wallet_invoices(
+    callback: CallbackQuery, session: AsyncSession, db_user: User | None
+) -> None:
+    """H4: the user's own invoices/receipts (tenant-scoped by the middleware)."""
+    if db_user is not None and isinstance(callback.message, Message):
+        from app.services.invoice_service import InvoiceService
+
+        rows = await InvoiceService(session).list_for_user(db_user.id, limit=20)
+        await callback.message.answer(messages.invoices_view(rows))
+    await callback.answer()
+
+
 @router.callback_query(WalletCb.filter(F.action == "topup"))
 async def topup_start(
     callback: CallbackQuery, state: FSMContext, session: AsyncSession
@@ -301,6 +314,13 @@ async def buy_confirm(
         await callback.message.answer(
             messages.plan_activated(_fmt_date(result.expires_at) if result.expires_at else None)
         )
+        if result.invoice_no is not None:  # H4: in-bot receipt right after payment
+            await callback.message.answer(
+                messages.invoice_receipt(
+                    invoice_no=result.invoice_no, kind="plan",
+                    amount=result.price, method="wallet",
+                )
+            )
         await callback.answer()
     elif result.status is PurchaseStatus.INSUFFICIENT:
         balance = await WalletService(session).balance(db_user.id)

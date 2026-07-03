@@ -30,6 +30,7 @@ from app.panel.routes import (
     reports,
     review,
     settings as settings_routes,
+    invoices,
     stats,
     texts,
     tickets,
@@ -62,6 +63,7 @@ for _module in (
     license_routes,
     broadcast,
     tickets,
+    invoices,
 ):
     router.include_router(_module.router)
 

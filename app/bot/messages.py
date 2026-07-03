@@ -812,3 +812,51 @@ def support_admin_notify(subject: str) -> str:
 
 def support_user_reply_notify(subject: str, body: str) -> str:
     return f"🎧 پاسخ پشتیبانی برای «{subject}»:\n\n{body}"
+
+
+# --- Phase H4: invoices / receipts ------------------------------------------
+BTN_INVOICES = "🧾 فاکتورها"
+
+_INVOICE_KIND_FA = {
+    "topup": "شارژ کیف پول", "plan": "خرید پلن",
+    "bot_creation": "ساخت ربات", "rental": "تمدید ربات",
+}
+_INVOICE_METHOD_FA = {
+    "card": "کارت‌به‌کارت", "wallet": "کیف پول", "stars": "استارز",
+    "zarinpal": "زرین‌پال", "zibal": "زیبال", "centralpay": "سنترال‌پی",
+}
+
+
+def invoice_kind_fa(kind: str) -> str:
+    return _INVOICE_KIND_FA.get(kind, kind)
+
+
+def invoice_method_fa(method: str) -> str:
+    return _INVOICE_METHOD_FA.get(method, method)
+
+
+def invoice_receipt(*, invoice_no, kind, amount, method, ref=None, date=None) -> str:
+    lines = [
+        "🧾 رسید پرداخت",
+        f"شماره فاکتور: {invoice_no}",
+        f"بابت: {invoice_kind_fa(kind)}",
+        f"مبلغ: {amount:,} تومان",
+        f"روش: {invoice_method_fa(method)}",
+    ]
+    if ref:
+        lines.append(f"کد پیگیری: {ref}")
+    if date:
+        lines.append(f"تاریخ: {date}")
+    return "\n".join(lines)
+
+
+def invoices_view(rows) -> str:
+    if not rows:
+        return "🧾 هنوز فاکتوری ثبت نشده است."
+    out = ["🧾 فاکتورهای شما:"]
+    for inv in rows:
+        out.append(
+            f"#{inv.invoice_no} · {invoice_kind_fa(inv.kind)} · "
+            f"{inv.amount:,} تومان · {invoice_method_fa(inv.method)}"
+        )
+    return "\n".join(out)

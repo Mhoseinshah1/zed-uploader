@@ -11,6 +11,7 @@ from app.models.broadcast import BroadcastJob, BroadcastRecipient
 from app.models.channel import RequiredChannel
 from app.models.download_log import DownloadLog
 from app.models.folder import Folder
+from app.models.invoice import Invoice
 from app.models.license import LicenseInfo
 from app.models.media import Media
 from app.models.media_file import MediaFile
@@ -57,4 +58,5 @@ __all__ = [
     "TenantLogSettings",
     "SupportTicket",
     "TicketMessage",
+    "Invoice",
 ]

@@ -111,7 +111,17 @@ class GatewayService:
                 select(User).where(User.id == payment.user_id)
             )
             if user is not None:
+                # the plan settlement records its own kind=plan invoice
                 await SubscriptionService(self.session).purchase(
-                    user, payment.intent.split(":", 1)[1]
+                    user, payment.intent.split(":", 1)[1], method=self.provider.key
                 )
+        else:
+            # a genuine wallet top-up (not funding an immediate plan buy) -> receipt
+            from app.services.invoice_service import safe_record
+
+            await safe_record(
+                self.session, user_id=payment.user_id, kind="topup",
+                amount=payment.amount, method=self.provider.key,
+                source_ref=f"payment:{payment.id}", provider_ref=result.ref,
+            )
         return "credited"

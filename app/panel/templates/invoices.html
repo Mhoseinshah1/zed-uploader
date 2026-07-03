@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}فاکتورها — پنل مدیریت{% endblock %}
+{% block content %}
+<div class="page-h">
+  <div><h1>فاکتورها</h1><p>رسیدِ همهٔ پرداخت‌های تسویه‌شده</p></div>
+  <div class="h-actions">
+    <a class="btn ghost" href="{{ panel_path }}/invoices/export.csv">⬇️ خروجی CSV</a>
+  </div>
+</div>
+
+<div class="card tbl-wrap">
+  <table>
+    <thead><tr><th>شماره</th><th>بابت</th><th>مبلغ</th><th>روش</th><th>کد پیگیری</th><th>کاربر</th><th>تاریخ</th></tr></thead>
+    <tbody>
+    {% for inv in invoices %}
+      <tr>
+        <td>#{{ inv.invoice_no }}</td>
+        <td>
+          {% if inv.kind == "topup" %}<span class="pill p-blue">شارژ کیف پول</span>
+          {% elif inv.kind == "plan" %}<span class="pill p-green">خرید پلن</span>
+          {% elif inv.kind == "bot_creation" %}<span class="pill p-amber">ساخت ربات</span>
+          {% elif inv.kind == "rental" %}<span class="pill p-amber">تمدید ربات</span>
+          {% else %}<span class="pill p-gray">{{ inv.kind }}</span>{% endif %}
+        </td>
+        <td class="money">{{ "{:,}".format(inv.amount) }}</td>
+        <td>{{ inv.method }}</td>
+        <td dir="ltr">{{ inv.provider_ref or "—" }}</td>
+        <td>#{{ inv.user_id }}</td>
+        <td dir="ltr">{{ inv.created_at.strftime("%Y-%m-%d %H:%M") if inv.created_at else "—" }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7"><div class="empty">فاکتوری نیست.</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
