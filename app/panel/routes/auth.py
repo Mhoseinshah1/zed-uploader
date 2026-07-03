@@ -1,6 +1,14 @@
-"""Login / logout with rate limiting and double-submit CSRF on the login form."""
+"""Login / logout with rate limiting and double-submit CSRF on the login form.
+
+J9 adds an OPTIONAL TOTP second factor: when the account has 2FA enabled the
+password step only mints a short-lived, single-purpose "pending" record in
+Redis (signed cookie), and the session is created after the code verifies.
+Accounts without 2FA (the default) log in exactly as before.
+"""
 from __future__ import annotations
 
+import json
+import secrets as _secrets
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Form, Request
@@ -20,10 +28,40 @@ from fastapi import Depends
 router = APIRouter()
 
 _PRECSRF_COOKIE = "zpcsrf"
+_TWOFA_COOKIE = "zp2fa"
+_TWOFA_PREFIX = "panel:2fa:"
+_TWOFA_TTL = 300  # seconds to enter the code after the password step
 
 
 def _login_url() -> str:
     return f"{settings.panel_path}/login"
+
+
+async def _mint_session(
+    request: Request, session: AsyncSession, user: PanelUser
+) -> RedirectResponse:
+    """Create the panel session (epoch-stamped, J9) and set the cookie."""
+    csrf = security.generate_csrf()
+    sid = await SessionStore(get_redis()).create(
+        {"uid": user.id, "csrf": csrf, "epoch": int(user.session_epoch or 0)}
+    )
+    user.last_login_at = datetime.now(timezone.utc)
+    await session.commit()
+    request.state.panel_user = user
+    await audit(session, request, "login", target=user.username)
+
+    response = RedirectResponse(url=settings.panel_path, status_code=302)
+    response.set_cookie(
+        COOKIE_NAME,
+        security.sign(sid),
+        httponly=True,
+        samesite="lax",
+        secure=is_secure(request),
+        max_age=SESSION_TTL,
+    )
+    response.delete_cookie(_PRECSRF_COOKIE)
+    response.delete_cookie(_TWOFA_COOKIE)
+    return response
 
 
 @router.get("/login")
@@ -73,24 +111,82 @@ async def login_submit(
         )
 
     await security.clear_login_failures(redis, ip, username)
-    csrf = security.generate_csrf()
-    sid = await SessionStore(redis).create({"uid": user.id, "csrf": csrf})
-    user.last_login_at = datetime.now(timezone.utc)
-    await session.commit()
-    request.state.panel_user = user
-    await audit(session, request, "login", target=user.username)
 
-    response = RedirectResponse(url=settings.panel_path, status_code=302)
-    response.set_cookie(
-        COOKIE_NAME,
-        security.sign(sid),
-        httponly=True,
-        samesite="lax",
-        secure=is_secure(request),
-        max_age=SESSION_TTL,
+    # J9: optional second factor — password alone never mints a session here
+    if user.twofa_enabled and user.totp_secret:
+        pending = _secrets.token_urlsafe(32)
+        await redis.set(
+            _TWOFA_PREFIX + pending,
+            json.dumps({"uid": user.id, "u": user.username}),
+            ex=_TWOFA_TTL,
+        )
+        token = security.generate_csrf()
+        response = render(request, "login_2fa.html", login_csrf=token, error=None)
+        response.set_cookie(
+            _PRECSRF_COOKIE, security.sign(token),
+            httponly=True, samesite="lax",
+            secure=is_secure(request), max_age=_TWOFA_TTL,
+        )
+        response.set_cookie(
+            _TWOFA_COOKIE, security.sign(pending),
+            httponly=True, samesite="lax",
+            secure=is_secure(request), max_age=_TWOFA_TTL,
+        )
+        return response
+
+    return await _mint_session(request, session, user)
+
+
+@router.post("/login/2fa")
+async def login_2fa_submit(
+    request: Request,
+    code: str = Form(...),
+    csrf_token: str = Form(""),
+    session: AsyncSession = Depends(get_session),
+):
+    # same double-submit CSRF as the password form (still no session)
+    cookie_token = security.unsign(request.cookies.get(_PRECSRF_COOKIE))
+    if not security.verify_csrf(csrf_token, cookie_token):
+        return RedirectResponse(url=_login_url(), status_code=302)
+
+    redis = get_redis()
+    pending_id = security.unsign(request.cookies.get(_TWOFA_COOKIE))
+    raw = await redis.get(_TWOFA_PREFIX + pending_id) if pending_id else None
+    if not raw:
+        return RedirectResponse(url=_login_url(), status_code=302)
+    data = json.loads(raw)
+
+    ip = client_ip(request)
+    if await security.login_locked(redis, ip, data["u"]):
+        return render(
+            request, "login_2fa.html", login_csrf=csrf_token, error=texts.LOGIN_LOCKED
+        )
+
+    user = await session.scalar(
+        select(PanelUser).where(
+            PanelUser.id == data["uid"], PanelUser.is_active.is_(True)
+        )
     )
-    response.delete_cookie(_PRECSRF_COOKIE)
-    return response
+    if user is None or not user.twofa_enabled or not user.totp_secret:
+        return RedirectResponse(url=_login_url(), status_code=302)
+
+    from app.core.crypto import decrypt_secret
+    from app.panel.totp import verify_totp
+
+    try:
+        secret = decrypt_secret(user.totp_secret)
+    except Exception:
+        return RedirectResponse(url=_login_url(), status_code=302)
+    if not verify_totp(secret, code):
+        # wrong codes count toward the same lockout as wrong passwords
+        await security.record_login_failure(redis, ip, data["u"])
+        return render(
+            request, "login_2fa.html", login_csrf=csrf_token, error=texts.TWOFA_FAILED
+        )
+
+    await security.clear_login_failures(redis, ip, data["u"])
+    await redis.delete(_TWOFA_PREFIX + pending_id)  # single use
+    return await _mint_session(request, session, user)
 
 
 @router.get("/link/{token}")
@@ -125,7 +221,9 @@ async def panel_link_login(
         target = settings.panel_path
 
     csrf = security.generate_csrf()
-    sid = await SessionStore(redis).create({"uid": user.id, "csrf": csrf})
+    sid = await SessionStore(redis).create(
+        {"uid": user.id, "csrf": csrf, "epoch": int(user.session_epoch or 0)}
+    )
     response = RedirectResponse(url=target, status_code=302)
     response.set_cookie(
         COOKIE_NAME,

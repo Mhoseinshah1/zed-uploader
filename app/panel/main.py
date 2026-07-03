@@ -11,6 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.config import settings
 from app.panel.deps import PanelAuthRequired
 from app.panel.routes import (
+    account,
     admins,
     ads,
     auth,
@@ -72,6 +73,7 @@ for _module in (
     features,
     comments,
     buttons,
+    account,
 ):
     router.include_router(_module.router)
 

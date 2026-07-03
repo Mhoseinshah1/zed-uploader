@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}حساب من — پنل مدیریت{% endblock %}
+{% block content %}
+<div class="page-h">
+  <div><h1>حساب من</h1><p>رمز عبور و ورود دومرحله‌ای شما</p></div>
+</div>
+
+{% if error == "badpass" %}<p class="flash error">رمز عبور فعلی نادرست است.</p>
+{% elif error == "short" %}<p class="flash error">رمز جدید باید حداقل ۸ کاراکتر باشد.</p>
+{% elif error == "code" %}<p class="flash error">کد تأیید نادرست است. دوباره تلاش کنید.</p>{% endif %}
+{% if ok == "enabled" %}<p class="flash">ورود دومرحله‌ای فعال شد. از این پس هنگام ورود کد لازم است.</p>
+{% elif ok == "disabled" %}<p class="flash">ورود دومرحله‌ای غیرفعال شد.</p>{% endif %}
+
+<section class="card">
+  <h2>تغییر رمز عبور</h2>
+  <p class="muted">پس از تغییر رمز، از همهٔ دستگاه‌ها خارج می‌شوید و باید دوباره وارد شوید.</p>
+  <form method="post" action="{{ panel_path }}/account/password" class="form-grid">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>رمز فعلی <input type="password" name="current_password" autocomplete="current-password" required></label>
+    <label>رمز جدید <input type="password" name="new_password" autocomplete="new-password" minlength="8" required></label>
+    <button type="submit">تغییر رمز</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>ورود دومرحله‌ای (اختیاری)</h2>
+  {% if twofa_enabled %}
+    <p><span class="pill p-green">فعال</span> هنگام ورود، علاوه بر رمز، کد برنامهٔ احراز هویت لازم است.</p>
+    <form method="post" action="{{ panel_path }}/account/2fa/disable" class="form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>رمز عبور فعلی <input type="password" name="current_password" autocomplete="current-password" required></label>
+      <button type="submit" class="danger">غیرفعال‌سازی</button>
+    </form>
+  {% elif new_secret %}
+    <p>این کلید را در برنامهٔ احراز هویت (مثل Google Authenticator یا Aegis) وارد کنید. <b>این کلید فقط همین یک بار نمایش داده می‌شود.</b></p>
+    <p>کلید: <code dir="ltr">{{ new_secret }}</code></p>
+    <p>لینک مستقیم: <code dir="ltr">{{ otpauth }}</code></p>
+    <form method="post" action="{{ panel_path }}/account/2fa/enable" class="form-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>کد ۶ رقمی برنامه <input type="text" name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required></label>
+      <button type="submit">فعال‌سازی</button>
+    </form>
+  {% else %}
+    <p><span class="pill p-gray">غیرفعال</span> برای امنیت بیشتر می‌توانید کد یک‌بارمصرف (TOTP) را فعال کنید.</p>
+    {% if twofa_pending %}<p class="muted">راه‌اندازی قبلی کامل نشده؛ با دکمهٔ زیر کلید تازه‌ای بسازید.</p>{% endif %}
+    <form method="post" action="{{ panel_path }}/account/2fa/start">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">شروع راه‌اندازی</button>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}
